@@ -1,12 +1,12 @@
 % run in session directory to create rplraw and rpllfp objects in each channel
-rplsplit('auto','SaveLevels',2);
-
 % if we want to just create rpllfp and not rplraw objects
-rplsplit('auto','redo','SaveLevels',2,'SkipRaw');
+rplsplit('auto','SaveLevels',2,'SkipRaw');
 
 % create vmlfp objects in each channel
 ProcessLevel(vmlfp,'Levels','session','save')
 
+% change directory to one of the arrays, e.g. array01
+cd(array01)
 % create objects
 cd('channel001')
 vp1 = vmlfp('auto');
