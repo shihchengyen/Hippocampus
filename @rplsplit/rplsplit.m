@@ -13,7 +13,7 @@ function [obj, varargout] = rplsplit(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'SkipRaw', 0, 'SkipLFP', 0, ...
-				'SkipParallel',0, 'Channels',1, 'ChannelsPerArray',32);
+				'SkipParallel',0, 'Channels',[], 'ChannelsPerArray',32);
 Args.flags = {'Auto','ArgsOnly','SkipRaw','SkipLFP','SkipParallel'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};                            
