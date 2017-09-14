@@ -4,7 +4,6 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-			'PreTrial',500, 'NormalizeTrial',0, ...
 		  'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial'};
 [Args,varargin2] = getOptArgs(varargin,Args);
@@ -19,30 +18,10 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	% find indices for n-th trial
-	tIdx = obj.data.trialIndices(n,:);
-	idx = (tIdx(1)-(Args.PreTrial/1000*obj.data.sampleRate)):tIdx(2);
-	plot((obj.data.ltime(idx)-obj.data.ltime(tIdx(1)))*1000,obj.data.lfp(idx),'.-')
+	plot(obj.data.analogTime,obj.data.analogData,'.-')
 else
 	% plot all data
-	dIdx = diff(obj.data.trialIndices,1,2);
-	% find longest trial
-	mIdx = max(dIdx);
-	% create matrix
-	mdata = zeros(obj.data.numSets,mIdx);
-	for i = 1:obj.data.numSets
-		idx = obj.data.trialIndices(i,:);
-        if(Args.NormalizeTrial)
-            rdata = obj.data.lfp(idx(1):idx(2));
-            rdmin = min(rdata);
-            rdmax = max(rdata);
-            mdata(i,1:(dIdx(i)+1)) = (rdata-rdmin)/(rdmax-rdmin);
-        else
-            mdata(i,1:(dIdx(i)+1)) = obj.data.lfp(idx(1):idx(2));
-        end
-	end
-	imagesc(mdata)
-    colormap(jet)
+	plot(obj.data.analogTime,obj.data.analogData,'.-')
 end
 
 % add code for plot options here

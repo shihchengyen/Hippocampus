@@ -12,10 +12,11 @@ function [obj, varargout] = rpllfp(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'Channel',1,'StartMarker',1);
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+				'Data',[]);
 Args.flags = {'Auto','ArgsOnly'};
-% The arguments which can be neglected during arguments checking
-Args.UnimportantArgs = {'RedoLevels','SaveLevels'};                            
+% The arguments that are critical when loading saved data
+Args.DataCheckArgs = {};                            
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -50,67 +51,12 @@ end
 
 function obj = createObject(Args,varargin)
 
-% look for ripple file
-dfile = dir('*.ns2');
-dnum = size(dfile,1);
-
-% check if the right conditions were met to create object
-if(dnum>0)
-	% this is a valid object
-	if(dnum>1)
-		% there is more than 1 ns2 file in the current directory
-		% print a warning that only the 1st file will be used to create the object
-		warning('More than 1 ns2 file found')
-		warning(['Creating object only from ' dfile(1).name])
-	end
-	
-	% these are object specific fields
-	data.lfpfname = dfile(1).name;
-	% open the file, and read the markers
-	[ns_status, hFile] = ns_OpenFile(dfile(1).name); 
-	entityID = find(cellfun(@strcmpi, {hFile.Entity.Reason},...
-		repmat({'Parallel Input'}, size({hFile.Entity.Reason})))); % Note: original 'Digital Input'
-	% Extract channel info
-	[ns_RESULT, entityInfo] = ns_GetEntityInfo(hFile, entityID(end));
-	% Get events and time stamps
-	numCount = entityInfo.ItemCount;
-	ddata = NaN(1, numCount); timeStamps = NaN(1, numCount); sz = NaN(1, numCount);
-	for i = 1:numCount
-		[~, timeStamps(i), ddata(i), dataSize(i)] = ns_GetEventData(hFile, entityID, i);
-	end 
-	% get LFP data
-	EntityIndices = find([hFile.Entity(:).ElectrodeID] == Args.Channel);         
-	for i = 1:length(EntityIndices)       
-		fileTypeNum = hFile.Entity(EntityIndices(i)).FileType;
-		fileType = hFile.FileInfo(fileTypeNum).Type;            
-		if strcmp('ns2', fileType); entityID = EntityIndices(i); break; end 
-	end
-	% Extract channel info
-	% analog info contains things like range and sampling rate	
-	[ns_RESULT, analogInfo] = ns_GetAnalogInfo(hFile, entityID(end));     
-	TimeStamps = hFile.FileInfo(hFile.Entity(entityID).FileType).TimeStamps;
-	numSamples = sum(TimeStamps(:,end));
-	analogInputData = zeros(1,numSamples);
-	startIndex = 1; 
-	indexCount = TimeStamps(2,1);
-	for i = 1:size(TimeStamps,2)                
-	    [~, ~, tempData] = ns_GetAnalogData(hFile, entityID, startIndex, indexCount);
-	    dataRange = TimeStamps(1,i) + (1:TimeStamps(2,i));
-	    analogInputData(dataRange) = tempData';
-	    clear tempData
-	    if i ~= size(TimeStamps,2) 
-	        startIndex = startIndex + TimeStamps(2,i);
-	        indexCount = TimeStamps(2,i+1);
-	    end
-	end
-	data.sampleRate = analogInfo.SampleRate;
-	data.ltime = (0:numSamples-1)' ./ data.sampleRate;
-	data.lfp = analogInputData;
-	data.markers = ddata;
-	% get start time for each trial
-	data.trialIndices = floor(reshape(timeStamps*data.sampleRate,2,[])');
-	data.numSets = length(data.trialIndices);
-	ns_status = ns_CloseFile(hFile);
+if(~isempty(Args.Data))
+	data = Args.Data;
+	data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+	data.numSets = 1;
+	% clear Data in Args so it is not saved
+	Args.Data = [];
 		
 	% create nptdata so we can inherit from it    
     data.Args = Args;
