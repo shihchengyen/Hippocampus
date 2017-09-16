@@ -9,8 +9,8 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0);
-Args.flags ={'ObjectLevel','AnalysisLevel'};
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0,'GroupPlotProperties',0);
+Args.flags ={'ObjectLevel','AnalysisLevel','GroupPlotProperties'};
 Args = getOptArgs(varargin,Args);
 
 % set variables to default
@@ -22,6 +22,8 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
+elseif(Args.GroupPlotProperties)
+	r = 'Vertical';
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way
