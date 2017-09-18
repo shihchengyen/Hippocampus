@@ -33,3 +33,11 @@ cd ..
 ng = nptgroup('auto','CellName','channel0*');
 % plot all channels in array 1 (arranged vertically) using a pre-trial window of 750 ms
 InspectGUI(ng,'Object',{'vmlfp',{'PreTrial',750}},'GroupPlotSep','Vertical')
+
+cd('channel022')
+vp22 = vmlfp('auto')
+InspectGUI(vp22,'addObjs',{vp22},'optArgs',{{},{'FreqPlot'}},'SP',[2 1])
+InspectGUI(vp22,'addObjs',{vp22,vp22,vp22},'optArgs',{{},{'RemoveLineNoise',50},{'FreqPlot'},{'FreqPlot','RemoveLineNoise',50}},'SP',[4 1])
+
+InspectGUI(vp22,'addObjs',{vp22,vp22,vp22},'optArgs',{{},{'RemoveLineNoise',50}, {'FreqPlot','FreqLims',[0 150]}, {'FreqPlot','RemoveLineNoise',50,'FreqLims',[0 150]}},'SP',[4 1])
+
