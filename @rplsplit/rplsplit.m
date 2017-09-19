@@ -66,7 +66,7 @@ if(dnum>0)
 	end
 	
 	% these are object specific fields
-	data.lfpfname = dfile(1).name;
+	data.rawfname = dfile(1).name;
 	% open the file, and read the information
 	[ns_status, hFile] = ns_OpenFile(dfile(1).name); 
     [ns_RESULT, nsFileInfo] = ns_GetFileInfo(hFile);
