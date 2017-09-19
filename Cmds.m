@@ -1,4 +1,11 @@
-% run in session directory to create rplraw and rpllfp objects in each channel
+%% Check Ripple file using Neuroshare functions
+[nsStatus,hFile] = ns_OpenFile('170918.ns5');
+entityNum = 279;
+[nsStatus,entityInfo] = ns_GetEntityInfo(hFile,entityNum)
+[nsStatus,analogInfo] = ns_GetAnalogInfo(hFile,entityNum)
+[nsStatus,~,analogData] = ns_GetAnalogData(hFile,entityNum,1,entityInfo.ItemCount);
+
+%% run in session directory to create rplraw and rpllfp objects in each channel
 % if we want to just create rpllfp and not rplraw objects
 rplsplit('auto','SaveLevels',2,'SkipRaw');
 
