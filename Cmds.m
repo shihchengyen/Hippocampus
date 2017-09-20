@@ -4,6 +4,12 @@ entityNum = 279;
 [nsStatus,entityInfo] = ns_GetEntityInfo(hFile,entityNum)
 [nsStatus,analogInfo] = ns_GetAnalogInfo(hFile,entityNum)
 [nsStatus,~,analogData] = ns_GetAnalogData(hFile,entityNum,1,entityInfo.ItemCount);
+ns_status = ns_CloseFile(hFile);
+
+%% Inspect Ripple file
+% run from session directory containing ns5 file
+rv = rplview('auto')
+InspectGUI(rv)
 
 %% run in session directory to create rplraw and rpllfp objects in each channel
 % if we want to just create rpllfp and not rplraw objects
@@ -42,9 +48,9 @@ ng = nptgroup('auto','CellName','channel0*');
 InspectGUI(ng,'Object',{'vmlfp',{'PreTrial',750}},'GroupPlotSep','Vertical')
 
 cd('channel022')
-vp22 = vmlfp('auto')
-InspectGUI(vp22,'addObjs',{vp22},'optArgs',{{},{'FreqPlot'}},'SP',[2 1])
-InspectGUI(vp22,'addObjs',{vp22,vp22,vp22},'optArgs',{{},{'RemoveLineNoise',50},{'FreqPlot'},{'FreqPlot','RemoveLineNoise',50}},'SP',[4 1])
+vp = vmlfp('auto')
+InspectGUI(vp,'addObjs',{vp},'optArgs',{{},{'FreqPlot'}},'SP',[2 1])
+InspectGUI(vp,'addObjs',{vp,vp,vp},'optArgs',{{},{'RemoveLineNoise',50},{'FreqPlot'},{'FreqPlot','RemoveLineNoise',50}},'SP',[4 1])
 
-InspectGUI(vp22,'addObjs',{vp22,vp22,vp22},'optArgs',{{},{'RemoveLineNoise',50}, {'FreqPlot','FreqLims',[0 150]}, {'FreqPlot','RemoveLineNoise',50,'FreqLims',[0 150]}},'SP',[4 1])
+InspectGUI(vp,'addObjs',{vp,vp,vp},'optArgs',{{},{'RemoveLineNoise',50}, {'FreqPlot','FreqLims',[0 150]}, {'FreqPlot','RemoveLineNoise',50,'FreqLims',[0 150]}},'SP',[4 1])
 
