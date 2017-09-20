@@ -72,24 +72,36 @@ if(~isempty(Args.NumericArguments))
 	end
 else
 	% plot all data
-	dIdx = diff(obj.data.trialIndices,1,2);
-	% find longest trial
-	mIdx = max(dIdx);
-	% create matrix
-	mdata = zeros(obj.data.numSets,mIdx);
-	for i = 1:obj.data.numSets
-		idx = obj.data.trialIndices(i,:);
-        if(Args.NormalizeTrial)
-            rdata = obj.data.analogData(idx(1):idx(2));
-            rdmin = min(rdata);
-            rdmax = max(rdata);
-            mdata(i,1:(dIdx(i)+1)) = (rdata-rdmin)/(rdmax-rdmin);
-        else
-            mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(2));
-        end
-    end
-	imagesc(mdata)
-	colormap(jet)
+	if(Args.FreqPlot)
+		sRate = obj.data.analogInfo.SampleRate;
+		data = obj.data.analogData;
+		if(~isempty(Args.RemoveLineNoise))
+			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+		end
+
+		datam = mean(data);
+		PlotFFT(data-datam,sRate)
+		set(gca,'TickDir','out')
+	else
+		dIdx = diff(obj.data.trialIndices,1,2);
+		% find longest trial
+		mIdx = max(dIdx);
+		% create matrix
+		mdata = zeros(obj.data.numSets,mIdx);
+		for i = 1:obj.data.numSets
+			idx = obj.data.trialIndices(i,:);
+			if(Args.NormalizeTrial)
+				rdata = obj.data.analogData(idx(1):idx(2));
+				rdmin = min(rdata);
+				rdmax = max(rdata);
+				mdata(i,1:(dIdx(i)+1)) = (rdata-rdmin)/(rdmax-rdmin);
+			else
+				mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(2));
+			end
+		end
+		imagesc(mdata)
+		colormap(jet)
+	end
 end
 
 % add code for plot options here
