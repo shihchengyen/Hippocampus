@@ -5,13 +5,13 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 			'PreTrial',500, 'NormalizeTrial',0, 'RewardMarker',3, ...
-            'TimeOutMarker',4, 'FreqPlot',0, 'RemoveLineNoise',[], ...
+            'TimeOutMarker',4, 'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',256, 'TFfftOverlap',50, ...
 		    'TFfftPoints',256, ...
 		    'TFWavelets',0,  ...
-		    'ReturnVars',{''}, 'ArgsOnly',0);
+		    'PlotAllData',0, 'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'TFWavelet'};
+				'LogPlot','TFWavelet','PlotAllData'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -28,15 +28,22 @@ if(~isempty(Args.NumericArguments))
 	tIdx = obj.data.trialIndices(n,:);
 	sRate = obj.data.analogInfo.SampleRate;
 	idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
-	data = obj.data.analogData(idx);
+	if(Args.PlotAllData)
+		data = obj.data.analogData;
+	else
+		data = obj.data.analogData(idx);
+	end
 	if(~isempty(Args.RemoveLineNoise))
 		data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
 	end
 	if(Args.FreqPlot)
 		% remove the mean, i.e. DC component		
-		datam = mean(data);
+		datam = mean(data);			
 		PlotFFT(data-datam,sRate);
 		set(gca,'TickDir','out')
+		if(Args.LogPlot)
+			set(gca,'YScale','log')
+		end
 	elseif(Args.TFfft)
 		datam = mean(data);
 		spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
@@ -82,6 +89,9 @@ else
 		datam = mean(data);
 		PlotFFT(data-datam,sRate)
 		set(gca,'TickDir','out')
+		if(Args.LogPlot)
+			set(gca,'YScale','log')
+		end
 	else
 		dIdx = diff(obj.data.trialIndices,1,2);
 		% find longest trial
