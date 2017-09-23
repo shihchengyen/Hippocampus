@@ -14,6 +14,7 @@ InspectGUI(rv)
 %% run in session directory to create rplraw and rpllfp objects in each channel
 % if we want to just create rpllfp and not rplraw objects
 rplsplit('auto','SaveLevels',2,'SkipRaw');
+rplsplit('auto','SaveLevels',2,'SkipLFP','SkipParallel','Channels',1:10);
 
 % create vmlfp objects in each channel
 ProcessLevel(vmlfp,'Levels','session','save')
@@ -46,11 +47,16 @@ cd ..
 ng = nptgroup('auto','CellName','channel0*');
 % plot all channels in array 1 (arranged vertically) using a pre-trial window of 750 ms
 InspectGUI(ng,'Object',{'vmlfp',{'PreTrial',750}},'GroupPlotSep','Vertical')
+InspectGUI(ng,'Object',{'vmlfp',{'FreqPlot','PlotAllData','FreqLims',[0 150]}},'GroupPlotSep','Vertical')
+
 
 cd('channel022')
 vp = vmlfp('auto')
+% Plot LFP and frequency spectrum
 InspectGUI(vp,'addObjs',{vp},'optArgs',{{},{'FreqPlot'}},'SP',[2 1])
+% Plot LFP, cleaned LFP, frequency spectrum, and frequency spectrum for cleaned LFP
 InspectGUI(vp,'addObjs',{vp,vp,vp},'optArgs',{{},{'RemoveLineNoise',50},{'FreqPlot'},{'FreqPlot','RemoveLineNoise',50}},'SP',[4 1])
-
+% Limit the frequency axis to 0 to 150
 InspectGUI(vp,'addObjs',{vp,vp,vp},'optArgs',{{},{'RemoveLineNoise',50}, {'FreqPlot','FreqLims',[0 150]}, {'FreqPlot','RemoveLineNoise',50,'FreqLims',[0 150]}},'SP',[4 1])
-
+% plot cleaned LFP and time-frequency plot of cleaned LFP
+InspectGUI(vp,'addObjs',{vp},'optArgs',{{'RemoveLineNoise',50},{'TFfft','RemoveLineNoise',50}},'SP',[2 1])
