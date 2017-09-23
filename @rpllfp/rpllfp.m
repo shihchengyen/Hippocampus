@@ -13,10 +13,10 @@ function [obj, varargout] = rpllfp(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[]);
+				'Data',[], 'LowpassFreqs',[1 150], 'LPFOrder',8);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments that are critical when loading saved data
-Args.DataCheckArgs = {};                            
+Args.DataCheckArgs = {'LowpassFreqs'};                            
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -28,6 +28,9 @@ Args.DataCheckArgs = {};
 Args.classname = 'rpllfp';
 Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'df';
+
+RIPPLE_LFP_LOW_FREQ = 0.1;
+RIPPLE_LFP_HIGH_FREQ = 250;
 
 % To decide the method to create or load the object
 command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -57,16 +60,41 @@ if(~isempty(Args.Data))
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
+	Args.LowpassFreqs = [RIPPLE_LFP_LOW_FREQ RIPPLE_LFP_HIGH_FREQ];
 		
 	% create nptdata so we can inherit from it    
-    data.Args = Args;
 	n = nptdata(data.numSets,0,pwd);
 	d.data = data;
 	obj = class(d,Args.classname,n);
 	saveObject(obj,'ArgsC',Args);	
 else
-	% create empty object
-	obj = createEmptyObject(Args);
+	rw = rplraw('auto',varargin{:});
+	if(~isempty(rw))		
+		[lpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
+					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
+		data.analogData = lpdata;
+		data.analogInfo = rw.data.analogInfo;
+		data.analogInfo.SampleRate = resampleRate;
+		data.analogInfo.MinVal = min(lpdata);
+		data.analogInfo.MaxVal = max(lpdata);
+		data.analogInfo.HighFreqCorner = Args.LowpassFreqs(1)*1000;
+		data.analogInfo.LowFreqCorner = Args.LowpassFreqs(2)*1000;
+		data.analogInfo.NumberSamples = length(lpdata);
+		data.analogInfo.HighFreqOrder = Args.LPFOrder;
+		data.analogInfo.LowFreqOrder = Args.LPFOrder;
+		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
+		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+		data.numSets = 1;
+		
+		% create nptdata so we can inherit from it    
+		n = nptdata(data.numSets,0,pwd);
+		d.data = data;
+		obj = class(d,Args.classname,n);
+		saveObject(obj,'ArgsC',Args);			
+	else
+		% create empty object
+		obj = createEmptyObject(Args);
+	end
 end
 
 function obj = createEmptyObject(Args)
