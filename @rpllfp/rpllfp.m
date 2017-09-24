@@ -62,7 +62,8 @@ if(~isempty(Args.Data))
 	Args.Data = [];
 	Args.LowpassFreqs = [RIPPLE_LFP_LOW_FREQ RIPPLE_LFP_HIGH_FREQ];
 		
-	% create nptdata so we can inherit from it    
+	% create nptdata so we can inherit from it   
+	data.Args = Args; 
 	n = nptdata(data.numSets,0,pwd);
 	d.data = data;
 	obj = class(d,Args.classname,n);
@@ -87,6 +88,7 @@ else
 		data.numSets = 1;
 		
 		% create nptdata so we can inherit from it    
+		data.Args = Args; 
 		n = nptdata(data.numSets,0,pwd);
 		d.data = data;
 		obj = class(d,Args.classname,n);
