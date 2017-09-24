@@ -6,7 +6,7 @@ function [obj, varargout] = plot(obj,varargin)
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 			'PreTrial',500, 'NormalizeTrial',0, 'RewardMarker',3, ...
             'TimeOutMarker',4, 'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
-		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',256, 'TFfftOverlap',50, ...
+		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, ...
 		    'TFWavelets',0,  ...
 		    'PlotAllData',0, 'ReturnVars',{''}, 'ArgsOnly',0);
@@ -28,15 +28,15 @@ if(~isempty(Args.NumericArguments))
 	tIdx = obj.data.trialIndices(n,:);
 	sRate = obj.data.analogInfo.SampleRate;
 	idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
-	if(Args.PlotAllData)
-		data = obj.data.analogData;
-	else
-		data = obj.data.analogData(idx);
-	end
-	if(~isempty(Args.RemoveLineNoise))
-		data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-	end
 	if(Args.FreqPlot)
+		if(Args.PlotAllData)
+			data = obj.data.analogData;
+		else
+			data = obj.data.analogData(idx);
+		end
+		if(~isempty(Args.RemoveLineNoise))
+			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+		end
 		% remove the mean, i.e. DC component		
 		datam = mean(data);			
 		PlotFFT(data-datam,sRate);
@@ -45,10 +45,47 @@ if(~isempty(Args.NumericArguments))
 			set(gca,'YScale','log')
 		end
 	elseif(Args.TFfft)
-		datam = mean(data);
-		spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
-			sRate,'yaxis')
+		if(Args.PlotAllData)
+			% create memory to store overall mean
+			dIdx = diff(obj.data.trialIndices,1,2);
+			% find longest trial
+			mIdx = max(dIdx);
+			% find number of time bins in the spectrogram that corresponds to
+			spTimeStep = Args.TFfftWindow - Args.TFfftOverlap;
+			spTimeBins = floor(mIdx/spTimeStep) - Args.TFfftOverlap/spTimeStep;
+			% create matrix
+			nFreqs = (Args.TFfftPoints/2)+1;			
+			ops = zeros(nFreqs,spTimeBins);
+			opsCount = ops;
+			for ti = 1:obj.data.numSets
+				tftIdx = obj.data.trialIndices(ti,:);
+				tfidx = tftIdx(1):tftIdx(2);
+				data = obj.data.analogData(tfidx);
+				if(~isempty(Args.RemoveLineNoise))
+					data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+				end
+				datam = mean(data);
+				[s,w,t,ps] = spectrogram(data-datam,Args.TFfftWindow, ...
+					Args.TFfftOverlap,Args.TFfftPoints,sRate);
+				% add to overall mean
+				% get columns of ps
+				psIdx = 1:size(ps,2);
+				ops(:,psIdx) = ops(:,psIdx) + ps;
+				opsCount(:,psIdx) = opsCount(:,psIdx) + 1;
+			end
+			imagesc(0:(Args.TFfftWindow-Args.TFfftOverlap):mIdx,0:(sRate/Args.TFfftPoints):(sRate/2),ops./opsCount)
+            set(gca,'Ydir','normal')
+		else
+			data = obj.data.analogData(idx);
+			if(~isempty(Args.RemoveLineNoise))
+				data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+			end
+			datam = mean(data);
+			spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
+				sRate,'yaxis')
+		end
 	elseif(Args.TFWavelets)
+		% not fully completed yet
     	cdata = nptRemoveLineNoise(obj.data.analogData',50,1000);
     	cdata1 = cdata(idx);
     	cdata1m = mean(cdata1);
@@ -69,6 +106,10 @@ if(~isempty(Args.NumericArguments))
         
         TFRwave = ft_freqanalysis(cfg,data);
 	else
+		data = obj.data.analogData(idx);
+		if(~isempty(Args.RemoveLineNoise))
+			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+		end
 		plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data,'.-')
 		line([0 0],ylim,'Color','g')
 		if(obj.data.markers(n,2)==Args.RewardMarker)
