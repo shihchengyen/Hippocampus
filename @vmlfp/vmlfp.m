@@ -12,10 +12,11 @@ function [obj, varargout] = vmlfp(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'StartMarker',1);
-Args.flags = {'Auto','ArgsOnly'};
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+    'OldMarkerFormat',0,'OldMarkerFormat2',0);
+Args.flags = {'Auto','ArgsOnly','OldMarkerFormat','OldMarkerFormat2'};
 % The arguments which can be neglected during arguments checking
-Args.DataCheckArgs = {};                            
+Args.DataCheckArgs = {};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -57,9 +58,44 @@ end
 function obj = createObject(rp,rl,Args,varargin)
 
 data = rp.data;
-data.markers = reshape(rl.data.markers,2,[])';
-% get start time for each trial
-data.trialIndices = floor(reshape(rl.data.timeStamps*data.analogInfo.SampleRate,2,[])');
+if(Args.OldMarkerFormat)
+    data.markers = reshape(rl.data.markers,2,[])';
+    % get start time for each trial
+    data.trialIndices = floor(reshape(rl.data.timeStamps*data.analogInfo.SampleRate,2,[])');
+elseif(Args.OldMarkerFormat2)
+    rawMarkers = rl.data.markers;
+    % format is marker followed by 0, so we will reshape into 2 rows
+    % to make it easy to remove the 0's
+    rm1 = reshape(rawMarkers,2,[]);
+    % remove the 2nd row, which is all 0's
+    % format is 1 marker for start of trial, and another for either
+    % correct or incorrect, so reshape into 2 columns
+    data.markers = reshape(rm1(1,:),2,[])';
+    % get start time for each trial
+    rtime = rl.data.timeStamps;
+    % reshape to remove timestamps for 0's
+    rt1 = reshape(rtime,2,[]);
+    % select 1st row to remove 0's, and the reshape timestamps into 
+    % 2 columns
+    data.timeStamps = reshape(rt1(1,:),2,[])';
+    % compute the data indices corresponding to the marker timestamps
+    data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
+else
+    rawMarkers = rl.data.markers;
+    % format is marker followed by 0, so we will reshape into 2 rows
+    % to make it easy to remove the 0's
+    % remove the 2nd row, which is all 0's
+    % format is: 1 for cue onset/start of trial; 2 for cue offset; 
+    % and 3 or 4 for reward or error/timeout
+    % so we will reshape markers into 3 columns
+    rm1 = reshape(rawMarkers,6,[]);
+    data.markers = rm1([1 3 5],:)';
+    % get start time for each trial
+    rtime = rl.data.timeStamps;
+    rt1 = reshape(rtime,6,[]);
+    data.timeStamps = rt1([1 3 5],:)';    
+    data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
+end
 data.numSets = length(data.trialIndices);
 	
 % create nptdata so we can inherit from it    
