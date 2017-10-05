@@ -46,12 +46,12 @@ elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    rp = rpllfp('auto',varargin{:});
-    rl = rplparallel('auto',varargin{:});
+    rp = rpllfp('auto',modvarargin{:});
+    rl = rplparallel('auto',modvarargin{:});
     if( isempty(rp) | isempty(rl) )
     	obj = createEmptyObject(Args);
     else
-	    obj = createObject(rp,rl,Args,varargin{:});
+	    obj = createObject(rp,rl,Args,modvarargin{:});
 	end
 end
 
