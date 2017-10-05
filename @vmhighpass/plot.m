@@ -1,5 +1,5 @@
 function [obj, varargout] = plot(obj,varargin)
-%@vmlfp/plot Plot function for vmlfp object.
+%@vmhighpass/plot Plot function for vmhighpass object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
 
@@ -198,7 +198,7 @@ end
 % add code for plot options here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @vmlfp/PLOT takes 'LabelsOff' as an example
+% @vmhighpass/PLOT takes 'LabelsOff' as an example
 if(~Args.LabelsOff)
 	if(Args.FreqPlot)
 		xlabel('Frequency (Hz)')

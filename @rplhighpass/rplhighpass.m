@@ -1,22 +1,22 @@
-function [obj, varargout] = rpllfp(varargin)
-%@rpllfp Constructor function for rpllfp class
-%   OBJ = rpllfp(varargin) extracts LFPs from a RIPPLE recording
+function [obj, varargout] = rplhighpass(varargin)
+%@rplhighpass Constructor function for rplhighpass class
+%   OBJ = rplhighpass(varargin) extracts highpass signals from a RIPPLE recording
 %
-%   OBJ = rpllfp('auto') attempts to create a rpllfp object by ...
+%   OBJ = rplhighpass('auto') attempts to create a rplhighpass object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on rpllfp %
+%   % Instructions on rplhighpass %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%example [as, Args] = rpllfp('save','redo')
+%example [as, Args] = rplhighpass('save','redo')
 %
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[], 'LowpassFreqs',[1 150], 'LPFOrder',8);
+				'Data',[], 'HighpassFreqs',[500 10000], 'HPFOrder',8);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments that are critical when loading saved data
-Args.DataCheckArgs = {'LowpassFreqs'};                            
+Args.DataCheckArgs = {'HighpassFreqs'};                            
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -25,9 +25,9 @@ Args.DataCheckArgs = {'LowpassFreqs'};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'rpllfp';
+Args.classname = 'rplhighpass';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'df';
+Args.matvarname = 'rh';
 
 % To decide the method to create or load the object
 command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -57,7 +57,7 @@ if(~isempty(Args.Data))
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
-	Args.LowpassFreqs = [data.analogInfo.HighFreqCorner/1000 ...
+	Args.HighpassFreqs = [data.analogInfo.HighFreqCorner/1000 ...
 		data.analogInfo.LowFreqCorner/1000];
 		
 	% create nptdata so we can inherit from it   
@@ -69,19 +69,18 @@ if(~isempty(Args.Data))
 else
 	rw = rplraw('auto',varargin{:});
 	if(~isempty(rw))		
-		[lpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
-					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
-		data.analogData = lpdata;
+		hpdata = nptHighPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
+					Args.HighpassFreqs(1),Args.HighpassFreqs(2));
+		data.analogData = hpdata;
 		data.analogInfo = rw.data.analogInfo;
-		data.analogInfo.SampleRate = resampleRate;
-		data.analogInfo.MinVal = min(lpdata);
-		data.analogInfo.MaxVal = max(lpdata);
-		data.analogInfo.HighFreqCorner = Args.LowpassFreqs(1)*1000;
-		data.analogInfo.LowFreqCorner = Args.LowpassFreqs(2)*1000;
-		data.analogInfo.NumberSamples = length(lpdata);
-		data.analogInfo.HighFreqOrder = Args.LPFOrder;
-		data.analogInfo.LowFreqOrder = Args.LPFOrder;
-		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
+		data.analogInfo.MinVal = min(hpdata);
+		data.analogInfo.MaxVal = max(hpdata);
+		data.analogInfo.HighFreqCorner = Args.HighpassFreqs(1)*1000;
+		data.analogInfo.LowFreqCorner = Args.HighpassFreqs(2)*1000;
+		data.analogInfo.NumberSamples = length(hpdata);
+		data.analogInfo.HighFreqOrder = Args.HPFOrder;
+		data.analogInfo.LowFreqOrder = Args.HPFOrder;
+		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','hp');
 		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
 		data.numSets = 1;
 		

@@ -1,14 +1,14 @@
-function [obj, varargout] = vmlfp(varargin)
-%@vmlfp Constructor function for vmlfp class
-%   OBJ = vmlfp(varargin) extracts LFPs from a RIPPLE recording
+function [obj, varargout] = vmhighpass(varargin)
+%@vmhighpass Constructor function for vmhighpass class
+%   OBJ = vmhighpass(varargin) extracts LFPs from a RIPPLE recording
 %
-%   OBJ = vmlfp('auto') attempts to create a vmlfp object by ...
+%   OBJ = vmhighpass('auto') attempts to create a vmhighpass object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on vmlfp %
+%   % Instructions on vmhighpass %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%example [as, Args] = vmlfp('save','redo')
+%example [as, Args] = vmhighpass('save','redo')
 %
 %dependencies: 
 
@@ -25,7 +25,7 @@ Args.DataCheckArgs = {};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'vmlfp';
+Args.classname = 'vmhighpass';
 Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'vp';
 
@@ -46,18 +46,18 @@ elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    rp = rpllfp('auto',modvarargin{:});
-    rl = rplparallel('auto',modvarargin{:});
-    if( isempty(rp) | isempty(rl) )
+    rh = rplhighpass('auto',varargin{:});
+    rl = rplparallel('auto',varargin{:});
+    if( isempty(rh) | isempty(rl) )
     	obj = createEmptyObject(Args);
     else
-	    obj = createObject(rp,rl,Args,modvarargin{:});
+	    obj = createObject(rh,rl,Args,modvarargin{:});
 	end
 end
 
-function obj = createObject(rp,rl,Args,varargin)
+function obj = createObject(rh,rl,Args,varargin)
 
-data = rp.data;
+data = rh.data;
 if(Args.OldMarkerFormat)
     data.markers = reshape(rl.data.markers,2,[])';
     % get start time for each trial
