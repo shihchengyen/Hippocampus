@@ -45,7 +45,7 @@ elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    obj = createObject(Args,varargin{:});
+    obj = createObject(Args,modvarargin{:});
 end
 
 function obj = createObject(Args,varargin)
