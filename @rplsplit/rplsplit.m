@@ -104,7 +104,13 @@ if(dnum>0)
 					cwd = pwd;
 					nptMkDir(array_dir);
 					cd(array_dir);
-					chan_dir = sprintf('channel%03d',rem(chan_num-1,Args.ChannelsPerArray)+1);
+					%
+					% restart channel numbers from 001 for each array
+					% chan_dir = sprintf('channel%03d',rem(chan_num-1,Args.ChannelsPerArray)+1);
+					%
+					% change to keep original channel numbers so we don't
+					% have to switch between channel numbers
+					chan_dir = sprintf('channel%03d',chan_num);
 					nptMkDir(chan_dir);
 					cd(chan_dir);
 					tData.analogInfo = analogInfo;
