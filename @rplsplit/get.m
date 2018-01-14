@@ -18,7 +18,7 @@ r = [];
 
 if(Args.ObjectLevel)
 	% specifies that the object should be created in the session directory
-	r = levelConvert('levelNo',1);
+	r = 'Session';
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
