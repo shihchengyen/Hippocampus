@@ -1,15 +1,70 @@
 %% Processing data after each day of recordings
 % This will split the raw Ripple files in each session into 
-% rplraw and rplparallel objects
-ProcessLevel(rplsplit,'Levels','Day','SaveLevels',2,'LevelObject','Session')
+% rplraw and rplparallel objects. We will skip the LFP files
+% as we will perform our own low-pass filtering on the raw data
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
+
+ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Channel','system(''source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/hplfp/hplfp_submit_file.txt'')'})
+
 % This will use rplraw to first create rplhighpass, then use rplparallel
 % to create vmhighpass
-ProcessLevel(vmhighpass,'Levels','Day','SaveLevels',2,'OldMarkerFormat2')
+ProcessLevel(vmhighpass,'Levels','Session','SaveLevels',2)
 % This will use rplraw to first create rpllfp, then use rplparallel
 % to create vmlfp
-ProcessLevel(vmlfp,'Levels','Day','SaveLevels',2,'OldMarkerFormat2')
+ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
+
+% Generate plots by arrays of the LFPs
+% Break long trials into plots of 3.5 s
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
+	'cwd = pwd; cd ../analog; vma = ProcessLevel(vmlfp,''Levels'',''Array'',''SaveLevels'',2); cd(cwd); vmb = ProcessLevel(vmlfp,''Levels'',''Array''); vmc = vmb + vma; sindex(1).type = ''.''; sindex(1).subs = ''data''; sindex(2).type = ''.''; sindex(2).subs = ''timeStamps''; tStamps = subsref(vmc,sindex); ntrials = size(tStamps,1); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; h.Visible = ''off''; for i = 1:ntrials; plot(vmc,i); linkaxes(get(gcf,''Children''),''x''); title(pwd); xmaxi = tStamps(i,end)-tStamps(i,1)+0.5; ntplots = ceil(xmaxi/3.5); xlimits = -500:3500:((ntplots*3500)-500); for j = 1:ntplots; xlim([xlimits(j) xlimits(j+1)]); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''LFP_Analog_t%03d'',i) sprintf(''-%02d.pdf'',j)]); end; subplot(a(1),a(2),1); end'})
+
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
+	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmlfp(''auto''); ntrials = vp.number; sindex(1).type = ''.''; sindex(1).subs = ''data''; sindex(2).type = ''.''; sindex(2).subs = ''timeStamps''; tStamps = subsref(vp,sindex); cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmlfp''},''GroupPlotSep'',''Vertical''); linkaxes(get(gcf,''Children''),''x''); title(pwd); xmaxi = tStamps(i,end)-tStamps(i,1)+0.5; ntplots = ceil(xmaxi/3.5); xlimits = -500:3500:((ntplots*3500)-500); for j = 1:ntplots; xlim([xlimits(j) xlimits(j+1)]); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''LFPt%03d'',i) sprintf(''-%02d.pdf'',j)]); end; subplot(a(1),a(2),1); end'})
+
+% Generate plots by arrays of the highpass data
+% Break long trials into plots of 3.5 s
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
+	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmhighpass(''auto''); ntrials = vp.number; sindex(1).type = ''.''; sindex(1).subs = ''data''; sindex(2).type = ''.''; sindex(2).subs = ''timeStamps''; tStamps = subsref(vp,sindex); cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmhighpass''},''GroupPlotSep'',''Vertical''); linkaxes(get(gcf,''Children''),''x''); title(pwd); xmaxi = tStamps(i,end)-tStamps(i,1)+0.5; ntplots = ceil(xmaxi/3.5); xlimits = -500:3500:((ntplots*3500)-500); for j = 1:ntplots; xlim([xlimits(j) xlimits(j+1)]); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''HPt%03d'',i) sprintf(''-%02d.pdf'',j)]); end; subplot(a(1),a(2),1); end'})
+
+ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipLFP')
+
+ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
+	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmlfp(''auto''); ntrials = vp.number; cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmlfp''},''GroupPlotSep'',''Vertical''); title(pwd); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''LFPt%03d.pdf'',i)]); subplot(a(1),a(2),1); end'})
+
+ProcessLevel(vmhighpass,'Levels','Session','SaveLevels',2)
+ProcessLevel(nptdata,'Levels','Session','Exclude',{'array01'},'nptLevelCmd',{'Array', ...
+	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmhighpass(''auto''); ntrials = vp.number; cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmhighpass''},''GroupPlotSep'',''Vertical''); title(pwd); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''HPt%03d.pdf'',i)]); subplot(a(1),a(2),1); end'})
+
+ProcessLevel(nptdata,'Levels','Array','nptLevelCmd',{'Array', ...
+	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmhighpass(''auto''); ntrials = vp.number; cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmhighpass''},''GroupPlotSep'',''Vertical''); title(pwd); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''HPt%03d.pdf'',i)]); subplot(a(1),a(2),1); end'})
+
+ng = nptgroup('auto','Levels','Array','LevelObject','Channel');
+ntrials = 82;
+a = nptSubplot(1,1); h = gcf; h.PaperOrientation = 'landscape'; h.PaperType = 'a4';
+for i = 2:ntrials
+    plot(ng,i,'Object',{'vmhighpass'},'GroupPlotSep','Vertical'); 
+    title(pwd); 
+    print('-dpdf','-fillpage','-noui',[getDataOrder('ShortName') sprintf('HPt%03d.pdf',i)]); 
+    subplot(a(1),a(2),1); 
+end
+
+
 % Create nptgroup object containing all channels in a session
-ng18_1_1 = nptgroup('auto','Levels','Array','LevelObject','Channel')
+cd('session01')
+cd('array01')
+ng1 = nptgroup('auto','Levels','Array','LevelObject','Channel')
+cd('../array02')
+ng2 = nptgroup('auto','Levels','Array','LevelObject','Channel')
+cd('../array03')
+ng3 = nptgroup('auto','Levels','Array','LevelObject','Channel')
+cd('../array04')
+ng4 = nptgroup('auto','Levels','Array','LevelObject','Channel')
+InspectGUI(ng1,'Object',{'vmlfp'},'GroupPlotSep','Vertical')
+InspectGUI(ng2,'Object',{'vmlfp'},'GroupPlotSep','Vertical')
+InspectGUI(ng3,'Object',{'vmlfp'},'GroupPlotSep','Vertical')
+InspectGUI(ng4,'Object',{'vmlfp'},'GroupPlotSep','Vertical')
+
 % Inspect all vmhighpass objects session by session
 InspectGUI(ng27_1,'Object',{'vmhighpass'},'GroupPlotSep','Vertical')
 % Inspect all vmlfp objects
@@ -25,8 +80,8 @@ InspectGUI(ng18_1_1,'Object',{'vmlfp',{'OldMarkerFormat'},{'LowpassFreqs',[0.3 2
 
 
 %% Check Ripple file using Neuroshare functions
-[nsStatus,hFile] = ns_OpenFile('170918.ns5');
-entityNum = 279;
+[nsStatus,hFile] = ns_OpenFile('171219_Block1.ns5')
+entityNum = 256;
 [nsStatus,entityInfo] = ns_GetEntityInfo(hFile,entityNum)
 [nsStatus,analogInfo] = ns_GetAnalogInfo(hFile,entityNum)
 [nsStatus,~,analogData] = ns_GetAnalogData(hFile,entityNum,1,entityInfo.ItemCount);
@@ -39,10 +94,11 @@ InspectGUI(rv)
 
 %% run in session directory to create rplraw and rpllfp objects in each channel
 % if we want to just create rpllfp and not rplraw objects
-rplsplit('auto','SaveLevels',2,'SkipRaw');
+rplsplit('auto','SaveLevels',3,'SkipLFP');
 rplsplit('auto','SaveLevels',2,'SkipRaw','LowpassFreqs',[3 250]);
 rplsplit('auto','redo','SaveLevels',2,'SkipLFP','SkipParallel','Channels',114);
 ProcessLevel(rplsplit,'Levels','Day','SaveLevels',2,'LevelObject','Session','redo')
+ProcessLevel(rplsplit,'Levels','Days','SaveLevels',3,'LevelObject','Session','SkipRaw','SkipLFP','SkipParallel')
 
 
 %% create LFP from raw data
