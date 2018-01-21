@@ -5,14 +5,14 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 			'PreTrial',500, 'NormalizeTrial',0, 'RewardMarker',3, ...
-            'TimeOutMarker',4, 'PlotAllData',0, 'OldMarkerFormat2',0, ...
+            'TimeOutMarker',4, 'PlotAllData',0, 'TitleOff', 0, ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, ...
 		    'TFWavelets',0,  ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'LogPlot','TFWavelet','PlotAllData','OldMarkerFormat2'};
+				'LogPlot','TFWavelet','PlotAllData','TitleOff'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -27,8 +27,13 @@ if(~isempty(Args.NumericArguments))
 	n = Args.NumericArguments{1};
 	% find indices for n-th trial
 	tIdx = obj.data.trialIndices(n,:);
+	if(length(tIdx)==2)
+		OldMarkerFormat = 1;
+	else
+		OldMarkerFormat = 0;
+	end
 	sRate = obj.data.analogInfo.SampleRate;
-	if(Args.OldMarkerFormat2)
+	if(OldMarkerFormat)
 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
 	else
 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
@@ -52,7 +57,7 @@ if(~isempty(Args.NumericArguments))
 	elseif(Args.TFfft)
 		if(Args.PlotAllData)
 			% create memory to store overall mean
-			if(Args.OldMarkerFormat2)
+			if(OldMarkerFormat)
 				dIdx = diff(obj.data.trialIndices,1,2);
 			else
 				dIdx = obj.data.trialIndices(:,3) - obj.data.trialIndices(:,1);
@@ -68,7 +73,7 @@ if(~isempty(Args.NumericArguments))
 			opsCount = ops;
 			for ti = 1:obj.data.numSets
 				tftIdx = obj.data.trialIndices(ti,:);
-				if(Args.OldMarkerFormat2)
+				if(OldMarkerFormat)
 					tfidx = tftIdx(1):tftIdx(2);
 				else
 					tfidx = tftIdx(1):tftIdx(3);
@@ -119,30 +124,39 @@ if(~isempty(Args.NumericArguments))
         
         TFRwave = ft_freqanalysis(cfg,data);
 	else
-		data = obj.data.analogData(idx);
+		data = obj.data.analogData(idx,:);
+        drows = size(data,2);
 		if(~isempty(Args.RemoveLineNoise))
 			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
 		end
-		plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data,'.-')
-		% indicate trial start
-		line([0 0],ylim,'Color','g')
-		if(Args.OldMarkerFormat2)
-			if(obj.data.markers(n,2)==Args.RewardMarker)
-				% indicate correct trial
-				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+		axesPositions = separateAxis('Vertical',drows);
+		for spi = 1:drows
+			% do subplot if there are multiple rows of data
+			subplot('Position',axesPositions(spi,:));
+			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
+            if(spi>1)
+                set(gca,'XTickLabel',{})
+            end
+			% indicate trial start
+			line([0 0],ylim,'Color','g')
+			if(OldMarkerFormat)
+				if(obj.data.markers(n,2)==Args.RewardMarker)
+					% indicate correct trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+				else
+					% indicate incorrect trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+				end
 			else
-				% indicate incorrect trial
-				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
-			end
-		else
-			% indicate cue offset
-			line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
-			if(obj.data.markers(n,3)==Args.RewardMarker)
-				% indicate correct trial
-				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
-			else
-				% indicate incorrect trial
-				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+				% indicate cue offset
+				line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
+				if( (obj.data.markers(n,3)==Args.RewardMarker) || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
+					% indicate correct trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+				else
+					% indicate incorrect trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+				end
 			end
 		end
 	end
@@ -162,7 +176,13 @@ else
 			set(gca,'YScale','log')
 		end
 	else
-		if(Args.OldMarkerFormat2)
+		if(size(obj.data.trialIndices,2)<3)
+			OldMarkerFormat = 1;
+		else
+			OldMarkerFormat = 0;
+		end
+		
+		if(OldMarkerFormat)
 			dIdx = diff(obj.data.trialIndices,1,2);
 		else
 			dIdx = obj.data.trialIndices(:,3) - obj.data.trialIndices(:,1);
@@ -174,7 +194,7 @@ else
 		for i = 1:obj.data.numSets
 			idx = obj.data.trialIndices(i,:);
 			if(Args.NormalizeTrial)
-				if(Args.OldMarkerFormat2)
+				if(OldMarkerFormat)
 					rdata = obj.data.analogData(idx(1):idx(2));
 				else
 					rdata = obj.data.analogData(idx(1):idx(3));
@@ -183,7 +203,7 @@ else
 				rdmax = max(rdata);
 				mdata(i,1:(dIdx(i)+1)) = (rdata-rdmin)/(rdmax-rdmin);
 			else
-				if(Args.OldMarkerFormat2)
+				if(OldMarkerFormat)
 					mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(2));
 				else
 					mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(3));
@@ -211,8 +231,10 @@ if(~Args.LabelsOff)
 		ylabel('Voltage (uV)')
 	end
 end
-[a,b] = fileparts(obj.nptdata.SessionDirs{:});
-title(b)
+if(~Args.TitleOff)
+    [a,b] = fileparts(obj.nptdata.SessionDirs{:});
+    title(b)
+end
 if(~isempty(Args.FreqLims))
 	if(Args.FreqPlot)
 		xlim(Args.FreqLims)
@@ -224,5 +246,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RR = eval('Args.ReturnVars');
-for i=1:length(RR) RR1{i}=eval(RR{i}); end 
-varargout = getReturnVal(Args.ReturnVars, RR1);
+lRR = length(RR);
+if(lRR>0)
+    for i=1:lRR
+        RR1{i}=eval(RR{i});
+    end 
+    varargout = getReturnVal(Args.ReturnVars, RR1);
+else
+    varargout = {};
+end
