@@ -12,9 +12,8 @@ function [obj, varargout] = vmhighpass(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-    'OldMarkerFormat',0,'OldMarkerFormat2',0);
-Args.flags = {'Auto','ArgsOnly','OldMarkerFormat','OldMarkerFormat2'};
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0);
+Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};
 
@@ -46,8 +45,8 @@ elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    rh = rplhighpass('auto',varargin{:});
-    rl = rplparallel('auto',varargin{:});
+    rh = rplhighpass('auto',modvarargin{:});
+    rl = rplparallel('auto',modvarargin{:});
     if( isempty(rh) | isempty(rl) )
     	obj = createEmptyObject(Args);
     else
@@ -55,49 +54,12 @@ elseif(strcmp(command,'createObj'))
 	end
 end
 
-function obj = createObject(rh,rl,Args,varargin)
+function [d,n] = createObject(rh,rl,Args,varargin)
 
 data = rh.data;
-if(Args.OldMarkerFormat)
-    data.markers = reshape(rl.data.markers,2,[])';
-    % get start time for each trial
-    data.trialIndices = floor(reshape(rl.data.timeStamps*data.analogInfo.SampleRate,2,[])');
-elseif(Args.OldMarkerFormat2)
-    rawMarkers = rl.data.markers;
-    % format is marker followed by 0, so we will reshape into 2 rows
-    % to make it easy to remove the 0's
-    rm1 = reshape(rawMarkers,2,[]);
-    % remove the 2nd row, which is all 0's
-    % format is 1 marker for start of trial, and another for either
-    % correct or incorrect, so reshape into 2 columns
-    data.markers = reshape(rm1(1,:),2,[])';
-    % get start time for each trial
-    rtime = rl.data.timeStamps;
-    % reshape to remove timestamps for 0's
-    rt1 = reshape(rtime,2,[]);
-    % select 1st row to remove 0's, and the reshape timestamps into 
-    % 2 columns
-    data.timeStamps = reshape(rt1(1,:),2,[])';
-    % compute the data indices corresponding to the marker timestamps
-    data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
-else
-    rawMarkers = rl.data.markers;
-    % format is marker followed by 0, so we will reshape into 2 rows
-    % to make it easy to remove the 0's
-    % remove the 2nd row, which is all 0's
-    % format is: 1 for cue onset/start of trial; 2 for cue offset; 
-    % and 3 or 4 for reward or error/timeout
-    % so we will reshape markers into 3 columns
-    rm1 = reshape(rawMarkers,6,[]);
-    data.markers = rm1([1 3 5],:)';
-    % get start time for each trial
-    rtime = rl.data.timeStamps;
-    rt1 = reshape(rtime,6,[]);
-    data.timeStamps = rt1([1 3 5],:)';    
-    data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
-end
-data.numSets = length(data.trialIndices);
-	
+data = arrangeMarkers(data,rl);
+data.numSets = size(data.trialIndices,1);
+
 % create nptdata so we can inherit from it    
 data.Args = Args;
 n = nptdata(data.numSets,0,pwd);
@@ -108,12 +70,8 @@ saveObject(obj,'ArgsC',Args);
 function obj = createEmptyObject(Args)
 
 % useful fields for most objects
+data.trialIndices = [];
 data.numSets = 0;
-data.setNames = '';
-
-% these are object specific fields
-data.dlist = [];
-data.setIndex = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;
