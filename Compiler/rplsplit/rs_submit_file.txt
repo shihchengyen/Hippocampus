@@ -9,6 +9,7 @@ when_to_transfer_output = ON_EXIT
 transfer_executable = False
 stream_error = True
 stream_output = True
+request_memory = 12 GB
 job_machine_attrs = Machine
 job_machine_attrs_history_length = 5
 requirements = target.machine =!= MachineAttrMachine1 && target.machine =!= MachineAttrMachine2
