@@ -31,9 +31,7 @@ for ni = 1:nec
 				[~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, ni, i);
 			end
 			% create and save obj
-            fprintf('Creating rplparallel object...\n')
 			rplparallel('auto','Data',tData,varargin{:});
-            fprintf('Created rplparallel object\n')
 			clear tData
 		end
 	case 2
