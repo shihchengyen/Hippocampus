@@ -2,16 +2,14 @@
 % This will split the raw Ripple files in each session into 
 % rplraw and rplparallel objects. We will skip the LFP files
 % as we will perform our own low-pass filtering on the raw data
-ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Days','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
 
 ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Channel','system(''source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/hplfp/hplfp_submit_file.txt'')'})
 
-% This will use rplraw to first create rplhighpass, then use rplparallel
-% to create vmhighpass
-ProcessLevel(vmhighpass,'Levels','Session','SaveLevels',2)
-% This will use rplraw to first create rpllfp, then use rplparallel
-% to create vmlfp
-ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
+ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Session','submitSort'})
+
+% generate rpllfp objects in eyesession directories
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Channel','rpllfp(''auto'',''save'');'})
 
 % Generate plots by arrays of the LFPs
 % Break long trials into plots of 3.5 s
@@ -27,6 +25,16 @@ ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
 	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmhighpass(''auto''); ntrials = vp.number; sindex(1).type = ''.''; sindex(1).subs = ''data''; sindex(2).type = ''.''; sindex(2).subs = ''timeStamps''; tStamps = subsref(vp,sindex); cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmhighpass''},''GroupPlotSep'',''Vertical''); linkaxes(get(gcf,''Children''),''x''); title(pwd); xmaxi = tStamps(i,end)-tStamps(i,1)+0.5; ntplots = ceil(xmaxi/3.5); xlimits = -500:3500:((ntplots*3500)-500); for j = 1:ntplots; xlim([xlimits(j) xlimits(j+1)]); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''HPt%03d'',i) sprintf(''-%02d.pdf'',j)]); end; subplot(a(1),a(2),1); end'})
 
 ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipLFP')
+
+% check spike sorting
+
+
+% This will use rplraw to first create rplhighpass, then use rplparallel
+% to create vmhighpass
+ProcessLevel(vmhighpass,'Levels','Session','SaveLevels',2)
+% This will use rplraw to first create rpllfp, then use rplparallel
+% to create vmlfp
+ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
 
 ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
 ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
@@ -49,6 +57,13 @@ for i = 2:ntrials
     subplot(a(1),a(2),1); 
 end
 
+% check spike sorting
+h = rplhighpass('auto');
+load g095c01_spiketrain.mat
+panGUI
+plot(rh.data.analogTime(1:100000)*1000,rh.data.analogData(1:100000),'.-')
+hold on
+stem(rh.data.analogTime(timestamps(1:100))*1000,repmat(100,1,100))
 
 % Create nptgroup object containing all channels in a session
 cd('session01')
