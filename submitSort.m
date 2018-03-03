@@ -1,4 +1,13 @@
 function submitSort(varargin)
+	% submitSort Submits channels for spike sorting
+	%   This function checks a spreadsheet to submit channels for spike sorting. This function should be called from
+	%   session directory, or can be used in the following manner to submit several days of data for spike sorting:
+	%       ProcessLevel(nptdata,'Levels','Days','Exclude',{'analog'},'nptLevelCmd',{'Session','submitSort'})
+	%   This function uses the following optional arguments:
+	%       CellLog	- 'Cell activity log.xlsx'
+	%       ChannelsPerArray - 32
+	%       SortCmd - 'source ~/.bash_profile; cp ~/Dropbox/Work/Matlab/hmmsort/hmmsort5.dag .; condor_submit_dag -maxpre 10
+	%                  hmmsort5.dag'
 
 Args = struct('CellLog','Cell activity log.xlsx','ChannelsPerArray',32, ...
 	'SortCmd','source ~/.bash_profile; cp ~/Dropbox/Work/Matlab/hmmsort/hmmsort5.dag .; condor_submit_dag -maxpre 10 hmmsort5.dag');
