@@ -2,7 +2,7 @@
 % This will split the raw Ripple files in each session into 
 % rplraw and rplparallel objects. We will skip the LFP files
 % as we will perform our own low-pass filtering on the raw data
-ProcessLevel(rplsplit,'Levels','Days','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
 
 ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Channel','system(''source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/hplfp/hplfp_submit_file.txt'')'})
 
