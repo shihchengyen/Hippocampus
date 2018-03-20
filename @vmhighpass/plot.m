@@ -5,7 +5,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 			'PreTrial',500, 'NormalizeTrial',0, 'RewardMarker',3, ...
-            'TimeOutMarker',4, 'PlotAllData',0, ...
+            'TimeOutMarker',4, 'PlotAllData',0, 'SpikeData',[], ...
+            'SpikeTriggerIndex', 26, 'SpikeHeight', 100, ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, ...
@@ -128,7 +129,7 @@ if(~isempty(Args.NumericArguments))
 		if(~isempty(Args.RemoveLineNoise))
 			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
 		end
-		plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data,'.-')
+		plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1))) * 1000,data,'.-')
 		% indicate trial start
 		line([0 0],ylim,'Color','g')
 		if(OldMarkerFormat)
@@ -150,6 +151,17 @@ if(~isempty(Args.NumericArguments))
 				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
 			end
 		end
+		if(~isempty(Args.SpikeData))
+			hold on
+			% get SpikeData
+			mlseq = Args.SpikeData;
+			spidx = Args.SpikeTriggerIndex;
+			% add spike trains
+			st1 = find(mlseq(1,idx)==spidx);
+			% add stem plot
+			stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,size(st1),1))
+			
+		end	
 	end
 else
 	% plot all data
