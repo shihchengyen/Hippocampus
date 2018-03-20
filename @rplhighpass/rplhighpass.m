@@ -69,10 +69,14 @@ if(~isempty(Args.Data))
 else
 	rw = rplraw('auto',varargin{:});
 	if(~isempty(rw))		
-		hpdata = nptHighPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
+		% Matlab Compiler appears to be calling the wrong subsref when accessing 
+		% fields inside the data structure inside objects, so we are going to
+		% have to get the data structure first and then access the fields inside it
+		rwdata = rw.data;
+		hpdata = nptHighPassFilter(rwdata.analogData,rwdata.analogInfo.SampleRate, ...
 					Args.HighpassFreqs(1),Args.HighpassFreqs(2));
 		data.analogData = hpdata;
-		data.analogInfo = rw.data.analogInfo;
+		data.analogInfo = rwdata.analogInfo;
 		data.analogInfo.MinVal = min(hpdata);
 		data.analogInfo.MaxVal = max(hpdata);
 		data.analogInfo.HighFreqCorner = Args.HighpassFreqs(1)*1000;

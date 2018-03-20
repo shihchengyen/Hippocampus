@@ -37,18 +37,7 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
-
-		
-		% object specific fields
-		r.data.unityData = [p.data.unityData; q.data.unityData];
-		r.data.unityTriggers = [p.data.unityTriggers; q.data.unityTriggers];
-		r.data.sumCost = [p.data.sumCost; q.data.sumCost];
-		r.data.sumRoute = concat(p.data.sumRoute,q.data.sumRoute);
-		r.data.sumActualRoute = concat(p.data.sumActualRoute,q.data.sumActualRoute);
-		r.data.perf = [p.data.perf; q.data.perf];
-		r.data.processTrials = [p.data.processTrials; q.data.processTrials];
-		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
-			+ q.data.setIndex(2:end))];
+		r.data.analogData = [p.data.analogData q.data.analogData];
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);

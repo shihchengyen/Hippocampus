@@ -4,6 +4,7 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
+			'SpikeData',[], 'SpikeTriggerIndex', 26, 'SpikeHeight', 100, ...
 		  'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial'};
 [Args,varargin2] = getOptArgs(varargin,Args);
@@ -18,7 +19,22 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	plot(obj.data.analogTime,obj.data.analogData,'.-')
+	plot(obj.data.analogTime * 1000,obj.data.analogData,'.-')
+	if(~isempty(Args.SpikeData))
+		hold on
+		% get SpikeData
+		mlseq = Args.SpikeData;
+		spidx = Args.SpikeTriggerIndex;
+		ncells = size(mlseq,1);
+		clist = nptDefaultColors(1:ncells);
+		% add spike trains
+		for spi = 1:ncells
+			st1 = find(mlseq(spi,:)==spidx);
+			% add stem plot
+			stem( obj.data.analogTime(st1) * 1000, repmat(Args.SpikeHeight,[size(st1),1]), 'Color', clist(spi,:))
+		end
+		hold off
+	end	
 else
 	% plot all data
 	plot(obj.data.analogTime,obj.data.analogData,'.-')
@@ -36,5 +52,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RR = eval('Args.ReturnVars');
-for i=1:length(RR) RR1{i}=eval(RR{i}); end 
-varargout = getReturnVal(Args.ReturnVars, RR1);
+lRR = length(RR);
+if(lRR>0)
+    for i=1:lRR
+        RR1{i}=eval(RR{i});
+    end 
+    varargout = getReturnVal(Args.ReturnVars, RR1);
+else
+    varargout = {};
+end
