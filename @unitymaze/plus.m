@@ -40,7 +40,13 @@ else
 
 		
 		% object specific fields
-		r.data.dlist = [p.data.dlist; q.data.dlist];
+		r.data.unityData = [p.data.unityData; q.data.unityData];
+		r.data.unityTriggers = [p.data.unityTriggers; q.data.unityTriggers];
+		r.data.sumCost = [p.data.sumCost; q.data.sumCost];
+		r.data.sumRoute = concat(p.data.sumRoute,q.data.sumRoute);
+		r.data.sumActualRoute = concat(p.data.sumActualRoute,q.data.sumActualRoute);
+		r.data.perf = [p.data.perf; q.data.perf];
+		r.data.processTrials = [p.data.processTrials; q.data.processTrials];
 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
 			+ q.data.setIndex(2:end))];
 			
