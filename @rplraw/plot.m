@@ -4,8 +4,8 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		  'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial'};
+		  'FreqPlot',0, 'ReturnVars',{''}, 'ArgsOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -18,22 +18,27 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	plot(obj.data.analogTime,obj.data.analogData,'.-')
+	if(Args.FreqPlot)
+		PlotFFT(obj.data.analogData,obj.data.analogInfo.SampleRate);
+		set(gca,'TickDir','out')
+	else
+		plot(obj.data.analogTime,obj.data.analogData,'.-')
+	end
+	if(~Args.LabelsOff)
+		xlabel('Freq (Hz)')
+		ylabel('Magnitude')
+    end
+    
+    sdstr = get(obj,'SessionDirs');
+	title(getDataOrder('ShortName','DirString',sdstr{n}))
 else
 	% plot all data
 	plot(obj.data.analogTime,obj.data.analogData,'.-')
+	if(~Args.LabelsOff)
+		xlabel('Time (ms)')
+		ylabel('Voltage (uV)')
+	end
 end
-
-% add code for plot options here
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% @rpllfp/PLOT takes 'LabelsOff' as an example
-if(~Args.LabelsOff)
-	xlabel('X Axis')
-	ylabel('Y Axis')
-end
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RR = eval('Args.ReturnVars');
 for i=1:length(RR) RR1{i}=eval(RR{i}); end 
