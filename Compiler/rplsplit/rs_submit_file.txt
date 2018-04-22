@@ -1,5 +1,5 @@
 universe     = vanilla
-Executable   = /Users/shihcheng/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/run_rsCreateObject.sh
+Executable   = /Users/shihcheng/cbin/run_rsCreateObject.sh
 Arguments    = "/Applications/MATLAB_R2016b.app"
 Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
 Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
