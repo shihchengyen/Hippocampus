@@ -5,8 +5,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 			'SpikeData',[], 'SpikeTriggerIndex', 26, 'SpikeHeight', 100, ...
-		  'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial'};
+		    'LoadSort', 0, 'ReturnVars',{''}, 'ArgsOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','LoadSort'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -20,6 +20,10 @@ if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
 	plot(obj.data.analogTime * 1000,obj.data.analogData,'.-')
+	if(Args.LoadSort)
+		l = load('hmmsort.mat');
+		Args.SpikeData = l.mlseq;
+	end
 	if(~isempty(Args.SpikeData))
 		hold on
 		% get SpikeData
