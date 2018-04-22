@@ -9,7 +9,7 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0,'GroupPlotProperties',0, ...
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'GroupPlotProperties',0, ...
 				'Number',0, 'Trial',0);
 Args.flags ={'ObjectLevel','AnalysisLevel','GroupPlotProperties','Number','Trial'};
 Args = getOptArgs(varargin,Args);
