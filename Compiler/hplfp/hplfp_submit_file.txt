@@ -1,5 +1,5 @@
 universe     = vanilla
-Executable   = /Users/shihcheng/Dropbox/Work/Matlab/Hippocampus/Compiler/hplfp/run_vmhplfp.sh
+Executable   = /Users/shihcheng/cbin/run_vmhplfp.sh
 Arguments    = "/Applications/MATLAB_R2016b.app"
 Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
 Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
