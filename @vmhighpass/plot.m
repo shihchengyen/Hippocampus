@@ -11,9 +11,10 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, ...
 		    'TFWavelets',0,  ...
+		    'LoadSort',0, ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'LogPlot','TFWavelet','PlotAllData'};
+				'LogPlot','TFWavelet','PlotAllData','LoadSort'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -151,6 +152,10 @@ if(~isempty(Args.NumericArguments))
 				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
 			end
 		end
+		if(Args.LoadSort)
+			l = load('hmmsort.mat');
+			Args.SpikeData = l.mlseq;
+		end			
 		if(~isempty(Args.SpikeData))
 			hold on
 			% get SpikeData
@@ -159,8 +164,8 @@ if(~isempty(Args.NumericArguments))
 			% add spike trains
 			st1 = find(mlseq(1,idx)==spidx);
 			% add stem plot
-			stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,size(st1),1))
-			
+			stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,[size(st1),1]))
+			hold off
 		end	
 	end
 else
@@ -234,8 +239,8 @@ if(~Args.LabelsOff)
 		ylabel('Voltage (uV)')
 	end
 end
-[a,b] = fileparts(obj.nptdata.SessionDirs{:});
-title(b)
+sdstr = get(obj,'SessionDirs');
+title(getDataOrder('ShortName','DirString',sdstr{1}))
 if(~isempty(Args.FreqLims))
 	if(Args.FreqPlot)
 		xlim(Args.FreqLims)
