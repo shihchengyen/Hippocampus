@@ -54,7 +54,7 @@ elseif(strcmp(command,'createObj'))
 	end
 end
 
-function [d,n] = createObject(rh,rl,Args,varargin)
+function obj = createObject(rh,rl,Args,varargin)
 
 data = rh.data;
 data = arrangeMarkers(data,rl);
