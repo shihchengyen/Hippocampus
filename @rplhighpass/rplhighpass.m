@@ -13,7 +13,7 @@ function [obj, varargout] = rplhighpass(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[], 'HighpassFreqs',[500 10000], 'HPFOrder',8);
+				'Data',[], 'HighpassFreqs',[500 7500], 'HPFOrder',8);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments that are critical when loading saved data
 Args.DataCheckArgs = {'HighpassFreqs'};                            
