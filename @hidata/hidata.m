@@ -59,7 +59,7 @@ dlist = dir(Args.FileName);
 dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
-if(dnum>0 || eval(Args.Eval))
+if(dnum>0)
 	% these are fields that are useful for most objects
 	data.numChannels = 1;
 	% this is a valid object
