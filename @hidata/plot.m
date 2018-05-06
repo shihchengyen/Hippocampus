@@ -95,6 +95,7 @@ if(~isempty(Args.NumericArguments))
 					fprintf('%s\n',lm);
 				end  % catch
 			end  % for i = 1:nobjs
+			cd(cwd)
 		end	 % for pidx = (chnstart+1):chnend	
 	else  % if(UseGMRlayout)
 		% create a new nptdata object using the relevant directories
