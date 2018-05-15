@@ -166,8 +166,10 @@ if(~isempty(Args.NumericArguments))
        		clist = nptDefaultColors(1:ncells);
             for si = 1:ncells
                 st1 = find(mlseq(si,idx)==spidx);
-                % add stem plot
-                stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,[size(st1),1]), 'Color', clist(si,:))
+                if(~isempty(st1))
+                    % add stem plot
+                    stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,[size(st1),1]), 'Color', clist(si,:))
+                end
             end
 			hold off
 		end	
