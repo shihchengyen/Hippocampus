@@ -1,11 +1,12 @@
 function [obj, varargout] = plot(obj,varargin)
-%@rpllfp/plot Plot function for rplraw object.
+%@rplraw/plot Plot function for rplraw object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		  'FreqPlot',0, 'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot'};
+		  'FFT',0, 'XLims',[0 10000], 'Cmds','', ...
+		  'ReturnVars',{''}, 'ArgsOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FFT'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -18,28 +19,49 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	if(Args.FreqPlot)
+	if(Args.FFT)
 		PlotFFT(obj.data.analogData,obj.data.analogInfo.SampleRate);
-		set(gca,'TickDir','out')
+		if(~Args.LabelsOff)
+			xlabel('Freq (Hz)')
+			ylabel('Magnitude')
+	    end
+		xlim(Args.XLims)
 	else
-		plot(obj.data.analogTime,obj.data.analogData,'.-')
+		plot(obj.data.analogTime *1000,obj.data.analogData,'.-')
+		if(~Args.LabelsOff)
+			xlabel('Time (ms)')
+			ylabel('Voltage (uV)')
+		end
 	end
-	if(~Args.LabelsOff)
-		xlabel('Freq (Hz)')
-		ylabel('Magnitude')
-    end
-    
-    sdstr = get(obj,'SessionDirs');
-	title(getDataOrder('ShortName','DirString',sdstr{n}))
 else
 	% plot all data
-	plot(obj.data.analogTime,obj.data.analogData,'.-')
-	if(~Args.LabelsOff)
-		xlabel('Time (ms)')
-		ylabel('Voltage (uV)')
+	if(Args.FFT)
+		PlotFFT(obj.data.analogData,obj.data.analogInfo.SampleRate);
+		if(~Args.LabelsOff)
+			xlabel('Freq (Hz)')
+			ylabel('Magnitude')
+	    end
+		xlim(Args.XLims)
+	else
+		plot(obj.data.analogTime *1000,obj.data.analogData,'.-')
+		if(~Args.LabelsOff)
+			xlabel('Time (ms)')
+			ylabel('Voltage (uV)')
+		end
 	end
 end
 
+set(gca,'TickDir','out')
+sdstr = get(obj,'SessionDirs');
+title(getDataOrder('ShortName','DirString',sdstr{1}))
+
 RR = eval('Args.ReturnVars');
-for i=1:length(RR) RR1{i}=eval(RR{i}); end 
-varargout = getReturnVal(Args.ReturnVars, RR1);
+lRR = length(RR);
+if(lRR>0)
+    for i=1:lRR
+        RR1{i}=eval(RR{i});
+    end 
+    varargout = getReturnVal(Args.ReturnVars, RR1);
+else
+    varargout = {};
+end
