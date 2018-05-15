@@ -5,7 +5,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0, 'GroupPlots',1, 'GroupPlotIndex',1, 'Color','b', ...
 			'SpikeData',[], 'SpikeTriggerIndex',26, 'SpikeHeight',100, ...
-		    'FFT',0, 'LoadSort',0, 'ReturnVars',{''}, 'ArgsOnly',0);
+		    'FFT',0, 'XLims',[0 10000], 'LoadSort',0, 'Cmds','', ...
+		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','LoadSort','FFT'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
@@ -25,6 +26,7 @@ if(~isempty(Args.NumericArguments))
 			xlabel('Freq (Hz)')
 			ylabel('Magnitude')
 		end
+		xlim(Args.XLims)
 	else
 		plot(obj.data.analogTime * 1000,obj.data.analogData,'.-')
 		if(Args.LoadSort)
@@ -59,6 +61,7 @@ else
 			xlabel('Freq (Hz)')
 			ylabel('Magnitude')
 		end
+		xlim(Args.XLims)
 	else
 		plot(obj.data.analogTime * 1000,obj.data.analogData,'.-')
 		if(~Args.LabelsOff)
@@ -70,6 +73,14 @@ end
 
 sdstr = get(obj,'SessionDirs');
 title(getDataOrder('ShortName','DirString',sdstr{1}))
+
+if(~isempty(Args.Cmds))
+    % save the current figure in case Args.Cmds switches to another figure
+    h = gcf;
+    eval(Args.Cmds)
+    % switch back to previous figure
+    figure(h);
+end
 
 RR = eval('Args.ReturnVars');
 lRR = length(RR);
