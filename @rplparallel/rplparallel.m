@@ -13,7 +13,7 @@ function [obj, varargout] = rplparallel(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'Channel',1, ...
-				'StartMarker',1, 'Data',[]);
+				'StartMarker',1, 'Data',[], 'ObjectLevel','Session');
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};                            
@@ -30,10 +30,10 @@ Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'df';
 
 % change to the right directory
-[p,cwd] = getDataOrder('session','CDNow');
+% [p,cwd] = getDataOrder('session','CDNow');
 
 % To decide the method to create or load the object
-command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
+[command, robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
 
 if(strcmp(command,'createEmptyObjArgs'))
     varargout{1} = {'Args',Args};
@@ -43,8 +43,9 @@ elseif(strcmp(command,'createEmptyObj'))
 elseif(strcmp(command,'passedObj'))
     obj = varargin{1};
 elseif(strcmp(command,'loadObj'))
-    l = load(Args.matname);
-    obj = eval(['l.' Args.matvarname]);
+    % l = load(Args.matname);
+    % obj = eval(['l.' Args.matvarname]);
+	obj = robj;
 elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
@@ -53,7 +54,7 @@ elseif(strcmp(command,'createObj'))
 end
 
 % change back to previous directory
-cd(cwd)
+% cd(cwd)
 
 function obj = createObject(Args,varargin)
 
