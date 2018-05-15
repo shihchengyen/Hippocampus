@@ -13,7 +13,7 @@ function [obj, varargout] = unitymaze(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'FileLineOfffset',15, 'DirName','RawData_*', ...
+				'FileLineOfffset',15, 'DirName','RawData_*', 'ObjectLevel','Session', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
 				'TriggerVal3',30);
 Args.flags = {'Auto','ArgsOnly'};
@@ -33,8 +33,8 @@ Args.matvarname = 'um';
 
 % To decide the method to create or load the object
 % change to proper directory to check for saved object
-% [pdir,cdir] = getDataOrder('session','relative','CDNow');
-command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
+% [pdir,cdir] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
+[command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
 
 if(strcmp(command,'createEmptyObjArgs'))
     varargout{1} = {'Args',Args};
@@ -44,8 +44,9 @@ elseif(strcmp(command,'createEmptyObj'))
 elseif(strcmp(command,'passedObj'))
     obj = varargin{1};
 elseif(strcmp(command,'loadObj'))
-    l = load(Args.matname);
-    obj = eval(['l.' Args.matvarname]);
+    % l = load(Args.matname);
+    % obj = eval(['l.' Args.matvarname]);
+	obj = robj;
 elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
@@ -186,24 +187,24 @@ if(~isempty(rd))
 		        for c = 1:size(pathdiff,1)-1,
 		            if pathdiff(c) == pathdiff(c+1)*(-1);
 
-		                plot(xBound,zBound,'k','LineWidth',1.5);
-						hold on
-		                plot(x1Bound,z1Bound,'k','LineWidth',1);
-		                plot(x2Bound,z2Bound,'k','LineWidth',1);
-		                plot(x3Bound,z3Bound,'k','LineWidth',1);
-		                plot(x4Bound,z4Bound,'k','LineWidth',1);
-		                plot(unityData(unityTriggers(a,2):unityTriggers(a,3)-1,3),unityData(unityTriggers(a,2):unityTriggers(a,3)-1,4),'b','LineWidth',1); % plot current trial trajectory
-		                plot(unityData(unityTriggers(a,3),3),unityData(unityTriggers(a,3),4),'k.','MarkerSize',20); % plot end point identifier
-						hold off
+		                % plot(xBound,zBound,'k','LineWidth',1.5);
+						% hold on
+		                % plot(x1Bound,z1Bound,'k','LineWidth',1);
+		                % plot(x2Bound,z2Bound,'k','LineWidth',1);
+		                % plot(x3Bound,z3Bound,'k','LineWidth',1);
+		                % plot(x4Bound,z4Bound,'k','LineWidth',1);
+		                % plot(unityData(unityTriggers(a,2):unityTriggers(a,3)-1,3),unityData(unityTriggers(a,2):unityTriggers(a,3)-1,4),'b','LineWidth',1); % plot current trial trajectory
+		                % plot(unityData(unityTriggers(a,3),3),unityData(unityTriggers(a,3),4),'k.','MarkerSize',20); % plot end point identifier
+						% hold off
 
-		                userInput = input('Enter (1) to ACCEPT and (2) to REJECT as shortest route: ');
+		                % userInput = input('Enter (1) to ACCEPT and (2) to REJECT as shortest route: ');
 
-		                    if userInput == 1,
+		                    % if userInput == 1,
 		                        sumCost(a,6) = 1;
-		                    end
+								% end
 
 		                    % close all % close figure     
-		                break % exit for loop
+		                % break % exit for loop
 		            end % if pathdiff(c) == pathdiff(c+1)*(-1);
 		        end % for c = 1:size(pathdiff,1)-1,
 		        clear pathdiff 
