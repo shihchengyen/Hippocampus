@@ -85,7 +85,6 @@ if(dnum>0)
     data.Args = Args;
 		
 	% create nptdata so we can inherit from it
-    
     data.Args = Args;
 	n = nptdata(data.numChannels,0,pwd);
 	d.data = data;
@@ -104,9 +103,6 @@ data.numArrays = 0;
 data.numSessions = 0;
 data.numDays = 0;
 data.spikeForms = [];
-
-% these are object specific fields
-data.setIndex = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;
