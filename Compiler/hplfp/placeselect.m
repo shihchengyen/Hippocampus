@@ -1,6 +1,6 @@
-function placeselect
+function placeselect(dirstr)
 	
-nShuffles = 1000;
+nShuffles = 10;
 res = 5; % 5 x 5 grid resolution
 overalGridSize = 25;
 oGS2 = overalGridSize/2;
@@ -158,7 +158,8 @@ if(~isempty(l.mlseq))
         bar(spikeTargetFreq(:,1),'FaceColor','green');
         set(gca,'xticklabel',{'T1','T2','T3','T4','T5','T6'});
         title('Target-specificity');
-        ylabel('Firing frequency (Hz)'); hold on
+        ylabel('Firing frequency (Hz)'); 
+		hold on
         errorbar(1:6,spikeTargetFreq(:,1),spikeTargetFreq(:,2),'k.');
         for q=1:6
             text(q,1,num2str(spikeTargetFreq(q,3)),'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize',5);
@@ -181,10 +182,10 @@ if(~isempty(l.mlseq))
         end  % for i = 1:25
 		
 		% change to the session directory to read the spreadsheet
-		[p,cwd] = getDataOrder('session','CDNow');
-        save('excludeBins','excludeBins');
+		% [p,cwd] = getDataOrder('session','CDNow');
+        % save('excludeBins','excludeBins');
 		% return to previous directory
-		cd(cwd);
+		% cd(cwd);
         spikeFreq(:,excludeBins) = nan; % exclude segments traversed < 6 times from heat map analyses
         
         % Get 95th percentile (significance using shuffling method)
@@ -206,6 +207,7 @@ if(~isempty(l.mlseq))
 
         % Plot firing rate map
         subplot(2,7,[6 7 13 14])
+		disp('Subplot')
         firRate = reshape(spikeFreq(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
         imAlpha=ones(size(firRate)); % plot NaN regions as black
         imAlpha(isnan(firRate))=0;
@@ -218,6 +220,7 @@ if(~isempty(l.mlseq))
         plot(2,3.5,'r.','MarkerSize',40);
         plot(2,4.5,'r.','MarkerSize',40);
         plot(4.5,4,'r.','MarkerSize',40); hold on
+		disp('Finished plots')
 
         for n = 1:25, % highlight significant grids from shuffle
         	row = floor(n/5); 
@@ -229,26 +232,31 @@ if(~isempty(l.mlseq))
             end  % if column == 0, % if no remainder, plot in 5th grid
                 
             if unit_locsig(1,n) < unit_locsig(2,n), % below cutoff
-                textHandles(column,row) = text(column,row,'*','Color','k','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
+                textHandles(column,row) = text(column,row,'*','Color','k','FontSize',15,'horizontalAlignment','center'); 
+				  hold on % indicate significant grids with asterisk
             elseif unit_locsig(1,n) > unit_locsig(3,n), % above cutoff
-                textHandles(column,row) = text(column,row,'*','Color','w','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
+                textHandles(column,row) = text(column,row,'*','Color','w','FontSize',15,'horizontalAlignment','center'); 
+				  hold on % indicate significant grids with asterisk
             end  % if unit_locsig(1,n) < unit_locsig(2,n), % below cutoff
         end  % for n = 1:25, % highlight significant grids from shuffle
         
         title('Firing rate map (spikes/s)');
         set(gcf, 'InvertHardCopy', 'off'); % retain black background in figure
-        h = suptitle(strcat(getDataOrder('ShortName'), ' Unit ', num2str(si,'%02d'), ' SI: ', num2str(round(unit_locSI,2)))); % main title
+        h = suptitle(strcat(getDataOrder('ShortName','DirString',dirstr), ' Unit ', num2str(si,'%02d'), ' SI: ', num2str(round(unit_locSI,2)))); % main title
         set(h,'FontSize',16);
 
         set(gcf,'units','normalized','outerposition',[0 0 1 1]); % maximize figure
         set(gcf, 'PaperPositionMode', 'auto');
+		disp('Completed figure')
 
         % ANOVA and multiple comparisons
         figure();
+		disp('New figure')
         [P,T,STATS,TERMS]=anovan(firingRate,{binNo},'display','off'); % use anovan for unbalanced groups
         [COMPARISON,MEANS,H,GNAMES] = multcompare(STATS,'CType','bonferroni','display','off'); % post-hoc pairwise comparisons
         
         figure(f1);
+		disp('Old figure')
         anovaSig = COMPARISON(COMPARISON(:,6)<0.05,1:2); % find pairwise comparison rows with p < .05
         anovaSigLocs = GNAMES(anovaSig); % get location bins with p < .05
         for bb = 1:numel(anovaSigLocs),
@@ -259,7 +267,9 @@ if(~isempty(l.mlseq))
 
 		ustr = ['unit' num2str(si,'%02d') '_placefield'];
 	    saveas(gcf,[ustr '.png']);
+		disp('Saved PNG')
 		save([ustr '.mat'],'unit_locSI')
+		disp('Saved MAT')
 	    close all;
     
 	    clearvars -except nShuffles res numGrids gridSize horGridBound vertGridBound l sampleRate unityTriggers processTrials unityData rplTriggers rplTrialType rplTrialDur spikeSort spikeForms ncells 
