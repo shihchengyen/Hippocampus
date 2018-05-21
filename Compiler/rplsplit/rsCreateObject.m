@@ -1,6 +1,6 @@
 function rsCreateObject()
 
-% load arguments
+% load arguments 
 % we are doing this so this program can run in compiled form
 load('rsData');
 % delete rsData.mat
