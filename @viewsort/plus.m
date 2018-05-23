@@ -44,7 +44,8 @@ else
 
 		% check if p and q are from the same array
 		if(~strcmp(p.data.arrstr(end,:),q.data.arrstr))
-			r.data.arrstr = [p.data.arrstr; q.data.arrstr];
+            % concatenate p and q
+			r.data.arrstr = strvcat(p.data.arrstr, q.data.arrstr);
 			r.data.ArrayIndex = [p.data.ArrayIndex; (p.data.ArrayIndex(end) ...
 				+ q.data.ArrayIndex(2:end))];
 		else
@@ -54,7 +55,8 @@ else
 
 		% check if p and q are from the same session
 		if(~strcmp(p.data.sesstr(end,:),q.data.sesstr))
-			r.data.sesstr = [p.data.sesstr; q.data.sesstr];
+            % concatenate p and q
+			r.data.sesstr = strvcat(p.data.sesstr, q.data.sesstr);
 			r.data.SessionIndex = [p.data.SessionIndex; (p.data.SessionIndex(end) ...
 				+ q.data.SessionIndex(2:end))];
 		else
@@ -64,7 +66,8 @@ else
 
 		% check if p and q are from the same day
 		if(~strcmp(p.data.daystr(end,:),q.data.daystr))
-			r.data.daystr = [p.data.daystr; q.data.daystr];
+            % concatenate p and q
+			r.data.daystr = strvcat(p.data.daystr, q.data.daystr);
 			r.data.DayIndex = [p.data.DayIndex; (p.data.DayIndex(end) ...
 				+ q.data.DayIndex(2:end))];
 		else

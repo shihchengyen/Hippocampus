@@ -50,6 +50,10 @@ if(~isempty(Args.NumericArguments))
 			plot((obj.data.spikeForms(xind,:))','.-')
 			sdstr = get(obj,'SessionDirs');
 			title(getDataOrder('ShortName','DirString',sdstr{chnindex}))
+            
+            % plot noise on top of waveform
+            % plot((obj.data.Noise(xind,:))','.-')
+            
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
 		xind = (obj.data.ChannelIndex(n)+1):obj.data.ChannelIndex(n+1);

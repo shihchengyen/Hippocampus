@@ -13,7 +13,8 @@ function [obj, varargout] = viewsort(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'FileName','hmmsort.mat');
+				'FileName','hmmsort.mat','HMMDir','hmmsort', ...
+                'HMMFile','spike_templates.hdf5','HMMNoise','cinv');
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -68,7 +69,12 @@ if(dnum>0)
 	data.spikeForms = squeeze(l.spikeForms);
 	if(sf1==1)
 		data.spikeForms = data.spikeForms';
-	end
+    end
+    
+    % get noise data from spike templates
+    % addpath(Args.HMMDir);
+    % data.Noise = hdf5read(Args.HMMFile,Args.HMMNoise);
+        
 	% set index to keep track of which data goes with which directory
 	data.ChannelIndex = [0; sf1];
 	data.ArrayIndex = [0; 1];
