@@ -64,7 +64,8 @@ if(dnum>0)
 	% these are fields that are useful for most objects
 	data.numChannels = 1;
 	% this is a valid object
-	l = load(Args.FileName);	
+
+    l = load(Args.FileName);	
 	[sf1,sf2,sf3] = size(l.spikeForms);
 	data.spikeForms = squeeze(l.spikeForms);
 	if(sf1==1)
@@ -72,11 +73,13 @@ if(dnum>0)
     end
     
     % get noise data from spike templates
-    % addpath(Args.HMMDir);
-    % data.Noise = hdf5read(Args.HMMFile,Args.HMMNoise);
-        
+    cwd = pwd;
+    cd(Args.HMMDir);
+    data.Noise(sf1,1:45) = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
+    cd(cwd);
+             
 	% set index to keep track of which data goes with which directory
-	data.ChannelIndex = [0; sf1];
+    data.ChannelIndex = [0; sf1];
 	data.ArrayIndex = [0; 1];
 	data.SessionIndex = [0; 1];
 	data.DayIndex = [0; 1];
@@ -109,6 +112,7 @@ data.numArrays = 0;
 data.numSessions = 0;
 data.numDays = 0;
 data.spikeForms = [];
+
 
 % create nptdata so we can inherit from it
 data.Args = Args;

@@ -52,7 +52,10 @@ if(~isempty(Args.NumericArguments))
 			title(getDataOrder('ShortName','DirString',sdstr{chnindex}))
             
             % plot noise on top of waveform
-            % plot((obj.data.Noise(xind,:))','.-')
+            hold on
+            plot(obj.data.Noise(xind(end),:),'r')
+            plot(0-(obj.data.Noise(xind(end),:)),'r')
+            hold off
             
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
