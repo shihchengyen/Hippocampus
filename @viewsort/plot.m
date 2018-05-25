@@ -65,14 +65,17 @@ if(~isempty(Args.NumericArguments))
 %             line(repmat(xlim',1,2),repmat([-obj.data.Noise],2,1));
 %            plot(obj.data.Noise(xind(end),:),'r')
 %            plot(0-(obj.data.Noise(xind(end),:)),'r')
-            hold off
-            
+            hold off            
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
 		xind = (obj.data.ChannelIndex(n)+1):obj.data.ChannelIndex(n+1);
 		plot((obj.data.spikeForms(xind,:))','.-')
 		sdstr = get(obj,'SessionDirs');
 		title(getDataOrder('ShortName','DirString',sdstr{n}))
+        % plot noise on top of waveform
+        hold on
+        line(repmat(xlim',1,2),repmat([-obj.data.Noise(n) obj.data.Noise(n)],2,1),'Color','r')
+        hold off
 	end  % if(Args.Array || Args.Session || Args.Day)
 else
 	% plot all data
