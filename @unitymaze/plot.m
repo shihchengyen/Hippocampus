@@ -56,7 +56,7 @@ if(~isempty(Args.NumericArguments))
 		sstr = num2str(obj.data.sumCost(n,1));
 		ratiostr = num2str(obj.data.sumCost(n,2)/obj.data.sumCost(n,1));
 		% use n and setIndex to find which session this trial belongs to
-		sessionnum = find(obj.data.setIndex<n);
+		sessionnum = find(obj.data.setIndex<=n);
 		sdstr = get(obj,'SessionDirs');
 		sessionstr = getDataOrder('ShortName','DirString',sdstr{sessionnum(end)});
 				
