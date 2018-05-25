@@ -13,7 +13,8 @@ function [obj, varargout] = viewsort(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'FileName','hmmsort.mat');
+				'FileName','hmmsort.mat','HMMDir','hmmsort', ...
+                'HMMFile','spike_templates.hdf5','HMMNoise','cinv');
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -63,14 +64,22 @@ if(dnum>0)
 	% these are fields that are useful for most objects
 	data.numChannels = 1;
 	% this is a valid object
-	l = load(Args.FileName);	
+
+    l = load(Args.FileName);	
 	[sf1,sf2,sf3] = size(l.spikeForms);
 	data.spikeForms = squeeze(l.spikeForms);
 	if(sf1==1)
 		data.spikeForms = data.spikeForms';
-	end
+    end
+    
+    % get noise data from spike templates
+    cwd = pwd;
+    cd(Args.HMMDir);
+    data.Noise = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
+    cd(cwd);
+             
 	% set index to keep track of which data goes with which directory
-	data.ChannelIndex = [0; sf1];
+    data.ChannelIndex = [0; sf1];
 	data.ArrayIndex = [0; 1];
 	data.SessionIndex = [0; 1];
 	data.DayIndex = [0; 1];
@@ -103,6 +112,7 @@ data.numArrays = 0;
 data.numSessions = 0;
 data.numDays = 0;
 data.spikeForms = [];
+
 
 % create nptdata so we can inherit from it
 data.Args = Args;
