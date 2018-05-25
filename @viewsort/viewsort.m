@@ -75,7 +75,7 @@ if(dnum>0)
     % get noise data from spike templates
     cwd = pwd;
     cd(Args.HMMDir);
-    data.Noise(sf1,1:45) = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
+    data.Noise = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
     cd(cwd);
              
 	% set index to keep track of which data goes with which directory

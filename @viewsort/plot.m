@@ -4,7 +4,7 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		'Array',0, 'Session',0, 'Day',0, ...
+		'Array',0, 'Session',0, 'Day',0,  ...
 		'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day'};
 [Args,varargin2] = getOptArgs(varargin,Args);
@@ -16,22 +16,30 @@ if Args.ArgsOnly
     return;
 end
 
+UseGMRlayout = 0;
+
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
 	if(Args.Array || Args.Session || Args.Day)
 		if(Args.Array)
-			% plot waveforms array by array
-			% get starting row in ChannelIndex
-			chnstart = obj.data.ArrayIndex(n);
-			% get ending row in ChannelIndex
-			chnend = obj.data.ArrayIndex(n+1);
+            % plot waveforms array by array
+            % get starting row in ChannelIndex
+            chnstart = obj.data.ArrayIndex(n);
+            % get ending row in ChannelIndex
+            chnend = obj.data.ArrayIndex(n+1);
+%             if(Args.UseGMR)
+%                 UseGMRlayout = 1;
+%             end
 		elseif(Args.Session)
 			% plot waveforms session by session
-			% get starting row in ChannelIndex
-			chnstart = obj.data.SessionIndex(n);
-			% get ending row in ChannelIndex
-			chnend = obj.data.SessionIndex(n+1);
+            % get starting row in ChannelIndex
+            chnstart = obj.data.SessionIndex(n);
+            % get ending row in ChannelIndex
+            chnend = obj.data.SessionIndex(n+1);
+%             if(Args.UseGMR)
+%                 UseGMRlayout = 1;
+%             end
 		elseif(Args.Day)
 			% plot waveforms session by session
 			% get starting row in ChannelIndex
@@ -53,8 +61,10 @@ if(~isempty(Args.NumericArguments))
             
             % plot noise on top of waveform
             hold on
-            plot(obj.data.Noise(xind(end),:),'r')
-            plot(0-(obj.data.Noise(xind(end),:)),'r')
+            line(repmat(xlim',1,2),repmat([-obj.data.Noise(index) obj.data.Noise(index)],2,1),'Color','r')
+%             line(repmat(xlim',1,2),repmat([-obj.data.Noise],2,1));
+%            plot(obj.data.Noise(xind(end),:),'r')
+%            plot(0-(obj.data.Noise(xind(end),:)),'r')
             hold off
             
 		end  % for index = 1:numSets
@@ -75,19 +85,30 @@ else
 		plot((obj.data.spikeForms(xind,:))','.-')
 		sdstr = get(obj,'SessionDirs');
 		title(getDataOrder('ShortName','DirString',sdstr{index}))
+        
+        % add code for plot options here
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % @viewsort/PLOT takes 'LabelsOff' as an example
+        if(~Args.LabelsOff)
+            xlabel('Data Points')
+            ylabel('Voltage (uV)')
+        end
+        %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	end
 end
 
-% add code for plot options here
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% @viewsort/PLOT takes 'LabelsOff' as an example
-if(~Args.LabelsOff)
-	xlabel('Data Points')
-	ylabel('Voltage (uV)')
-end
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % add code for plot options here
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %
+% % @viewsort/PLOT takes 'LabelsOff' as an example
+% if(~Args.LabelsOff)
+% 	xlabel('Data Points')
+% 	ylabel('Voltage (uV)')
+% end
+% %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RR = eval('Args.ReturnVars');
 lRR = length(RR);
