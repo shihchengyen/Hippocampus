@@ -69,9 +69,9 @@ if(dnum>0)
 	end
 	% set index to keep track of which data goes with which directory
 	data.ChannelIndex = [0; dnum];
-	data.ArrayIndex = [0; 1];
-	data.SessionIndex = [0; 1];
-	data.DayIndex = [0; 1];
+	data.ArrayIndex = [0; dnum];
+	data.SessionIndex = [0; dnum];
+	data.DayIndex = [0; dnum];
 	% get channel string
 	[data.arrstr(1,:), chnstr] = nptFileParts(pwd);
 	% get array string

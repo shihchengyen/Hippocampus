@@ -4,9 +4,9 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		'Array',0, 'Session',0, 'Day',0, ...
+		'Channel',0, 'Array',0, 'Session',0, 'Day',0, ...
 		'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day'};
+Args.flags = {'LabelsOff','ArgsOnly','Channel','Array','Session','Day'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -19,39 +19,46 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	if(Args.Array || Args.Session || Args.Day)
-		if(Args.Array)
+	if(Args.Channel || Args.Array || Args.Session || Args.Day)
+		if(Args.Channel)
 			% plot waveforms array by array
 			% get starting row in ChannelIndex
-			chnstart = obj.data.ArrayIndex(n);
+			sistart = obj.data.ChannelIndex(n)+1;
 			% get ending row in ChannelIndex
-			chnend = obj.data.ArrayIndex(n+1);
+			siend = obj.data.ChannelIndex(n+1);			
+			stem(obj.data.locSI(sistart:siend))
+			sdstr = get(obj,'SessionDirs');
+			title(getDataOrder('ShortName','DirString',sdstr{n}))
+		elseif(Args.Array)
+			% plot waveforms array by array
+			% get starting row in ChannelIndex
+			sistart = obj.data.ArrayIndex(n)+1;
+			% get ending row in ChannelIndex
+			siend = obj.data.ArrayIndex(n+1);
+			stem(obj.data.locSI(sistart:siend))
+			title(obj.data.arrstr(n,:))
 		elseif(Args.Session)
 			% plot waveforms session by session
 			% get starting row in ChannelIndex
-			chnstart = obj.data.SessionIndex(n);
+			sistart = obj.data.SessionIndex(n)+1;
 			% get ending row in ChannelIndex
-			chnend = obj.data.SessionIndex(n+1);
+			siend = obj.data.SessionIndex(n+1);
+			stem(obj.data.locSI(sistart:siend))
+			title(obj.data.sesstr(n,:))
 		elseif(Args.Day)
 			% plot waveforms session by session
 			% get starting row in ChannelIndex
-			chnstart = obj.data.DayIndex(n);
+			sistart = obj.data.DayIndex(n)+1;
 			% get ending row in ChannelIndex
-			chnend = obj.data.DayIndex(n+1);
-		end  % if(Args.Array)
-		% get number of channels in this array
-		numSets = chnend - chnstart;
-	    for index = 1:numSets
-	        if(numSets>1)
-	            nptSubplot(numSets,index);
-	        end
-			chnindex = chnstart + index;
-			xind = (obj.data.ChannelIndex(chnindex)+1):obj.data.ChannelIndex(chnindex+1);
-			plot((obj.data.spikeForms(xind,:))','.-')
-			sdstr = get(obj,'SessionDirs');
-			title(getDataOrder('ShortName','DirString',sdstr{chnindex}))
-		end  % for index = 1:numSets
-	else  % if(Args.Array || Args.Session || Args.Day)
+			siend = obj.data.DayIndex(n+1);
+			stem(obj.data.locSI(sistart:siend))
+			title(obj.data.daystr(n,:))
+		end  % if(Args.Channel)
+		if(~Args.LabelsOff)
+			xlabel('Cells')
+			ylabel('Place Selectivity Index')
+		end
+	else  % if(Args.Channel || Args.Array || Args.Session || Args.Day)
 		% display png file for each unit
 		% first get the directory
 		sidx = find(obj.data.ChannelIndex>=n);
@@ -69,11 +76,11 @@ if(~isempty(Args.NumericArguments))
 else
 	% plot all data
 	stem(obj.data.locSI)
-	ci = obj.data.ChannelIndex(2:end);
-	nci = size(ci,1);
-	cix = repmat((ci+0.5)',2,1);
-	ciy = repmat(ylim',1,nci);
-	line(cix,ciy)
+	% ci = obj.data.ChannelIndex(2:end);
+	% nci = size(ci,1);
+	% cix = repmat((ci+0.5)',2,1);
+	% ciy = repmat(ylim',1,nci);
+	% line(cix,ciy)
 	if(~Args.LabelsOff)
 		xlabel('Cells')
 		ylabel('Place Selectivity Index')

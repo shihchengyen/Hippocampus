@@ -13,7 +13,7 @@ function [obj, varargout] = unitymaze(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'FileLineOfffset',15, 'DirName','RawData_*', 'ObjectLevel','Session', ...
+				'FileLineOfffset',15, 'DirName','RawData*', 'ObjectLevel','Session', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
 				'TriggerVal3',30);
 Args.flags = {'Auto','ArgsOnly'};
@@ -163,13 +163,21 @@ if(~isempty(rd))
 		        % (current position) get nearest neighbour vertex
 		        CP = pdist2(vertices,currPos,'euclidean'); % get distance from all vertices
 		        [M3,I3] = min(CP); % M is the minimum value, I is the index of the minimum value
-		        path(b+1,1) = I3; % store nearest vertice for each location (per frame) into matrix 'path'
+		        mpath(b+1,1) = I3; % store nearest vertice for each location (per frame) into matrix 'mpath'
 			end
         
-			pathdiff = diff(path); change = [1; pathdiff(:)]; index = find(abs(change)>0); % get index of vertex change
-			actualRoute = path(index); % get actual route
+			pathdiff = diff(mpath); 
+			change = [1; pathdiff(:)]; 
+			index = find(abs(change)>0); % get index of vertex change
+			actualRoute = mpath(index); % get actual route
 			actualCost = (size(actualRoute,1)-1)*5; % get cost of actual route
-			clear path; clear pathdiff; clear change; clear index;         
+            actualTime = index; 
+			actualTime(end+1) = size(mpath,1); 
+			actualTime = diff(actualTime)+1; % get time in each space bin
+            % clear mpath; 
+			clear pathdiff; 
+			clear change; 
+			clear index;         
         
 			% Store summary
 			sumCost(a,1) = idealCost; 
@@ -179,35 +187,28 @@ if(~isempty(rd))
 			sumCost(a,5) = unityData(unityTriggers(a,3),1)-target; % mark out correct/incorrect trials        
 			sumRoute(a,1:size(idealroute,2)) = idealroute; % store shortest route
 			sumActualRoute(a,1:size(actualRoute,1)) = actualRoute; % store actual route
-    
+            sumActualTime(a,1:size(actualTime,1)) = actualTime; % store actual time spent in each space bin
+            
 		    if sumCost(a,3) <= 0, % least distance taken
 		        sumCost(a,6) = 1; % mark out trials completed via shortest route
 			elseif sumCost(a,3) > 0 && sumCost(a,5) == 30, 
 		        pathdiff = diff(actualRoute); % check if there's a one grid change of mind. If so, enable user to inspect trajectory 
-		        for c = 1:size(pathdiff,1)-1,
-		            if pathdiff(c) == pathdiff(c+1)*(-1);
+		        
+                for c = 1:size(pathdiff,1)-1,
+                    if pathdiff(c) == pathdiff(c+1)*(-1);
+                        timeingrid = size(find(mpath == actualRoute(c+1)),1);
 
-		                % plot(xBound,zBound,'k','LineWidth',1.5);
-						% hold on
-		                % plot(x1Bound,z1Bound,'k','LineWidth',1);
-		                % plot(x2Bound,z2Bound,'k','LineWidth',1);
-		                % plot(x3Bound,z3Bound,'k','LineWidth',1);
-		                % plot(x4Bound,z4Bound,'k','LineWidth',1);
-		                % plot(unityData(unityTriggers(a,2):unityTriggers(a,3)-1,3),unityData(unityTriggers(a,2):unityTriggers(a,3)-1,4),'b','LineWidth',1); % plot current trial trajectory
-		                % plot(unityData(unityTriggers(a,3),3),unityData(unityTriggers(a,3),4),'k.','MarkerSize',20); % plot end point identifier
-						% hold off
-
-		                % userInput = input('Enter (1) to ACCEPT and (2) to REJECT as shortest route: ');
-
-		                    % if userInput == 1,
-		                        sumCost(a,6) = 1;
-								% end
-
-		                    % close all % close figure     
-		                % break % exit for loop
-		            end % if pathdiff(c) == pathdiff(c+1)*(-1);
-		        end % for c = 1:size(pathdiff,1)-1,
-		        clear pathdiff 
+                        if timeingrid > 165, % greater than 5 seconds spent in grid (unlikely to have entered by accident due to poor steering)
+                            break
+                        else
+                            % disp('im here');
+                            sumCost(a,6) = 1;
+                        end
+                    else                
+                    end
+                end
+               
+		        clear mpath pathdiff 
 		    end % if sumCost(a,3) <= 0,
 		end % for a = 1:totTrials
 
@@ -215,8 +216,10 @@ if(~isempty(rd))
 
 		% Calculate performance
 		errorInd = find(sumCost(:,5) == 40); 
-		sumCost(errorInd,6) = 0; sumCost(errorInd+1,6) = 0; % exclude rewarded trials that were preceded by a timeout
-		perf = sum(sumCost(:,6))/50; disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
+		sumCost(errorInd,6) = 0; 
+		sumCost(errorInd+1,6) = 0; % exclude rewarded trials that were preceded by a timeout
+		perf = sum(sumCost(:,6))/50; 
+		disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
 		processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
 
 		% clearvars -except day session directory unityTriggers unityData sumCost sumRoute sumActualRoute perf processTrials
@@ -227,6 +230,7 @@ if(~isempty(rd))
 		data.sumCost = sumCost;
 		data.sumRoute = sumRoute;
 		data.sumActualRoute = sumActualRoute;
+        data.sumActualTime = sumActualTime;
 		data.perf = perf;
 		data.processTrials = processTrials;
 		data.setIndex = [1; totTrials];
@@ -259,6 +263,7 @@ data.unityTriggers = [];
 data.sumCost = [];
 data.sumRoute = [];
 data.sumActualRoute = [];
+data.sumActualTime = [];
 data.perf = [];
 data.processTrials = [];
 data.setIndex = [];
