@@ -138,8 +138,12 @@ if(rval~=-1)
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt; cd $cwd; done']);
         else  % if(~Args.SkipSort)
 			display('Launching eyehplfp_nosort scripts...')
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-        end  % if(~Args.SkipSort)
+            if ~Args.UseHPC
+                system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPathcondor_submit ~/cbin/eyehplfp_nosort_submit_file.txt; cd $cwd; done']);
+            else
+                system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; qsub $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/eyehplfpHPC_nosort_submit_file.txt; cd $cwd; done');
+            end
+		end  % if(~Args.SkipSort)
 	end  % if(isempty(strfind(sesname,'eye')))
 end  %  if(rval~=-1)
 
