@@ -1,5 +1,5 @@
 function [obj, varargout] = plot(obj,varargin)
-%@vmlfp/plot Plot function for vmlfp object.
+%@vmswr/plot Plot function for vmswr object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
 

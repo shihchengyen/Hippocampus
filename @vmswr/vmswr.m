@@ -68,17 +68,21 @@ if(~isempty(Args.Data))
 	saveObject(obj,'ArgsC',Args);	
 else
 	rw = rplraw('auto',varargin{:});
-	if(~isempty(rw))		
-		[lpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
+	if(~isempty(rw))
+        rlndata = nptRemoveLineNoise(rw.data.analogData, 50, rw.data.analogInfo.SampleRate); % remove 50Hz line noise
+		[bpdata,resampleRate] = nptLowPassFilter(rlndata,rw.data.analogInfo.SampleRate, ...
 					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
-		data.analogData = lpdata;
-		data.analogInfo = rw.data.analogInfo;
+		data.analogData = bpdata;
+        data.analogRmsData = nptRms(bpdata,0.02*rw.data.analogInfo.SampleRate,...
+            rw.data.analogInfo.SampleRate/200,1); % (data, window length = 0.02s, overlap = 200Hz, zero pad for last window)
+        data.swrInfo = nptSwr(data.analogRmsData);
+        data.analogInfo = rw.data.analogInfo;
 		data.analogInfo.SampleRate = resampleRate;
-		data.analogInfo.MinVal = min(lpdata);
-		data.analogInfo.MaxVal = max(lpdata);
+		data.analogInfo.MinVal = min(bpdata);
+		data.analogInfo.MaxVal = max(bpdata);
 		data.analogInfo.HighFreqCorner = Args.LowpassFreqs(1)*1000;
 		data.analogInfo.LowFreqCorner = Args.LowpassFreqs(2)*1000;
-		data.analogInfo.NumberSamples = length(lpdata);
+		data.analogInfo.NumberSamples = length(bpdata);
 		data.analogInfo.HighFreqOrder = Args.LPFOrder;
 		data.analogInfo.LowFreqOrder = Args.LPFOrder;
 		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
