@@ -4,10 +4,10 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		'Array',0, 'Session',0, 'Day',0,  ...
-		'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day'};
-[Args,varargin2] = getOptArgs(varargin,Args);
+		'Array',0, 'Session',0, 'Day',0, 'UseGMR',0, ...
+		'Cmds', '', 'ReturnVars',{''}, 'ArgsOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day', 'UseGMR'};
+[Args,varargin2] = getOptArgs(varargin,Args,'removenumargs');
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
 if Args.ArgsOnly
@@ -18,6 +18,7 @@ end
 
 UseGMRlayout = 0;
 
+% plot waveform
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
@@ -28,24 +29,24 @@ if(~isempty(Args.NumericArguments))
             chnstart = obj.data.ArrayIndex(n);
             % get ending row in ChannelIndex
             chnend = obj.data.ArrayIndex(n+1);
-%             if(Args.UseGMR)
-%                 UseGMRlayout = 1;
-%             end
+            if(Args.UseGMR)
+                UseGMRlayout = 1;
+            end
 		elseif(Args.Session)
 			% plot waveforms session by session
             % get starting row in ChannelIndex
             chnstart = obj.data.SessionIndex(n);
             % get ending row in ChannelIndex
             chnend = obj.data.SessionIndex(n+1);
-%             if(Args.UseGMR)
-%                 UseGMRlayout = 1;
-%             end
-		elseif(Args.Day)
-			% plot waveforms session by session
-			% get starting row in ChannelIndex
-			chnstart = obj.data.DayIndex(n);
-			% get ending row in ChannelIndex
-			chnend = obj.data.DayIndex(n+1);
+            if(Args.UseGMR)
+                UseGMRlayout = 1;
+            end
+        elseif(Args.Day)
+            % plot waveforms session by session
+            % get starting row in ChannelIndex
+            chnstart = obj.data.DayIndex(n);
+            % get ending row in ChannelIndex
+            chnend = obj.data.DayIndex(n+1);
 		end  % if(Args.Array)
 		% get number of channels in this array
 		numSets = chnend - chnstart;
@@ -62,18 +63,48 @@ if(~isempty(Args.NumericArguments))
             % plot noise on top of waveform
             hold on
             line(repmat(xlim',1,2),repmat([-obj.data.Noise(index) obj.data.Noise(index)],2,1),'Color','r')
-%             line(repmat(xlim',1,2),repmat([-obj.data.Noise],2,1));
-%            plot(obj.data.Noise(xind(end),:),'r')
-%            plot(0-(obj.data.Noise(xind(end),:)),'r')
+            % plot(obj.data.Noise(xind(end),:),'r')
+            % plot(0-(obj.data.Noise(xind(end),:)),'r')
             hold off
             
+            % add axis labels
+            if(~Args.LabelsOff)
+            xlabel('Data Points')
+            ylabel('Voltage (uV)')
+            end
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
-		xind = (obj.data.ChannelIndex(n)+1):obj.data.ChannelIndex(n+1);
-		plot((obj.data.spikeForms(xind,:))','.-')
-		sdstr = get(obj,'SessionDirs');
-		title(getDataOrder('ShortName','DirString',sdstr{n}))
-	end  % if(Args.Array || Args.Session || Args.Day)
+        xind = (obj.data.ChannelIndex(n)+1):obj.data.ChannelIndex(n+1);
+        plot((obj.data.spikeForms(xind,:))','.-')
+        sdstr = get(obj,'SessionDirs');
+        title(getDataOrder('ShortName','DirString',sdstr{n}))
+        
+        % plot noise on top of waveform
+        hold on
+        line(repmat(xlim',1,2),repmat([-obj.data.Noise(n) obj.data.Noise(n)],2,1),'Color','r')
+        % plot(obj.data.Noise(xind(end),:),'r')
+        % plot(0-(obj.data.Noise(xind(end),:)),'r')
+        hold off
+        
+        % add axis labels
+        if(~Args.LabelsOff)
+            xlabel('Data Points')
+            ylabel('Voltage (uV)')
+        end
+        
+        % show ISI coefficients of variation
+        legendLabels = cell(1,size(xind,1));
+        for k = 1:size(xind,2)
+            legendLabels{k} = num2str(round(obj.data.coeffV_ISI(xind(k)),2));
+        end
+        lgd = legend(legendLabels, 'FontSize', 12);
+        title(lgd,{'ISI Distribution','Coefficient of Variation: '})
+        % subplot(round((numUnits+1)/2),2,d+1);
+        % histogram(spike_ISI,1000,'facecolor',plotColour(d),'edgecolor',plotColour(d)); hold on
+        % title(strcat('(',num2str(d),')',' ISI Distribution, Coefficient of Variation: ', num2str(round(coeffV_ISI,2))));
+        % xlabel('ISI(ms)','FontSize',10); ylabel('Count','FontSize',10);
+       
+    end  % if(Args.Array || Args.Session || Args.Day)
 else
 	% plot all data
 	numSets = obj.data.numSets;
@@ -81,23 +112,33 @@ else
         if(numSets>1)
             nptSubplot(numSets,index);
         end
-		xind = (obj.data.ChannelIndex(index)+1):obj.data.ChannelIndex(index+1);
-		plot((obj.data.spikeForms(xind,:))','.-')
-		sdstr = get(obj,'SessionDirs');
-		title(getDataOrder('ShortName','DirString',sdstr{index}))
-        
-        % add code for plot options here
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %
-        % @viewsort/PLOT takes 'LabelsOff' as an example
+        xind = (obj.data.ChannelIndex(index)+1):obj.data.ChannelIndex(index+1);
+        plot((obj.data.spikeForms(xind,:))','.-')
+        sdstr = get(obj,'SessionDirs');
+        title(getDataOrder('ShortName','DirString',sdstr{index}))
+        % plot noise on top of waveform
+        hold on
+        line(repmat(xlim',1,2),repmat([-obj.data.Noise(xind) obj.data.Noise(xind)],2,1),'Color','r')
+        % plot(obj.data.Noise(xind(end),:),'r')
+        % plot(0-(obj.data.Noise(xind(end),:)),'r')
+        hold off
+        % add axis labels
         if(~Args.LabelsOff)
             xlabel('Data Points')
             ylabel('Voltage (uV)')
         end
-        %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	end
+    end
 end
+
+% show spike similarities (dot product)
+
+
+
+if(~isempty(Args.Cmds))
+    cd(sdstr{n})
+    eval(Args.Cmds)
+end
+
 
 % % add code for plot options here
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

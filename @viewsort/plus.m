@@ -37,6 +37,7 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.spikeForms = [p.data.spikeForms; q.data.spikeForms];
+        r.data.coeffV_ISI = [p.data.coeffV_ISI; q.data.coeffV_ISI];
         r.data.Noise = [p.data.Noise;q.data.Noise];
         r.data.numChannels = p.data.numChannels + q.data.numChannels;
 		% object specific fields

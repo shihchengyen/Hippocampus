@@ -77,7 +77,21 @@ if(dnum>0)
     cd(Args.HMMDir);
     data.Noise = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
     cd(cwd);
-             
+    
+    if (isfield(l,'mlseq') > 0)
+        % get and plot ISI coefficient of variation for waveform
+        spikeSort = l.mlseq;
+        for ind = 1:sf1
+            [M,I] = min(data.spikeForms(ind,:)); % get index of peak
+            spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
+            spikeTimes = spikeTimes/30; spike_ISI = diff(spikeTimes);
+            data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
+        end
+    else
+        data.coeffV_ISI(1:sf1) = NaN;
+    end
+    data.coeffV_ISI = data.coeffV_ISI';
+    
 	% set index to keep track of which data goes with which directory
     data.ChannelIndex = [0; sf1];
 	data.ArrayIndex = [0; 1];
