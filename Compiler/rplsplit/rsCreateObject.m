@@ -120,7 +120,7 @@ if(rval~=-1)
         cmdPath = 'condor_submit ~/cbin/';
         cmdScript = '';
     else
-        cmdPath = 'qsub $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/';
+        cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
         cmdScript = 'HPC';
     end
 	if(isempty(strfind(sesname,'eye')))
