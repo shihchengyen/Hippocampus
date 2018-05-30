@@ -1,4 +1,4 @@
 #PBS -l mem=12GB
 #PBS -l walltime=24:00:00
-cd ~/HPCTemp/
+cd ~/hpctmp2/HPCTemp/
 $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/rplsplit/run_eyehplfp.sh /app1/common/matlab/R2018a/
