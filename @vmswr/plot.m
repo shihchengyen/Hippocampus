@@ -1,18 +1,17 @@
+% takes in key input
+% the key input does not seem compatible with the current structure
+
 function [obj, varargout] = plot(obj,varargin)
 %@vmswr/plot Plot function for vmswr object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-			'PreTrial',500, 'NormalizeTrial',0, 'RewardMarker',3, ...
-            'TimeOutMarker',4, 'PlotAllData',0, 'TitleOff', 0, ...
-            'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
-		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
-		    'TFfftPoints',256, ...
-		    'TFWavelets',0,  ...
-		    'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'LogPlot','TFWavelet','PlotAllData','TitleOff'};
+            'PreTrial',500,'Rms',1, ...
+            'PlotAllData',0,'RemoveLineNoise',[],'TitleOff', 0, ...
+            'ReturnVars',{''}, 'ArgsOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly', ...
+            'PlotAllData'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -25,225 +24,226 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	% find indices for n-th trial
-	tIdx = obj.data.trialIndices(n,:);
-	if(length(tIdx)==2)
-		OldMarkerFormat = 1;
-	else
-		OldMarkerFormat = 0;
-	end
-	sRate = obj.data.analogInfo.SampleRate;
-	if(OldMarkerFormat)
-		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
-	else
-		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
-	end
-	if(Args.FreqPlot)
-		if(Args.PlotAllData)
-			data = obj.data.analogData;
-		else
-			data = obj.data.analogData(idx);
-		end
-		if(~isempty(Args.RemoveLineNoise))
-			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-		end
-		% remove the mean, i.e. DC component		
-		datam = mean(data);			
-		PlotFFT(data-datam,sRate);
-		set(gca,'TickDir','out')
-		if(Args.LogPlot)
-			set(gca,'YScale','log')
-		end
-	elseif(Args.TFfft)
-		if(Args.PlotAllData)
-			% create memory to store overall mean
-			if(OldMarkerFormat)
-				dIdx = diff(obj.data.trialIndices,1,2);
-			else
-				dIdx = obj.data.trialIndices(:,3) - obj.data.trialIndices(:,1);
-			end
-			% find longest trial
-			mIdx = max(dIdx);
-			% find number of time bins in the spectrogram that corresponds to
-			spTimeStep = Args.TFfftWindow - Args.TFfftOverlap;
-			spTimeBins = floor(mIdx/spTimeStep) - Args.TFfftOverlap/spTimeStep;
-			% create matrix
-			nFreqs = (Args.TFfftPoints/2)+1;			
-			ops = zeros(nFreqs,spTimeBins);
-			opsCount = ops;
-			for ti = 1:obj.data.numSets
-				tftIdx = obj.data.trialIndices(ti,:);
-				if(OldMarkerFormat)
-					tfidx = tftIdx(1):tftIdx(2);
-				else
-					tfidx = tftIdx(1):tftIdx(3);
-				end
-				data = obj.data.analogData(tfidx);
-				if(~isempty(Args.RemoveLineNoise))
-					data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-				end
-				datam = mean(data);
-				[s,w,t,ps] = spectrogram(data-datam,Args.TFfftWindow, ...
-					Args.TFfftOverlap,Args.TFfftPoints,sRate);
-				% add to overall mean
-				% get columns of ps
-				psIdx = 1:size(ps,2);
-				ops(:,psIdx) = ops(:,psIdx) + ps;
-				opsCount(:,psIdx) = opsCount(:,psIdx) + 1;
-			end
-			imagesc(0:(Args.TFfftWindow-Args.TFfftOverlap):mIdx,0:(sRate/Args.TFfftPoints):(sRate/2),ops./opsCount)
-            set(gca,'Ydir','normal')
-		else
-			data = obj.data.analogData(idx);
-			if(~isempty(Args.RemoveLineNoise))
-				data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-			end
-			datam = mean(data);
-			spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
-				sRate,'yaxis')
-		end
-	elseif(Args.TFWavelets)
-		% not fully completed yet
-    	cdata = nptRemoveLineNoise(obj.data.analogData',50,1000);
-    	cdata1 = cdata(idx);
-    	cdata1m = mean(cdata1);
-    	PlotFFT(cdata1-cdata1m,1000);
+%     % find indices for n-th trial
+% 	tIdx = obj.data.trialIndices(n,:);
+%     sRate = obj.data.analogInfo.SampleRate;
+%     swrInfo = obj.data.analogInfo.Swr;
+%     
+% 	if(length(tIdx)==2)
+% 		OldMarkerFormat = 1;
+% 	else
+% 		OldMarkerFormat = 0;
+%     end
+%     
+%     if(OldMarkerFormat)
+% 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
+% 	else
+% 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
+%     end
+%     
+%     if(Args.Rms)
+%         if (Args.PlotAllData)
+%             data = obj.data.analogRmsData;
+%         else
+%             data = obj.data.analogRmsData(idx,:);
+%         end
+%         sc = 200; %scaling for graphs
+%         numPlots = floor(size(data,2)/sc);
+%     else
+%         if (Args.PlotAllData)
+%             data = obj.data.analogData;
+%         else
+%             data = obj.data.analogData(idx,:);
+%         end
+%         sc = 1000;
+%         numPlots = floor(size(data,2)/sc);
+%     end
+%     if(~isempty(Args.RemoveLineNoise))
+% 			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+%     end
+%     
+%     j = 1;
+%     while j < numPlots+1
+%         
+%         xi = (j-1)*200+1;
+%         xf = j*200;
+%         yi = (j-1)*sc+1;
+%         yf = j*sc;
+%         
+%         y0 = min(data(1, yi:yf));
+%         y1 = max(data(1, yi:yf));
+%         
+%         for i = 1:length(swrInfo)
+%             if swrInfo(i,3) >= xi || swrInfo(i,2) <= xf % detects if swr event is in the graph
+%                 if swrInfo(i,3) >= xi && swrInfo(i,2) < xi
+%                     x0 = xi;
+%                     x1 = swrInfo(i,3)+0.5;
+%                 elseif swrInfo(i,2) <= xf && swrInfo(i,3) > xf
+%                     x0 = swrInfo(i,2)-0.5;
+%                     x1 = xf;
+%                 else
+%                     x0 = swrInfo(i,2)-0.5;
+%                     x1 = swrInfo(i,3)+0.5;
+%                 end
+%                 
+%                 patch([x0 x1 x1 x0].*5, [y0*[1 1] y1*[1 1]], [0.7 0.8 1], 'LineStyle','none') 
+%             end
+%         end
+%         
+%         plot((j-1)*sc+1:j*sc, data(1,(j-1)*sc+1:j*sc)); %highlights the SPW Event
+%         hold on
+%         plot((j-1)*sc+1:j*sc, data(1,yi:yf));
+%     end
     
-        data.trial = num2cell(mdata,2);
-        data.label = '1';
-        data.fsample = 1000;
-        data.time = num2cell(repmat((0:13087)/1000,51,1),2);
-
-        cfg.channel = 'all';
-        cfg.method = 'wavelet';
-        cfg.width = 7;
-        cfg.output = 'pow';
-        cfg.foi = 1:100;
-        cfg.toi = 0:5000;
-        cfg.pad = 'nextpow2';
-        
-        TFRwave = ft_freqanalysis(cfg,data);
-	else
-		data = obj.data.analogData(idx,:);
-        drows = size(data,2);
-		if(~isempty(Args.RemoveLineNoise))
-			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-		end
-		axesPositions = separateAxis('Vertical',drows);
-		for spi = 1:drows
-			% do subplot if there are multiple rows of data
-			subplot('Position',axesPositions(spi,:));
-			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
-            if(spi>1)
-                set(gca,'XTickLabel',{})
-            end
-			% indicate trial start
-			line([0 0],ylim,'Color','g')
-			if(OldMarkerFormat)
-				if(obj.data.markers(n,2)==Args.RewardMarker)
-					% indicate correct trial
-					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
-				else
-					% indicate incorrect trial
-					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
-				end
-			else
-				% indicate cue offset
-				line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
-				if( (obj.data.markers(n,3)==Args.RewardMarker) || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
-					% indicate correct trial
-					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
-				else
-					% indicate incorrect trial
-					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
-				end
-			end
-		end
-	end
 else
 	% plot all data
-	if(Args.FreqPlot)
-		sRate = obj.data.analogInfo.SampleRate;
-		data = obj.data.analogData;
-		if(~isempty(Args.RemoveLineNoise))
-			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-		end
-
-		datam = mean(data);
-		PlotFFT(data-datam,sRate)
-		set(gca,'TickDir','out')
-		if(Args.LogPlot)
-			set(gca,'YScale','log')
-		end
-	else
-		if(size(obj.data.trialIndices,2)<3)
-			OldMarkerFormat = 1;
-		else
-			OldMarkerFormat = 0;
-		end
-		
-		if(OldMarkerFormat)
-			dIdx = diff(obj.data.trialIndices,1,2);
-		else
-			dIdx = obj.data.trialIndices(:,3) - obj.data.trialIndices(:,1);
-		end
-		% find longest trial
-		mIdx = max(dIdx);
-		% create matrix
-		mdata = zeros(obj.data.numSets,mIdx);
-		for i = 1:obj.data.numSets
-			idx = obj.data.trialIndices(i,:);
-			if(Args.NormalizeTrial)
-				if(OldMarkerFormat)
-					rdata = obj.data.analogData(idx(1):idx(2));
-				else
-					rdata = obj.data.analogData(idx(1):idx(3));
-				end
-				rdmin = min(rdata);
-				rdmax = max(rdata);
-				mdata(i,1:(dIdx(i)+1)) = (rdata-rdmin)/(rdmax-rdmin);
-			else
-				if(OldMarkerFormat)
-					mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(2));
-				else
-					mdata(i,1:(dIdx(i)+1)) = obj.data.analogData(idx(1):idx(3));
-				end
-			end
-		end
-		imagesc(mdata)
-		colormap(jet)
-	end
+	n = 1;
+    fprintf('work in progress\n');
 end
 
-% add code for plot options here
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% @vmlfp/PLOT takes 'LabelsOff' as an example
-if(~Args.LabelsOff)
-	if(Args.FreqPlot)
-		xlabel('Frequency (Hz)')
-		ylabel('Magnitude')
-	elseif(Args.TFfft)
-		xlabel('Time (s)')
-		ylabel('Frequency (Hz)')
-	else
-		xlabel('Time (ms)')
-		ylabel('Voltage (uV)')
-	end
+tIdx = obj.data.trialIndices(n,:);
+sRate = obj.data.analogInfo.SampleRate;
+swrInfo = obj.data.analogRmsInfo.Swr;
+swrMean = obj.data.analogRmsInfo.Mean;
+swrStd = obj.data.analogRmsInfo.Std;
+
+if(length(tIdx)==2)
+    OldMarkerFormat = 1;
+else
+    OldMarkerFormat = 0;
 end
-if(~Args.TitleOff)
-    [a,b] = fileparts(obj.nptdata.SessionDirs{:});
-    title(b)
+
+if(OldMarkerFormat)
+    idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
+else
+    idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
 end
-if(~isempty(Args.FreqLims))
-	if(Args.FreqPlot)
-		xlim(Args.FreqLims)
-	elseif(Args.TFfft)
-		ylim(Args.FreqLims)
-	end
+
+if(Args.Rms)
+    idx=unique(roundn(idx./5,0));
+    if (Args.PlotAllData)
+        data = obj.data.analogRmsData';
+    else
+        data = obj.data.analogRmsData';
+        data = data(idx,:);
+    end
+    sc = 200; %scaling for graphs
+    numPlots = floor(size(data,1)/sc);
+else
+    if (Args.PlotAllData)
+        data = obj.data.analogData;
+    else
+        data = obj.data.analogData(idx,:);
+    end
+    sc = 1000;
+    numPlots = floor(size(data,1)/sc);
 end
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(~isempty(Args.RemoveLineNoise))
+        data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+end
+
+j = 1; % counter for numPlots
+% set axis
+y0 = min(data);
+y1 = max(data);
+    
+while j < numPlots+1
+    
+    if (~isempty(gca))
+        delete(gca)
+    end
+    
+    ri = idx(1)+(j-1)*200;
+    rf = idx(1)+j*200-1;
+    di = (j-1)*sc+1;
+    df = j*sc;
+
+%     y0 = min(data(di:df, 1));
+%     y1 = max(data(di:df, 1));
+    
+    hold on
+    
+    for i = 1:length(swrInfo)
+        if swrInfo(i,3) >= ri && swrInfo(i,2) <= rf % detects if swr event is in the graph
+%             si = 0; %swr event
+            if swrInfo(i,3) >= ri && swrInfo(i,2) < ri
+                x0 = ri;
+                x1 = swrInfo(i,3)+0.5;
+%                 if swrInfo(i,1) >= ri
+%                     si = swrInfo(i,1);
+%                 end
+            elseif swrInfo(i,2) <= rf && swrInfo(i,3) > rf
+                x0 = swrInfo(i,2)-0.5;
+                x1 = rf;
+%                 if swrInfo(i,1) <= rf
+%                     si = swrInfo(i,1);
+%                 end
+            else
+                x0 = swrInfo(i,2)-0.5;
+                x1 = swrInfo(i,3)+0.5;
+%                 si = swrInfo(i,1);
+            end
+%             si = (si-idx(1)).*(1000/sc);
+            patch(([x0 x1 x1 x0]-idx(1)).*(1000/sc), [y0*[1 1] y1*[1 1]], [0.7 0.8 1], 'LineStyle','none')
+%             if (si ~= 0)
+%                 plot(si, data(si/(1000/sc)),'rx')
+%             end
+        end
+    end
+
+    plot((di:df)*(1000/sc), data(di:df,1),'Color',Args.Color);
+    
+    % plotting std away from mean
+    plot(xlim,[swrMean+3*swrStd swrMean+3*swrStd],'r');
+    plot(xlim,[swrMean+swrStd swrMean+swrStd],'r'); 
+    text(di*(1000/sc)+5, 1+swrMean+3*swrStd, 'threshold = 3\sigma');
+    text(di*(1000/sc)+5, 1+swrMean+swrStd, '1\sigma');
+    p = gco;
+    ylim([y0 y1])
+    
+    % plot label options
+    if(~Args.LabelsOff)
+        xlabel('time (ms)')
+        ylabel('LFP')
+    end
+
+    if(~Args.TitleOff)
+        [a,b] = fileparts(obj.nptdata.SessionDirs{:});
+        title(b)
+        sp = {' '}; %space
+        title(strcat('LFP of',sp,b,sp,'from',sp,num2str(ri),'ms to',sp,num2str(rf),'ms'))
+    end
+    
+    % key input switch (left or right arrow)
+    [~,~,button]=ginput(1);
+    switch button
+      case 28 %left
+          if j > 1
+            j = j - 1;
+          end
+      case 29 %right
+          if j < numPlots
+              j = j + 1;
+          end
+    end
+    
+end
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % need to move this in due to key input
+% % @vmswr/PLOT takes 'LabelsOff'
+% if(~Args.LabelsOff)
+% 	xlabel('time (ms)')
+% 	ylabel('LFP')
+% end
+% 
+% if(~Args.TitleOff)
+%     [a,b] = fileparts(obj.nptdata.SessionDirs{:});
+%     title(b)
+% end
+% %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RR = eval('Args.ReturnVars');
 lRR = length(RR);
