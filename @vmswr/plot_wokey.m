@@ -4,7 +4,7 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-            'PreTrial',500,'Rms',0, ...
+            'PreTrial',500,'Rms',1, ...
             'PlotAllData',0,'RemoveLineNoise',[],'TitleOff', 0, ...
             'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly', ...
@@ -27,7 +27,6 @@ else
     fprintf('work in progress');
 end
 
-% find indices for n-th trial
 tIdx = obj.data.trialIndices(n,:);
 sRate = obj.data.analogInfo.SampleRate;
 swrInfo = obj.data.analogRmsInfo.Swr;
@@ -74,9 +73,9 @@ y1 = max(data);
 
 df = length(idx);
 
-if (~isempty(gca))
-    delete(gca)
-end
+% if (~isempty(gco))
+%     delete(gca)
+% end
 
 hold on
     
@@ -118,13 +117,17 @@ text(1*(1000/sc)+5, 1+swrMean+swrStd, '1\sigma');
 p = gco;
 ylim([y0 y1])
 
+hold off
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % need to move this in due to key input
 % @vmswr/PLOT takes 'LabelsOff'
+Args.LabelsOff = 0;
+
 if(~Args.LabelsOff)
     xlabel('time (ms)')
     ylabel('LFP')
+    Args.LabelsOff = 1;
 end
 
 if(~Args.TitleOff)
@@ -136,6 +139,7 @@ end
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% hidata plot overwrites the x and y label
 RR = eval('Args.ReturnVars');
 lRR = length(RR);
 if(lRR>0)
