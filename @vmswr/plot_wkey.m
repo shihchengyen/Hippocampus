@@ -24,134 +24,134 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-    % find indices for n-th trial
-    tIdx = obj.data.trialIndices(n,:);
-    sRate = obj.data.analogInfo.SampleRate;
-    swrInfo = obj.data.analogRmsInfo.Swr;
-    swrMean = obj.data.analogRmsInfo.Mean;
-    swrStd = obj.data.analogRmsInfo.Std;
-
-    if(length(tIdx)==2)
-        OldMarkerFormat = 1;
-    else
-        OldMarkerFormat = 0;
-    end
-
-    if(OldMarkerFormat)
-        idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
-    else
-        idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
-    end
-
-    if(Args.Rms)
-        idx=unique(roundn(idx./5,0));
-        if (Args.PlotAllData)
-            data = obj.data.analogRmsData';
-        else
-            data = obj.data.analogRmsData';
-            data = data(idx,:);
-        end
-        sc = 200; %scaling for graphs
-        numPlots = floor(size(data,1)/sc);
-    else
-        if (Args.PlotAllData)
-            data = obj.data.analogData;
-        else
-            data = obj.data.analogData(idx,:);
-        end
-        sc = 1000;
-        numPlots = floor(size(data,1)/sc);
-    end
-    if(~isempty(Args.RemoveLineNoise))
-            data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-    end
-
-    j = 1; % counter for numPlots
-    % set axis
-    y0 = min(data);
-    y1 = max(data);
-
-    while j < numPlots+1
-
-        if (~isempty(gca))
-            delete(gca)
-        end
-
-        ri = idx(1)+(j-1)*200;
-        rf = idx(1)+j*200-1;
-        di = (j-1)*sc+1;
-        df = j*sc;
-
-    %     y0 = min(data(di:df, 1));
-    %     y1 = max(data(di:df, 1));
-
-        hold on
-
-        for i = 1:length(swrInfo)
-            if swrInfo(i,3) >= ri && swrInfo(i,2) <= rf % detects if swr event is in the graph
-    %             si = 0; %swr event
-                if swrInfo(i,3) >= ri && swrInfo(i,2) < ri
-                    x0 = ri;
-                    x1 = swrInfo(i,3)+0.5;
-    %                 if swrInfo(i,1) >= ri
-    %                     si = swrInfo(i,1);
-    %                 end
-                elseif swrInfo(i,2) <= rf && swrInfo(i,3) > rf
-                    x0 = swrInfo(i,2)-0.5;
-                    x1 = rf;
-    %                 if swrInfo(i,1) <= rf
-    %                     si = swrInfo(i,1);
-    %                 end
-                else
-                    x0 = swrInfo(i,2)-0.5;
-                    x1 = swrInfo(i,3)+0.5;
-    %                 si = swrInfo(i,1);
-                end
-    %             si = (si-idx(1)).*(1000/sc);
-                patch(([x0 x1 x1 x0]-idx(1)).*(1000/sc), [y0*[1 1] y1*[1 1]], [0.7 0.8 1], 'LineStyle','none')
-    %             if (si ~= 0)
-    %                 plot(si, data(si/(1000/sc)),'rx')
-    %             end
-            end
-        end
-
-        plot((di:df)*(1000/sc), data(di:df,1),'Color',Args.Color);
-
-        % plotting std away from mean
-        plot(xlim,[swrMean+3*swrStd swrMean+3*swrStd],'r');
-        plot(xlim,[swrMean+swrStd swrMean+swrStd],'r'); 
-        text(di*(1000/sc)+5, 1+swrMean+3*swrStd, 'threshold = 3\sigma');
-        text(di*(1000/sc)+5, 1+swrMean+swrStd, '1\sigma');
-        p = gco;
-        ylim([y0 y1])
-
-        % plot label options
-        if(~Args.LabelsOff)
-            xlabel('time (ms)')
-            ylabel('LFP')
-        end
-
-        if(~Args.TitleOff)
-            [a,b] = fileparts(obj.nptdata.SessionDirs{:});
-            title(b)
-            sp = {' '}; %space
-            title(strcat('LFP of',sp,b,sp,'from',sp,num2str(ri),'ms to',sp,num2str(rf),'ms'))
-        end
-
-        % key input switch (left or right arrow)
-        [~,~,button]=ginput(1);
-        switch button
-          case 28 %left
-              if j > 1
-                j = j - 1;
-              end
-          case 29 %right
-              if j < numPlots
-                  j = j + 1;
-              end
-        end
-
-    end
+%     % find indices for n-th trial
+%     tIdx = obj.data.trialIndices(n,:);
+%     sRate = obj.data.analogInfo.SampleRate;
+%     swrInfo = obj.data.analogRmsInfo.Swr;
+%     swrMean = obj.data.analogRmsInfo.Mean;
+%     swrStd = obj.data.analogRmsInfo.Std;
+% 
+%     if(length(tIdx)==2)
+%         OldMarkerFormat = 1;
+%     else
+%         OldMarkerFormat = 0;
+%     end
+% 
+%     if(OldMarkerFormat)
+%         idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
+%     else
+%         idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
+%     end
+% 
+%     if(Args.Rms)
+%         idx=unique(roundn(idx./5,0));
+%         if (Args.PlotAllData)
+%             data = obj.data.analogRmsData';
+%         else
+%             data = obj.data.analogRmsData';
+%             data = data(idx,:);
+%         end
+%         sc = 200; %scaling for graphs
+%         numPlots = floor(size(data,1)/sc);
+%     else
+%         if (Args.PlotAllData)
+%             data = obj.data.analogData;
+%         else
+%             data = obj.data.analogData(idx,:);
+%         end
+%         sc = 1000;
+%         numPlots = floor(size(data,1)/sc);
+%     end
+%     if(~isempty(Args.RemoveLineNoise))
+%             data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+%     end
+% 
+%     j = 1; % counter for numPlots
+%     % set axis
+%     y0 = min(data);
+%     y1 = max(data);
+% 
+%     while j < numPlots+1
+% 
+%         if (~isempty(gca))
+%             delete(gca)
+%         end
+% 
+%         ri = idx(1)+(j-1)*200;
+%         rf = idx(1)+j*200-1;
+%         di = (j-1)*sc+1;
+%         df = j*sc;
+% 
+%     %     y0 = min(data(di:df, 1));
+%     %     y1 = max(data(di:df, 1));
+% 
+%         hold on
+% 
+%         for i = 1:length(swrInfo)
+%             if swrInfo(i,3) >= ri && swrInfo(i,2) <= rf % detects if swr event is in the graph
+%     %             si = 0; %swr event
+%                 if swrInfo(i,3) >= ri && swrInfo(i,2) < ri
+%                     x0 = ri;
+%                     x1 = swrInfo(i,3)+0.5;
+%     %                 if swrInfo(i,1) >= ri
+%     %                     si = swrInfo(i,1);
+%     %                 end
+%                 elseif swrInfo(i,2) <= rf && swrInfo(i,3) > rf
+%                     x0 = swrInfo(i,2)-0.5;
+%                     x1 = rf;
+%     %                 if swrInfo(i,1) <= rf
+%     %                     si = swrInfo(i,1);
+%     %                 end
+%                 else
+%                     x0 = swrInfo(i,2)-0.5;
+%                     x1 = swrInfo(i,3)+0.5;
+%     %                 si = swrInfo(i,1);
+%                 end
+%     %             si = (si-idx(1)).*(1000/sc);
+%                 patch(([x0 x1 x1 x0]-idx(1)).*(1000/sc), [y0*[1 1] y1*[1 1]], [0.7 0.8 1], 'LineStyle','none')
+%     %             if (si ~= 0)
+%     %                 plot(si, data(si/(1000/sc)),'rx')
+%     %             end
+%             end
+%         end
+% 
+%         plot((di:df)*(1000/sc), data(di:df,1),'Color',Args.Color);
+% 
+%         % plotting std away from mean
+%         plot(xlim,[swrMean+3*swrStd swrMean+3*swrStd],'r');
+%         plot(xlim,[swrMean+swrStd swrMean+swrStd],'r'); 
+%         text(di*(1000/sc)+5, 1+swrMean+3*swrStd, 'threshold = 3\sigma');
+%         text(di*(1000/sc)+5, 1+swrMean+swrStd, '1\sigma');
+%         p = gco;
+%         ylim([y0 y1])
+% 
+%         % plot label options
+%         if(~Args.LabelsOff)
+%             xlabel('time (ms)')
+%             ylabel('LFP')
+%         end
+% 
+%         if(~Args.TitleOff)
+%             [a,b] = fileparts(obj.nptdata.SessionDirs{:});
+%             title(b)
+%             sp = {' '}; %space
+%             title(strcat('LFP of',sp,b,sp,'from',sp,num2str(ri),'ms to',sp,num2str(rf),'ms'))
+%         end
+% 
+%         % key input switch (left or right arrow)
+%         [~,~,button]=ginput(1);
+%         switch button
+%           case 28 %left
+%               if j > 1
+%                 j = j - 1;
+%               end
+%           case 29 %right
+%               if j < numPlots
+%                   j = j + 1;
+%               end
+%         end
+% 
+%     end
     
 else
 	% plot all data
@@ -159,6 +159,136 @@ else
     fprintf('work in progress\n');
 end
 
+% find indices for n-th trial
+tIdx = obj.data.trialIndices(n,:);
+sRate = obj.data.analogInfo.SampleRate;
+swrInfo = obj.data.analogRmsInfo.Swr;
+swrMean = obj.data.analogRmsInfo.Mean;
+swrStd = obj.data.analogRmsInfo.Std;
+
+if(length(tIdx)==2)
+    OldMarkerFormat = 1;
+else
+    OldMarkerFormat = 0;
+end
+
+if(OldMarkerFormat)
+    idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
+else
+    idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
+end
+
+if(Args.Rms)
+    idx=unique(roundn(idx./5,0));
+    if (Args.PlotAllData)
+        data = obj.data.analogRmsData';
+    else
+        data = obj.data.analogRmsData';
+        data = data(idx,:);
+    end
+    sc = 200; %scaling for graphs
+    numPlots = floor(size(data,1)/sc);
+else
+    if (Args.PlotAllData)
+        data = obj.data.analogData;
+    else
+        data = obj.data.analogData(idx,:);
+    end
+    sc = 1000;
+    numPlots = floor(size(data,1)/sc);
+end
+if(~isempty(Args.RemoveLineNoise))
+        data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+end
+
+j = 1; % counter for numPlots
+% set axis
+y0 = min(data);
+y1 = max(data);
+
+while j < numPlots+1
+
+    if (~isempty(gca))
+        delete(gca)
+    end
+
+    ri = idx(1)+(j-1)*200;
+    rf = idx(1)+j*200-1;
+    di = (j-1)*sc+1;
+    df = j*sc;
+
+%     y0 = min(data(di:df, 1));
+%     y1 = max(data(di:df, 1));
+
+    hold on
+
+    for i = 1:length(swrInfo)
+        if swrInfo(i,3) >= ri && swrInfo(i,2) <= rf % detects if swr event is in the graph
+%             si = 0; %swr event
+            if swrInfo(i,3) >= ri && swrInfo(i,2) < ri
+                x0 = ri;
+                x1 = swrInfo(i,3)+0.5;
+%                 if swrInfo(i,1) >= ri
+%                     si = swrInfo(i,1);
+%                 end
+            elseif swrInfo(i,2) <= rf && swrInfo(i,3) > rf
+                x0 = swrInfo(i,2)-0.5;
+                x1 = rf;
+%                 if swrInfo(i,1) <= rf
+%                     si = swrInfo(i,1);
+%                 end
+            else
+                x0 = swrInfo(i,2)-0.5;
+                x1 = swrInfo(i,3)+0.5;
+%                 si = swrInfo(i,1);
+            end
+%             si = (si-idx(1)).*(1000/sc);
+            patch(([x0 x1 x1 x0]-idx(1)).*(1000/sc), [y0*[1 1] y1*[1 1]], [0.7 0.8 1], 'LineStyle','none')
+%             if (si ~= 0)
+%                 plot(si, data(si/(1000/sc)),'rx')
+%             end
+        end
+    end
+
+    plot((di:df)*(1000/sc), data(di:df,1),'Color',Args.Color);
+
+    % plotting std away from mean
+    plot(xlim,[swrMean+3*swrStd swrMean+3*swrStd],'r');
+    plot(xlim,[swrMean+swrStd swrMean+swrStd],'r'); 
+    text(di*(1000/sc)+5, 1+swrMean+3*swrStd, 'threshold = 3\sigma');
+    text(di*(1000/sc)+5, 1+swrMean+swrStd, '1\sigma');
+    p = gco;
+    ylim([y0 y1])
+    
+    hold off
+
+    % plot label options
+    if(~Args.LabelsOff)
+        xlabel('time (ms)')
+        ylabel('LFP')
+    end
+
+    if(~Args.TitleOff)
+        [a,b] = fileparts(obj.nptdata.SessionDirs{:});
+        title(b)
+        sp = {' '}; %space
+        title(strcat('LFP of',sp,b,sp,'from',sp,num2str(ri),'ms to',sp,num2str(rf),'ms'))
+    end
+
+    % key input switch (left or right arrow)
+    [~,~,button]=ginput(1);
+    switch button
+      case 28 %left
+          if j > 1
+            j = j - 1;
+          end
+      case 29 %right
+          if j < numPlots
+              j = j + 1;
+          end
+    end
+
+end
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % need to move this in due to key input
