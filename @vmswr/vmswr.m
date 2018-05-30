@@ -69,13 +69,10 @@ if(~isempty(Args.Data))
 else
 	rw = rplraw('auto',varargin{:});
 	if(~isempty(rw))
-        rlndata = nptRemoveLineNoise(rw.data.analogData, 50, rw.data.analogInfo.SampleRate); % remove 50Hz line noise
-		[bpdata,resampleRate] = nptLowPassFilter(rlndata,rw.data.analogInfo.SampleRate, ...
+%         rlndata = nptRemoveLineNoise(rw.data.analogData, 50, rw.data.analogInfo.SampleRate); % remove 50Hz line noise
+		[bpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
 					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
 		data.analogData = bpdata;
-        data.analogRmsData = nptRms(bpdata,0.02*rw.data.analogInfo.SampleRate,...
-            rw.data.analogInfo.SampleRate/200,1); % (data, window length = 0.02s, overlap = 200Hz, zero pad for last window)
-        data.swrInfo = nptSwr(data.analogRmsData);
         data.analogInfo = rw.data.analogInfo;
 		data.analogInfo.SampleRate = resampleRate;
 		data.analogInfo.MinVal = min(bpdata);
@@ -87,6 +84,11 @@ else
 		data.analogInfo.LowFreqOrder = Args.LPFOrder;
 		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
 		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+        
+        data.analogRmsData = nptRms(bpdata,10,5,1); % Calculate RMS every 5ms using a moving 10ms window
+        data.analogRmsInfo.Swr = nptSwr(data.analogRmsData);
+        data.analogRmsInfo.Mean = mean(data.analogRmsData);
+        data.analogRmsInfo.Std = std(data.analogRmsData);
         
         rl = rplparallel('auto',varargin{:});
 		data = arrangeMarkers(data,rl);
