@@ -1,4 +1,4 @@
-function rsCreateObject()
+function rsCreateObject(rsData)
 
 % load arguments 
 % we are doing this so this program can run in compiled form

@@ -13,7 +13,7 @@ Args = struct('CellLog','CellActivityLog.xlsx','ChannelsPerArray',32, ...
     'ChannelRows',3:112, 'HPC', 0, 'HPCUser', 'eleys', 'HPCMachine','atlas8', ...
     'HPCDir', '~/hpctmp/Data/', 'HPCCommand','~/hmmsort/hmmsort_pbs.py ~/hmmsort', ...
     'SkipMarker', 0, 'SkipSortName', 'skipsort.txt', ...
-	'SortCmd','source ~/.bash_profile; cp ~/Dropbox/Work/Matlab/hmmsort/hmmsort5.dag .; condor_submit_dag -maxpre 10 hmmsort5.dag');
+	);
 Args.flags = {'HPC','SkipMarker'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args);
@@ -99,7 +99,12 @@ if(~isempty(dayidx))
 			display([array_dir filesep chan_dir])
 			cd(array_dir);
 			cd(chan_dir);
-			system(Args.SortCmd);
+			if UseHPC
+				cmdSubmit =  'cp ~/Dropbox/Work/Matlab/hmmsort/hmmsort5.dag .; condor_submit_dag -maxpre 10 hmmsort5.dag';
+			else			
+				cmdSubmit = 'qsub $GITHUB_MATLAB/hmmsort/hmmsort5.dag';
+			end
+			system(['source ~/.bash_profile;',cmdSubmit]);
 			cd(cwd)
 		end  % for chidx = 1:size(ch_nums,1)
 	end  % if(Args.HPC)
