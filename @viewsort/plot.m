@@ -17,6 +17,7 @@ if Args.ArgsOnly
 end
 
 UseGMRlayout = 0;
+delete(findall(gcf,'type','annotation'))
 
 % plot waveform
 if(~isempty(Args.NumericArguments))
@@ -93,17 +94,31 @@ if(~isempty(Args.NumericArguments))
         end
         
         % show ISI coefficients of variation
-        legendLabels = cell(1,size(xind,1));
+        legendLabels = cell(1,size(xind,2));
         for k = 1:size(xind,2)
-            legendLabels{k} = num2str(round(obj.data.coeffV_ISI(xind(k)),2));
+            if isnan(obj.data.coeffV_ISI(xind(k)))
+                legendLabels{k} = 'N/A'
+            else
+                legendLabels{k} = num2str(round(obj.data.coeffV_ISI(xind(k)),2));
+            end
         end
         lgd = legend(legendLabels, 'FontSize', 12);
-        title(lgd,{'ISI Distribution','Coefficient of Variation: '})
+        title(lgd,{'ISI Distribution','Coefficient of Variation:'})
         % subplot(round((numUnits+1)/2),2,d+1);
         % histogram(spike_ISI,1000,'facecolor',plotColour(d),'edgecolor',plotColour(d)); hold on
         % title(strcat('(',num2str(d),')',' ISI Distribution, Coefficient of Variation: ', num2str(round(coeffV_ISI,2))));
         % xlabel('ISI(ms)','FontSize',10); ylabel('Count','FontSize',10);
-       
+        
+        % show spike similarities (dot product)
+        spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
+        if (size(spikeind,2)==1 && isnan(obj.data.spikesim(spikeind)))
+            % do nothing
+        elseif (size(spikeind,2)>=1)
+            perms = nchoosek(1:size(xind,2),2);
+            perms(:,3) = obj.data.spikesim(spikeind);
+            dim = [0.2, 0.2, 0.1, 0.1];
+            annotation('textbox',dim,'String', num2str(perms));
+        end
     end  % if(Args.Array || Args.Session || Args.Day)
 else
 	% plot all data

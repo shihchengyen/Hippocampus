@@ -78,7 +78,7 @@ if(dnum>0)
     data.Noise = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
     cd(cwd);
     
-    if (isfield(l,'mlseq') > 0)
+    if (isfield(l,'mlseq') > 0) % skip incomplete files
         % get and plot ISI coefficient of variation for waveform
         spikeSort = l.mlseq;
         for ind = 1:sf1
@@ -92,8 +92,26 @@ if(dnum>0)
     end
     data.coeffV_ISI = data.coeffV_ISI';
     
+    if (sf1>1)
+        % get spike similarities (dot product)
+        perms = nchoosek(1:size(data.spikeForms,1),2); % number of possible pair-wise comparisons
+        for a = 1:size(perms,1)
+            perms(a,3) = (dot(data.spikeForms(perms(a,1),:),data.spikeForms(perms(a,2),:)))/(norm(data.spikeForms(perms(a,1),:))*norm(data.spikeForms(perms(a,2),:))); % dot product divided by the magnitude of each vector
+            perms(a,3) = round(perms(a,3),2); % round to 2 decimal places
+            % amp1 = abs(min(data.spikeForms(perms(a,1),:)))+abs(max(data.spikeForms(perms(a,1),:))); % peak-to-peak amplitude of first waveform in comparison
+            % amp2 = abs(min(data.spikeForms(perms(a,2),:)))+abs(max(data.spikeForms(perms(a,2),:))); % peak-to-peak amplitude of second waveform in comparison
+            % perms(a,4) = round(abs(amp2-amp1),1); % abs difference in peak-to-peak amplitude
+        end
+        data.spikesim = perms(:,3);
+        numperms = nchoosek(sf1,2);
+    else
+        data.spikesim = NaN;
+        numperms = 1;
+    end
+    
 	% set index to keep track of which data goes with which directory
     data.ChannelIndex = [0; sf1];
+    data.spikesimIndex = [0; numperms];
 	data.ArrayIndex = [0; 1];
 	data.SessionIndex = [0; 1];
 	data.DayIndex = [0; 1];
