@@ -198,7 +198,7 @@ end
 if(Args.DisplayTrials)
     fprintf('here')
     vr = vmswr('auto');
-    InspectGUI(vr,'addObjs',{vr},'optArgs',{{'PlotAllData'},{'Rms'}},'SP',[2 1])
+    InspectGUI(vr,'addObjs',{vr},'optArgs',{{},{'Rms'}},'SP',[2 1])
 end
 
 % hidata plot overwrites the x and y label
