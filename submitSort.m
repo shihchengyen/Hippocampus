@@ -35,7 +35,6 @@ cd(cwd)
 dayidx = find(num(1,:)==str2num(dayname));
 
 if(~isempty(dayidx))
-<<<<<<< HEAD
     % find rows with single units
     ai1 =find(num(Args.ChannelRows,dayidx)==1);
     % if there are no single units, sort everything aside from the channels that are broken (marked by 0)
@@ -108,7 +107,6 @@ if(~isempty(dayidx))
             cd(cwd)
         end  % for chidx = 1:size(ch_nums,1)
     end  % if(Args.HPC)
-=======
 	% find rows with single units
 	ai1 =find(num(Args.ChannelRows,dayidx)==1);
 	% if there are no single units, sort everything aside from the channels that are broken (marked by 0)
@@ -177,7 +175,6 @@ if(~isempty(dayidx))
 			cd(cwd)
 		end  % for chidx = 1:size(ch_nums,1)
 	end  % if(Args.HPC)
->>>>>>> parent of 10ca154... submitSort.m also needs to change a bit
 else  % if(~isempty(dayidx))
     display('Day not found!')
     % set return value to -1 to make sure rsCreateObject does not launch hplfp scripts
