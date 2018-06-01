@@ -90,7 +90,7 @@ elseif(strcmp(command,'createObj'))
 		
 	else  % if(dnum>0)
 		% create empty object
-		obj = createEmptyObject();
+		obj = createEmptyObject(Args);
 	end
 end
 
