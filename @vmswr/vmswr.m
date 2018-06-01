@@ -91,9 +91,11 @@ else
 		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
         
         data.analogRmsData = nptRms(bpdata,10,5,1); % Calculate RMS every 5ms using a moving 10ms window
-        data.analogRmsInfo.Swr = nptSwr(data.analogRmsData);
+        data.analogRmsInfo.Threshold = 4;
+        data.analogRmsInfo.BeginEnd = 2;
         data.analogRmsInfo.Mean = mean(data.analogRmsData);
         data.analogRmsInfo.Std = std(data.analogRmsData);
+        data.analogRmsInfo.Swr = nptSwr(data.analogRmsData,data.analogRmsInfo.Threshold,data.analogRmsInfo.BeginEnd);
         
         rl = rplparallel('auto',varargin{:});
 		data = arrangeMarkers(data,rl);

@@ -5,7 +5,7 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'TitleOff', 0,'Color','b', ...
             'GroupPlots',1,'GroupPlotIndex',1,...
-            'PreTrial',500,'Rms',0,'Cmds','','DisplayTrials',0,...
+            'PreTrial',500,'Rms',0,'Cmds','','Trials',0,...
             'PlotAllData',0,'RemoveLineNoise',[],...
             'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','TitleOff','ArgsOnly', ...
@@ -35,6 +35,8 @@ if(~isempty(Args.NumericArguments))
     tIdx = obj.data.trialIndices(n,:);
     swrMean = obj.data.analogRmsInfo.Mean;
     swrStd = obj.data.analogRmsInfo.Std;
+    swrThr = obj.data.analogRmsInfo.Threshold;
+    swrBeen = obj.data.analogRmsInfo.BeginEnd;
     
     if (~Args.PlotAllData)
         if(length(tIdx)==2)
@@ -131,19 +133,18 @@ if(~isempty(Args.NumericArguments))
     xlim([di*sc df*sc])
 
     % plotting std away from mean
-    plot(xlim,[swrMean+3*swrStd swrMean+3*swrStd],'g');
-    plot(xlim,[swrMean+swrStd swrMean+swrStd],'g'); 
-    text(di*sc, swrMean+3*swrStd, 'threshold = 3\sigma');
-    text(di*sc, swrMean+swrStd, '1\sigma');
+    plot(xlim,(swrMean+swrThr*swrStd)*[1 1],'g');
+    plot(xlim,(swrMean+swrBeen*swrStd)*[1 1],'g'); 
+    text(di*sc, swrMean+swrThr*swrStd, strcat('threshold =',swrThr,'\sigma'));
+    text(di*sc, swrMean+swrBeen*swrStd, strcat(swrBeen,'\sigma'));
     % p = gco;
     hold off
     
     % texts for title, yaxis and xaxis 
-    tt = strcat('LFP of',sp,b,sp,'from',sp,num2str(tStart),'ms to',sp,num2str(tEnd),'ms');
+    tt = strcat(b,sp,num2str(tStart),'-',num2str(tEnd),'ms');
     ty = 'LFP';
     tx = 'time (ms)';
 else
-  
     tIdx = obj.data.trialIndices;
     s = size(tIdx);
     tIdx(:,1) = (tIdx(:,1)-(Args.PreTrial/1000*sRate))./5;
@@ -165,18 +166,26 @@ else
         tIdx(i,3) = sum(swrInfo(:,1)>tIdx(i,1) & swrInfo(:,1)<tIdx(i,2));
     end
     
-    histogram(tIdx(:,3))
+    if(Args.Trials)
+        bar(1:length(tIdx),tIdx(:,3))
+        xlim([1 length(tIdx)])
+        % texts for title, yaxis and xaxis 
+        tt = strcat(b);
+        tx = 'Trial';
+        ty = 'SPW Event (count)';
+    else    
+        pcolor(1:2,1:2,mean(tIdx(:,3))*[1 1;1 1])
+        caxis([0 20])
+        colormap(flipud(bone))
+%         colorbar
+        tt = strcat(b);
+        Args.LabelsOff = 1;
+    end
     
-    % texts for title, yaxis and xaxis 
-    tt = strcat('Histogram of SPW Events in',sp,b,sp,'in each trial');
-    ty = 'Trial';
-    tx = 'SPW Event (count)';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % @vmswr/PLOT takes 'LabelsOff' and 'TitleOff'
-Args.LabelsOff = 0;
-
 if(~Args.LabelsOff)
     xlabel(tx)
     ylabel(ty)
@@ -200,10 +209,6 @@ if(~isempty(Args.Cmds))
 %     cd(cwd)
 end
 
-if(Args.DisplayTrials)
-    vr = vmswr('auto');
-    InspectGUI(vr,'addObjs',{vr},'optArgs',{{},{'Rms'}},'SP',[2 1])
-end
 
 % hidata plot overwrites the x and y label
 RR = eval('Args.ReturnVars');
