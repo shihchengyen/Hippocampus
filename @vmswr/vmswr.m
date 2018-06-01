@@ -13,7 +13,7 @@ function [obj, varargout] = vmswr(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[], 'LowpassFreqs',[150 250], 'LPFOrder',8);
+				'Data',[], 'LowpassFreqs',[150 250], 'LPFOrder',8, 'DirStr','');
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments that are critical when loading saved data
 Args.DataCheckArgs = {'LowpassFreqs'};                            
@@ -62,7 +62,12 @@ if(~isempty(Args.Data))
 		
 	% create nptdata so we can inherit from it   
 	data.Args = Args; 
-	n = nptdata(data.numSets,0,pwd);
+    if(isempty(Args.DirStr))
+        dirname = pwd;
+    else
+        dirname = Args.DirStr;
+    end
+	n = nptdata(data.numSets,0,dirname);
 	d.data = data;
 	obj = class(d,Args.classname,n);
 	saveObject(obj,'ArgsC',Args);	
@@ -96,7 +101,12 @@ else
         
 		% create nptdata so we can inherit from it    
 		data.Args = Args; 
-		n = nptdata(data.numSets,0,pwd);
+        if(isempty(Args.DirStr))
+            dirname = pwd;
+        else
+            dirname = Args.DirStr;
+        end
+        n = nptdata(data.numSets,0,dirname);
 		d.data = data;
 		obj = class(d,Args.classname,n);
 		saveObject(obj,'ArgsC',Args);			

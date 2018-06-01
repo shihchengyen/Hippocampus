@@ -9,7 +9,7 @@ Args = struct('LabelsOff',0,'TitleOff', 0,'Color','b', ...
             'PlotAllData',0,'RemoveLineNoise',[],...
             'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','TitleOff','ArgsOnly', ...
-            'PlotAllData','Rms','Cmds','DisplayTrials'};
+            'PlotAllData','Rms','DisplayTrials'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -23,7 +23,8 @@ sRate = obj.data.analogInfo.SampleRate;
 swrInfo = obj.data.analogRmsInfo.Swr;
 
 % for title
-[a,b] = fileparts(obj.nptdata.SessionDirs{:});
+sdstr = get(obj,'SessionDirs');
+[a,b] = fileparts(sdstr{1});
 title(b)
 sp = {' '}; %space
 
@@ -189,14 +190,17 @@ end
 
 if(~isempty(Args.Cmds))
     % save the current figure in case Args.Cmds switches to another figure
-    h = gcf;
+%     h = gcf;
+    % save current directory
+%     cwd = pwd;
+%     cd(sdstr{1})
     eval(Args.Cmds)
     % switch back to previous figure
-    figure(h);
+%     figure(h);
+%     cd(cwd)
 end
 
 if(Args.DisplayTrials)
-    fprintf('here')
     vr = vmswr('auto');
     InspectGUI(vr,'addObjs',{vr},'optArgs',{{},{'Rms'}},'SP',[2 1])
 end
