@@ -2,6 +2,25 @@ function [obj, varargout] = plot(obj,varargin)
 %@vmswr/plot Plot function for vmswr object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
+%   
+%   Default - plots pcolor of average SPW Event per Trial
+%       option: 'Trial' - plots barplot of #of SPW Event for each Trial
+%
+%   For Each Channel,
+%       Default - plots data with SPW Event marked in red highlight,
+%       showing 1s of data each time (scroll to next or previous second using next and
+%       prev button respectively)
+%           option: 'Rms' - plots RMS
+%           option: 'PlotAllData' - plots the entire data for the channel,
+%           instead of 1s by 1s
+%           option: 'Trial' - plots only the trial part
+%
+%   'Cmds': accepts cmds such as InspectGUI (to display each channel data
+%   when analyzing array/session
+%   e.g. 
+%   >> cd /Volumes/Hippocampus/Data/picasso/20180406/session01/array02
+%   >> hmd = ProcessLevel(hidata,'Levels','Array','FileName','hmmsort.mat');
+%   >> InspectGUI(hmd,'Objects',{{'vmswr',{'Cmds','InspectGUI(vmswr(''auto''),''addObjs'',{vmswr(''auto'')},''optArgs'',{{''PlotAllData''},{''Rms''}},''SP'',[2 1])'}}})
 
 Args = struct('LabelsOff',0,'TitleOff', 0,'Color','b', ...
             'GroupPlots',1,'GroupPlotIndex',1,...
@@ -166,14 +185,14 @@ else
         tIdx(i,3) = sum(swrInfo(:,1)>tIdx(i,1) & swrInfo(:,1)<tIdx(i,2));
     end
     
-    if(Args.Trials)
+    if(Args.Trials) % plots # of SPW Event for each Trial
         bar(1:length(tIdx),tIdx(:,3))
         xlim([1 length(tIdx)])
         % texts for title, yaxis and xaxis 
         tt = strcat(b);
         tx = 'Trial';
         ty = 'SPW Event (count)';
-    else    
+    else % plots average # of SPW Event per Trial
         pcolor(1:2,1:2,mean(tIdx(:,3))*[1 1;1 1])
         caxis([0 20])
         colormap(flipud(bone))
