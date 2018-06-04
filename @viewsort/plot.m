@@ -97,7 +97,7 @@ if(~isempty(Args.NumericArguments))
         legendLabels = cell(1,size(xind,2));
         for k = 1:size(xind,2)
             if isnan(obj.data.coeffV_ISI(xind(k)))
-                legendLabels{k} = 'N/A'
+                legendLabels{k} = 'N/A';
             else
                 legendLabels{k} = num2str(round(obj.data.coeffV_ISI(xind(k)),2));
             end
@@ -111,9 +111,7 @@ if(~isempty(Args.NumericArguments))
         
         % show spike similarities (dot product)
         spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
-        if (size(spikeind,2)==1 && isnan(obj.data.spikesim(spikeind)))
-            % do nothing
-        elseif (size(spikeind,2)>=1)
+        if (~isnan(obj.data.spikesim(spikeind)))
             perms = nchoosek(1:size(xind,2),2);
             perms(:,3) = obj.data.spikesim(spikeind);
             dim = [0.2, 0.2, 0.1, 0.1];
@@ -145,15 +143,15 @@ else
     end
 end
 
-% show spike similarities (dot product)
-
-
-
+% evaluate 'Cmds'
 if(~isempty(Args.Cmds))
+    % save the current figure in case Args.Cmds switches to another figure
+    h = gcf;
     cd(sdstr{n})
     eval(Args.Cmds)
+    % switch back to previous figure
+    figure(h);
 end
-
 
 % % add code for plot options here
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

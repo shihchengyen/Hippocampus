@@ -78,19 +78,19 @@ if(dnum>0)
     data.Noise = 1/(hdf5read(Args.HMMFile,Args.HMMNoise));
     cd(cwd);
     
+    % get and plot ISI coefficient of variation for waveform
+    data.coeffV_ISI = zeros(sf1,1);
     if (isfield(l,'mlseq') > 0) % skip incomplete files
-        % get and plot ISI coefficient of variation for waveform
         spikeSort = l.mlseq;
         for ind = 1:sf1
             [M,I] = min(data.spikeForms(ind,:)); % get index of peak
             spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
             spikeTimes = spikeTimes/30; spike_ISI = diff(spikeTimes);
-            data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
+            data.coeffV_ISI(ind,1) = std(spike_ISI)/mean(spike_ISI);
         end
     else
-        data.coeffV_ISI(1:sf1) = NaN;
+        data.coeffV_ISI = repmat(NaN,sf1,1);
     end
-    data.coeffV_ISI = data.coeffV_ISI';
     
     if (sf1>1)
         % get spike similarities (dot product)
