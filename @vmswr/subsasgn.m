@@ -1,5 +1,5 @@
 function [obj,res] = subsasgn(obj,index,value)
-%@dirfiles/subsasgn Assignment function for DIRFILES object
+%@viewswr/subsasgn Assignment function for DIRFILES object
 
 res = 1;
 unknown = 0;

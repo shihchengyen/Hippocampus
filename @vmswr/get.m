@@ -1,9 +1,9 @@
 function [r,varargout] = get(obj,varargin)
-%dirfiles/get Get function for dirfiles objects
-%dirfiles/GET Returns object properties
+%vmswr/get Get function for vmswr objects
+%vmswr/GET Returns object properties
 %   VALUE = GET(OBJ,PROP_NAME) returns an object 
 %   property.
-%   In dirfiles, PROP_NAME can be one of the following:
+%   In vmswr, PROP_NAME can be one of the following:
 %      'ObjectLevel'
 %	 'AnalysisLevel'
 %

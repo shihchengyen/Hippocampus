@@ -1,5 +1,5 @@
 function [b,res] = subsref(obj,index)
-%@dirfiles/subsref Index function for DIRFILES object.
+%@viewswr/subsref Index function for DIRFILES object.
 
 res = 1;
 unknown = 0;
