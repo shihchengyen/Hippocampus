@@ -148,7 +148,11 @@ if(~isempty(Args.Cmds))
     % save the current figure in case Args.Cmds switches to another figure
     h = gcf;
     cd(sdstr{n})
-    eval(Args.Cmds)
+    eval(Args.Cmds{1})
+    drawnow
+    disp('Press a key to continue') % wait for keypress
+    pause;
+    eval(Args.Cmds{2})
     % switch back to previous figure
     figure(h);
 end
