@@ -86,7 +86,7 @@ if(dnum>0)
             [M,I] = min(data.spikeForms(ind,:)); % get index of peak
             spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
             spikeTimes = spikeTimes/30; spike_ISI = diff(spikeTimes);
-            data.coeffV_ISI(ind,1) = std(spike_ISI)/mean(spike_ISI);
+            data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
         end
     else
         data.coeffV_ISI = repmat(NaN,sf1,1);
