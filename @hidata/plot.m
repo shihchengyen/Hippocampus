@@ -196,8 +196,11 @@ function subplotGMR(dirname,Args)
 	[fdir,cstr] = fileparts(dirname);
 	% get channel number
 	chnnum = sscanf(cstr,'channel%d');
-	if(Args.Array)
-		subplot(5,8,alayout(chnnum))
-	elseif(Args.Session)
-		subplot(8,16,slayout(chnnum))
-	end
+    if(chnnum<125)
+        if(Args.Array)
+            subplot(5,8,alayout(chnnum))
+        elseif(Args.Session)
+            subplot(8,16,slayout(chnnum))
+        end
+    end
+    

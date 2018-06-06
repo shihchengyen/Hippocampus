@@ -1,6 +1,6 @@
 universe     = vanilla
-Executable   = /Users/shihcheng/cbin/run_vmhplfp.sh
-Arguments    = "/Applications/MATLAB_R2016b.app"
+Executable   = /Users/shihcheng/cbin/run_eyehplfp.sh
+Arguments    = "/Applications/MATLAB_R2016b.app SkipSort"
 Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
 Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
 Error        = /Users/shihcheng/condor/distro.$(Cluster).$(Process).err

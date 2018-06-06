@@ -1,5 +1,5 @@
 universe     = vanilla
-Executable   = /Users/shihcheng/cbin/run_vmhplfp.sh
+Executable   = /Users/shihcheng/cbin/run_checkRecording.sh
 Arguments    = "/Applications/MATLAB_R2016b.app"
 Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
 Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
@@ -9,6 +9,6 @@ when_to_transfer_output = ON_EXIT
 transfer_executable = False
 stream_error = True
 stream_output = True
-request_memory = 12 GB
+request_memory = 18 GB
 
 Queue 1
