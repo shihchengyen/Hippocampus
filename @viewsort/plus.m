@@ -38,10 +38,14 @@ else
 		% useful fields for most objects
 		r.data.spikeForms = [p.data.spikeForms; q.data.spikeForms];
         r.data.Noise = [p.data.Noise;q.data.Noise];
+        r.data.coeffV_ISI = [p.data.coeffV_ISI; q.data.coeffV_ISI];
+        r.data.spikesim = [p.data.spikesim; q.data.spikesim];
         r.data.numChannels = p.data.numChannels + q.data.numChannels;
 		% object specific fields
 		r.data.ChannelIndex = [p.data.ChannelIndex; (p.data.ChannelIndex(end) ...
 			+ q.data.ChannelIndex(2:end))];
+        r.data.spikesimIndex = [p.data.spikesimIndex; (p.data.spikesimIndex(end) ...
+			+ q.data.spikesimIndex(2:end))];
 
 
 		% check if p and q are from the same array
