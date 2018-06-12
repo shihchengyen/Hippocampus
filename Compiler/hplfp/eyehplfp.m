@@ -22,18 +22,25 @@ function eyehplfp(varargin)
 	
 			% make channel direcory on HPC, copy to HPC, cd to channel directory, and then run hmmsort
 			display('Creating channel directory ...')
-			syscmd = ['ssh eleys@atlas7 "cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr '"'];
+            cmdRedirect = ''; % remain empty if using HPC directly
+            cmdSCP = ''; % remain empty if using HPC directly 
+            if ~Args.UseHPC
+                cmdRedirect = 'ssh eleys@atlas7';
+            end
+			syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
 			display(syscmd)
 			system(syscmd);
-			display('Transferring rplhighpass file ...')
-			syscmd = ['scp rplhighpass.mat eleys@atlas7:~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr];
-			display(syscmd)
+            if ~Args.UseHPC
+                display('Transferring rplhighpass file ...')
+                syscmd = ['scp rplhighpass.mat eleys@atlas7:~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr];
+                display(syscmd)
+            end
 			rval=1;
 			while(rval~=0)
 				rval=system(syscmd);
 			end
 			display('Running spike sorting ...')
-			syscmd = ['ssh eleys@atlas7 "cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr '; ~/hmmsort/hmmsort_pbs.py ~/hmmsort"'];
+			syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr '; ~/hmmsort/hmmsort_pbs.py ~/hmmsort'];
 			display(syscmd)
 			system(syscmd);
 		end  % if(isempty(dir('skipsort.txt')))
