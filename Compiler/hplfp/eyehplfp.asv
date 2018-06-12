@@ -8,10 +8,14 @@ function eyehplfp(varargin)
     % get day string
     [p4, daystr] = nptFileParts(p3);
     
-    % to read Args
-    load([p2,'/rsData']);
+    load([p2,'/
 
-    rh = rplhighpass('auto','SaveLevels',2,varargin{:});
+	Args = struct('SkipSort', 0);
+	Args.flags = {'SkipSort'};
+
+	Args = getOptArgs(varargin,Args);
+
+	rh = rplhighpass('auto','SaveLevels',2,varargin{:});
 	rl = rpllfp('auto','SaveLevels',2,varargin{:});
 
 	if(~Args.SkipSort)

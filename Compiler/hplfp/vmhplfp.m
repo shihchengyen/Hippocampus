@@ -1,8 +1,15 @@
 function vmhplfp(varargin)
-	Args = struct('SkipSort', 0);
-	Args.flags = {'SkipSort'};
-
-	Args = getOptArgs(varargin,Args);
+    % get channel string
+    [p1, chstr] = nptFileParts(pwd);
+    % get array string
+    [p2, arrstr] = nptFileParts(p1);
+    % get session string
+    [p3, sesstr] = nptFileParts(p2);
+    % get day string
+    [p4, daystr] = nptFileParts(p3);
+    
+    % to read Args
+    load([p2,'/rsData']);
 
 	vh = vmhighpass('auto','SaveLevels',2,varargin{:});
 	vl = vmlfp('auto','SaveLevels',2,varargin{:});
