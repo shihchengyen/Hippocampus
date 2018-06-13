@@ -131,7 +131,6 @@ if(rval~=-1)
         if(~Args.SkipSort)
             display('Launching hplfp scripts...')
             cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
-            display(['Submitting ', cmdSubmit,' ...'])
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
         else  % if(~Args.SkipSort)
             display('Launching hplfp_nosort scripts...')
@@ -142,7 +141,6 @@ if(rval~=-1)
         if(~Args.SkipSort)
             display('Launching eyehplfp scripts...')
             cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-            display(['Submitting ', cmdSubmit])
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
         else  % if(~Args.SkipSort)
             display('Launching eyehplfp_nosort scripts...')
