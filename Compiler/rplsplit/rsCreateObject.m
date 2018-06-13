@@ -130,7 +130,9 @@ if(rval~=-1)
     if(isempty(strfind(sesname,'eye')))
         if(~Args.SkipSort)
             display('Launching hplfp scripts...')
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'hplfp', cmdScript, '_submit_file.txt; cd $cwd; done']);
+            cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
+            display(['Submitting ', cmdSubmit,' ...'])
+            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
         else  % if(~Args.SkipSort)
             display('Launching hplfp_nosort scripts...')
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
@@ -139,7 +141,9 @@ if(rval~=-1)
         % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
         if(~Args.SkipSort)
             display('Launching eyehplfp scripts...')
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt; cd $cwd; done']);
+            cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
+            display(['Submitting ', cmdSubmit])
+            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
         else  % if(~Args.SkipSort)
             display('Launching eyehplfp_nosort scripts...')
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
