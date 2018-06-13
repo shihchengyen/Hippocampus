@@ -25,19 +25,17 @@ function eyehplfp(varargin)
             cmdSCP = ''; % remain empty if using HPC directly 
             if ~Args.UseHPC
                 cmdRedirect = 'ssh eleys@atlas7';
-            end
-			syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
-			display(syscmd)
-			system(syscmd);
-            if ~Args.UseHPC
+                syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
+                display(syscmd)
+                system(syscmd);
                 display('Transferring rplhighpass file ...')
                 syscmd = ['scp rplhighpass.mat eleys@atlas7:~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr];
                 display(syscmd)
+                rval=1;
+                while(rval~=0)
+                    rval=system(syscmd);
+                end
             end
-			rval=1;
-			while(rval~=0)
-				rval=system(syscmd);
-			end
 			display('Running spike sorting ...')
 			syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr '; ~/hmmsort/hmmsort_pbs.py ~/hmmsort'];
 			display(syscmd)
