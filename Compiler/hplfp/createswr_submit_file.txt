@@ -1,0 +1,15 @@
+universe     = vanilla
+Executable   = $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/run_createswr.sh
+Arguments    = /Applications/MATLAB_R2016b.app $ENV(PWD)
+Log          = $ENV(HOME)/condor/distro.$(Cluster).$(Process).log
+Output       = $ENV(HOME)/condor/distro.$(Cluster).$(Process).out
+Error        = $ENV(HOME)/condor/distro.$(Cluster).$(Process).err
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_executable = True
+transfer_input_files = rplraw.mat, ../../rplparallel.mat,  $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/createswr.app
+stream_error = True
+stream_output = True
+# request_memory = 12 GB
+
+Queue 1
