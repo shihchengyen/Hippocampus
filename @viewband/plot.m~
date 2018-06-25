@@ -54,9 +54,9 @@ if(~isempty(Args.NumericArguments))
 		cwd = pwd;
 		sidx1 = sidx(1) - 1;
 		cd(sdstr{sidx1})
-        bf = load('bandfield.mat');
+        bf = load(bandfield.mat);
 		cd(cwd)
-
+        
         % Alpha power over time
         subplot(2,3,1)
         aph = permute(bf.alphaTime,[3 2 1])';
@@ -69,11 +69,13 @@ if(~isempty(Args.NumericArguments))
         end
         % Alpha power heat map
         subplot(2,3,4)
-        imagesc(bf.alphaPowerSpec,'AlphaData',~isnan(bf.alphaPowerSpec))
+        aph = permute(bf.alphaPowerSpec,[3 2 1])';
+        pp = permute(bf.posterPosition,[3 2 1])';
+        imagesc(aph,'AlphaData',~isnan(aph))
         set(gca,'color',[0 0 0],'xtick',[],'ytick',[]);
         colorbar; hold on
-        for i = 1:size(bf.posterPosition,1) % poster positions
-            plot(bf.posterPosition(i,1),bf.posterPosition(i,2),'r.','MarkerSize',40);
+        for i = 1:size(pp,1) % poster positions
+            plot(pp(i,1),pp(i,2),'r.','MarkerSize',40);
         end
         if (~Args.LabelsOff)
             title(strcat('SI: ',num2str(round(bf.alpha_locSI,2)),' p: ',num2str(bf.alphaPValue)));
@@ -81,7 +83,8 @@ if(~isempty(Args.NumericArguments))
         
         % Gamma power over time
         subplot(2,3,2)
-        plot(bf.gammaTime,'k'); hold on;
+        gph = permute(bf.gammaTime,[3 2 1])';
+        plot(gph,'k'); hold on;
         plot([7 7],ylim,'b'); %trigger identity
         if (~Args.LabelsOff)
             title('Average gamma power');
@@ -90,11 +93,12 @@ if(~isempty(Args.NumericArguments))
         end
         % Gamma power heat map
         subplot(2,3,5)
+        gph = permute(bf.gammaPowerSpec,[3 2 1])';
         imagesc(bf.gammaPowerSpec,'AlphaData',~isnan(bf.gammaPowerSpec))
         set(gca,'color',[0 0 0],'xtick',[],'ytick',[]);
         colorbar; hold on
-        for i = 1:size(bf.posterPosition,1) % poster positions
-            plot(bf.posterPosition(i,1),bf.posterPosition(i,2),'r.','MarkerSize',40);
+        for i = 1:size(pp,1) % poster positions
+            plot(pp(i,1),pp(i,2),'r.','MarkerSize',40);
         end
         if (~Args.LabelsOff)
             title(strcat('SI: ',num2str(round(bf.gamma_locSI,2)),' p: ',num2str(bf.gammaPValue)));
@@ -114,24 +118,13 @@ if(~isempty(Args.NumericArguments))
         imagesc(bf.thetaPowerSpec,'AlphaData',~isnan(bf.thetaPowerSpec))
         set(gca,'color',[0 0 0],'xtick',[],'ytick',[]);
         colorbar; hold on
-        for i = 1:size(bf.posterPosition,1) % poster positions
-            plot(bf.posterPosition(i,1),bf.posterPosition(i,2),'r.','MarkerSize',40);
+        for i = 1:size(pp,1) % poster positions
+            plot(pp(i,1),pp(i,2),'r.','MarkerSize',40);
         end
         if (~Args.LabelsOff)
             title(strcat('SI: ',num2str(round(bf.theta_locSI,2)),' p: ',num2str(bf.thetaPValue)));
         end
-        
-        % Title (channel #)
-        if (~Args.LabelsOff)
-            [bin, chn] = nptFileParts(sdstr{sidx1});
-            delete(findall(gcf,'type','annotation'))
-            annotation('textbox', [0 0.9 1 0.1], ...
-                        'String', chn, ...
-                        'FontSize', 16,...
-                        'EdgeColor', 'none', ...
-                        'HorizontalAlignment', 'center')
-        end
-
+            
 %         f = openfig('bandfield.fig','invisible');
 %         
 %         if(~strcmp(Args.Heatmap,''))

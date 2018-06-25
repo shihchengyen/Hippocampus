@@ -67,16 +67,16 @@ if(dnum>0)
 		l = load(dlist(didx).name);
         data.thetaTime(didx,:,:) = l.thetaTime;
         data.thetaPowerSpec(didx,:,:) = l.thetaPowerSpec;
-        data.theta_locSI(didx) = l.theta_locSI;
-        data.thetaPValue(didx,:,:) = l.thetaPValue;
+        data.theta_locSI(didx,:,:) = l.theta_locSI;
+        data.thetaPValue(didx,:,:) = l.thetaPValue(didx,:,:);
         data.alphaTime(didx,:,:) = l.alphaTime;
         data.alphaPowerSpec(didx,:,:) = l.alphaPowerSpec;
-        data.alpha_locSI(didx) = l.alpha_locSI;
-        data.alphaPValue(didx,:,:) = l.alphaPValue;
+        data.alpha_locSI(didx,:,:) = l.alpha_locSI;
+        data.alphaPValue(didx,:,:) = l.alphaPValue(didx,:,:);
         data.gammaTime(didx,:,:) = l.gammaTime;
         data.gammaPowerSpec(didx,:,:) = l.gammaPowerSpec;
-        data.gamma_locSI(didx) = l.gamma_locSI;
-        data.gammaPValue(didx,:,:) = l.gammaPValue;
+        data.gamma_locSI(didx,:,:) = l.gamma_locSI;
+        data.gammaPValue(didx,:,:) = l.gammaPValue(didx,:,:);
         data.posterPosition(didx,:,:) = l.posterPosition;
 	end
 	% set index to keep track of which data goes with which directory

@@ -65,9 +65,9 @@ function bandselect(dirstr)
                          theta_nav = mean(ps1(3:5,:)); theta_cue = mean(ps2(3:5,:));
                          alpha_nav = mean(ps1(6:8,:)); alpha_cue = mean(ps2(6:8,:));
                          gamma_nav = mean(ps1(17:62,:)); gamma_cue = mean(ps2(17:62,:));
-                         theta_time(proctrialsCounter,1:size(ps2,2)) = theta_cue; theta_time(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = theta_nav;
-                         alpha_time(proctrialsCounter,1:size(ps2,2)) = alpha_cue; alpha_time(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = alpha_nav;
-                         gamma_time(proctrialsCounter,1:size(ps2,2)) = gamma_cue; gamma_time(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = gamma_nav;
+                         thetaTime(proctrialsCounter,1:size(ps2,2)) = theta_cue; thetaTime(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = theta_nav;
+                         alphaTime(proctrialsCounter,1:size(ps2,2)) = alpha_cue; alphaTime(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = alpha_nav;
+                         gammaTime(proctrialsCounter,1:size(ps2,2)) = gamma_cue; gammaTime(proctrialsCounter,size(ps2,2)+1:size(ps1,2)+7) = gamma_nav;
                      end
 
                      for r = 1:size(t1,2) % get average x- ,y- position in each time bin
@@ -138,154 +138,50 @@ function bandselect(dirstr)
     theta_locSI = (25-sumTheta)/24;
     alpha_locSI = (25-sumAlpha)/24;
     gamma_locSI = (25-sumGamma)/24;
-
+    %% Poster Position
+    posterPosition = [1.5,2; 4,1.5; 4,2.5; 2,3.5; 2,4.5; 4.5,4];
+    posterPosition = posterPosition*res/5.0-0.5*ones(size(posterPosition))*(res/5-1);
+    
     %% Plot band power over time and heat maps  
     figure('name','band power maps');
 
     % Theta power over time
-    subplot(2,3,1);
-    numWindows = size(theta_time,2);
-    theta_time(end+1,:) = sum(theta_time(:,1:numWindows)) ./ sum(theta_time(:,1:numWindows) ~= 0);
-    plot(theta_time(end,:),'k'); hold on;
-    title(strcat('Average theta power'));
-    xlabel('Time bins');
-    plot([7 7],ylim,'b'); temp = ylim; text(0,1.05*temp(2),'cue offset','Color','blue'); % plot trigger identity aligned to
-
+    numWindows = size(thetaTime,2);
+    thetaTime(end+1,:) = sum(thetaTime(:,1:numWindows)) ./ sum(thetaTime(:,1:numWindows) ~= 0);
+    thetaTime = thetaTime(end,:);
     % Theta power heat map
-    subplot(2,3,4);
-    tPowerSpec = reshape(thetaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
-    imAlpha=ones(size(tPowerSpec)); % plot NaN regions as black
-    imAlpha(isnan(tPowerSpec))=0;
-    imagesc(tPowerSpec,'AlphaData',imAlpha); % input argument to set color range limits e.g. [100 200]
-    set(gca,'color',[0 0 0],'xtick',[],'ytick',[]); % set background to black and remove x- and y-axis labels
-    colorbar; hold on % show colorbar
-    plot(1.5,2,'r.','MarkerSize',40); % plot poster positions
-    plot(4,1.5,'r.','MarkerSize',40);
-    plot(4,2.5,'r.','MarkerSize',40);
-    plot(2,3.5,'r.','MarkerSize',40);
-    plot(2,4.5,'r.','MarkerSize',40);
-    plot(4.5,4,'r.','MarkerSize',40);
-    title(strcat('SI: ',num2str(round(theta_locSI,2))));
+    thetaPowerSpec = reshape(thetaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
+    thetaPValue = anova1(thetaPowerSpec,[],'off');
+%     for i = 1:size(posterPosition,1) % poster positions
+%         plot(posterPosition(i,1),posterPosition(i,2),'r.','MarkerSize',40);
+%     end
 
-        % Highlight significant grids from shuffle
-        for n = 1:25 
-            row = floor(n/5); 
-            column = rem(n,5); 
-            if column == 0 % if no remainder, plot in 5th grid
-                column = 5;
-            else
-                row = row + 1;
-            end
-
-            if theta_locsig(1,n) < theta_locsig(2,n) % below cutoff
-                textHandles(column,row) = text(column,row,'*','Color','k','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            elseif theta_locsig(1,n) > theta_locsig(3,n) % above cutoff
-                textHandles(column,row) = text(column,row,'*','Color','w','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            end
-        end
 
     % Alpha power over time
-    subplot(2,3,2);
-    alpha_time(end+1,:) = sum(alpha_time(:,1:numWindows)) ./ sum(alpha_time(:,1:numWindows) ~= 0);
-    plot(alpha_time(end,:),'k'); hold on;
-    title(strcat('Average alpha power'));
-    xlabel('Time bins');
-    plot([7 7],ylim,'b'); temp = ylim; text(0,1.05*temp(2),'cue offset','Color','blue'); % plot trigger identity aligned to
-
+    alphaTime(end+1,:) = sum(alphaTime(:,1:numWindows)) ./ sum(alphaTime(:,1:numWindows) ~= 0);
+    alphaTime = alphaTime(end,:);
     % Alpha power heat map
-    subplot(2,3,5);
-    aPowerSpec = reshape(alphaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
-    imAlpha=ones(size(aPowerSpec)); % plot NaN regions as black
-    imAlpha(isnan(aPowerSpec))=0;
-    imagesc(aPowerSpec,'AlphaData',imAlpha); % input argument to set color range limits e.g. [100 200]
-    set(gca,'color',[0 0 0],'xtick',[],'ytick',[]); % set background to black and remove x- and y-axis labels
-    colorbar; hold on % show colorbar
-    plot(1.5,2,'r.','MarkerSize',40); % plot poster positions
-    plot(4,1.5,'r.','MarkerSize',40);
-    plot(4,2.5,'r.','MarkerSize',40);
-    plot(2,3.5,'r.','MarkerSize',40);
-    plot(2,4.5,'r.','MarkerSize',40);
-    plot(4.5,4,'r.','MarkerSize',40);
-    title(strcat('SI: ',num2str(round(alpha_locSI,2))));
-
-        % Highlight significant grids from shuffle
-        for n = 1:25 
-            row = floor(n/5); 
-            column = rem(n,5); 
-            if column == 0 % if no remainder, plot in 5th grid
-                column = 5;
-            else
-                row = row + 1;
-            end
-
-            if alpha_locsig(1,n) < alpha_locsig(2,n) % below cutoff
-                textHandles(column,row) = text(column,row,'*','Color','k','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            elseif alpha_locsig(1,n) > alpha_locsig(3,n) % above cutoff
-                textHandles(column,row) = text(column,row,'*','Color','w','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            end
-        end
-
+    alphaPowerSpec = reshape(alphaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
+    alphaPValue = anova1(alphaPowerSpec,[],'off');
+    
     % Gamma power over time
-    subplot(2,3,3);
-    gamma_time(end+1,:) = sum(gamma_time(:,1:numWindows)) ./ sum(gamma_time(:,1:numWindows) ~= 0);
-    plot(gamma_time(end,:),'k'); hold on;
-    title(strcat('Average gamma power'));
-    xlabel('Time bins');
-    plot([7 7],ylim,'b'); temp = ylim; text(0,1.05*temp(2),'cue offset','Color','blue'); % plot trigger identity aligned to
-
+    gammaTime(end+1,:) = sum(gammaTime(:,1:numWindows)) ./ sum(gammaTime(:,1:numWindows) ~= 0);
+    gammaTime = gammaTime(end,:);
     % Gamma power heat map
-    subplot(2,3,6);
-    gPowerSpec = reshape(gammaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
-    imAlpha=ones(size(gPowerSpec)); % plot NaN regions as black
-    imAlpha(isnan(gPowerSpec))=0;
-    imagesc(gPowerSpec,'AlphaData',imAlpha); % input argument to set color range limits e.g. [100 200]
-    set(gca,'color',[0 0 0],'xtick',[],'ytick',[]); % set background to black and remove x- and y-axis labels
-    colorbar; hold on % show colorbar
-    plot(1.5,2,'r.','MarkerSize',40); % plot poster positions
-    plot(4,1.5,'r.','MarkerSize',40);
-    plot(4,2.5,'r.','MarkerSize',40);
-    plot(2,3.5,'r.','MarkerSize',40);
-    plot(2,4.5,'r.','MarkerSize',40);
-    plot(4.5,4,'r.','MarkerSize',40);
-    title(strcat('SI: ',num2str(round(gamma_locSI,2))));
-
-        % Highlight significant grids from shuffle
-        for n = 1:25, 
-            row = floor(n/5); 
-            column = rem(n,5); 
-            if column == 0 % if no remainder, plot in 5th grid
-                column = 5;
-            else
-                row = row + 1;
-            end
-
-            if gamma_locsig(1,n) < gamma_locsig(2,n) % below cutoff
-                textHandles(column,row) = text(column,row,'*','Color','k','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            elseif gamma_locsig(1,n) > gamma_locsig(3,n) % above cutoff
-                textHandles(column,row) = text(column,row,'*','Color','w','FontSize',15,'horizontalAlignment','center'); hold on % indicate significant grids with asterisk
-            end
-        end
+    gammaPowerSpec = reshape(gammaPower(1,:),[res,res])'; % reshape spikeFreq matrix to map onto physical maze locations
+    gammaPValue = anova1(gammaPowerSpec,[],'off');
+    
         
     [fp,channel,ext] = fileparts(pwd);
     [fp,array,ext] = fileparts(fp);
     [fp,session,ext] = fileparts(fp);
     [fp,day,ext] = fileparts(fp);
-    
-    h = suptitle(strcat(day, {' '}, session, {' '}, channel));
-    set(h,'FontSize',16);
-    set(gcf,'units','normalized','outerposition',[0 0 1 1]); % maximize figure
-    set(gcf, 'PaperPositionMode', 'auto');
-    
-%     name = [channel 'bandfield'];
+     
     name = 'bandfield';
-    saveas(gcf,[name '.fig']);
-    disp('Saved FIG')
-%     saveas(gcf,[name '.png']);
-% 	disp('Saved PNG')
-    save([name '.mat'],'theta_time','tPowerSpec','alpha_time','aPowerSpec','gamma_time','gPowerSpec');
+    save([name '.mat'],'thetaTime','thetaPowerSpec','thetaPValue','theta_locSI','alphaTime','alphaPowerSpec','alphaPValue','alpha_locSI','gammaTime','gammaPowerSpec','gammaPValue','gamma_locSI','posterPosition');
     disp('Saved MAT')
     close all;
 
-    clearvars -except directory rplTriggers lfpWaveform unityTriggers unityData thetaPower theta_locsig theta_locSI theta_time alphaPower alpha_locsig alpha_locSI alpha_time gammaPower gamma_locsig gamma_locSI gamma_time
+    clearvars -except directory rplTriggers lfpWaveform unityTriggers unityData thetaPower theta_locsig theta_locSI thetaTime alphaPower alpha_locsig alpha_locSI alphaTime gammaPower gamma_locsig gamma_locSI gammaTime
 
 end
