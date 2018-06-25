@@ -33,11 +33,11 @@ NOTE: You will need administrator rights to run MCRInstaller.
 
 Files to package for Standalone 
 ================================
--run_createswr.sh (shell script for temporarily setting environment variables and 
+-run_bandselect.sh (shell script for temporarily setting environment variables and 
  executing the application)
    -to run the shell script, type
    
-       ./run_createswr.sh <mcr_directory> <argument_list>
+       ./run_bandselect.sh <mcr_directory> <argument_list>
        
     at Linux or Mac command prompt. <mcr_directory> is the directory 
     where version 9.1 of the MATLAB Runtime is installed or the directory where 
@@ -47,21 +47,21 @@ Files to package for Standalone
     If you have version 9.1 of the MATLAB Runtime installed in 
     /mathworks/home/application/v91, run the shell script as:
     
-       ./run_createswr.sh /mathworks/home/application/v91
+       ./run_bandselect.sh /mathworks/home/application/v91
        
     If you have MATLAB installed in /mathworks/devel/application/matlab, 
     run the shell script as:
     
-       ./run_createswr.sh /mathworks/devel/application/matlab
+       ./run_bandselect.sh /mathworks/devel/application/matlab
 -MCRInstaller.zip 
    -if end users are unable to download the MATLAB Runtime using the above  
     link, include it when building your component by clicking 
     the "Runtime downloaded from web" link in the Deployment Tool
--The Macintosh bundle directory structure createswr.app 
+-The Macintosh bundle directory structure bandselect.app 
    -this can be gathered up using the zip command 
-    zip -r createswr.zip createswr.app
+    zip -r bandselect.zip bandselect.app
     or the tar command 
-    tar -cvf createswr.tar createswr.app
+    tar -cvf bandselect.tar bandselect.app
 -This readme file 
 
 3. Definitions
@@ -104,7 +104,7 @@ If it is defined, set it to the concatenation of these strings:
         NOTE: The environment variable syntax utilizes forward 
               slashes (/), delimited by colons (:).  
         NOTE: When deploying standalone applications, it is possible 
-              to run the shell script file run_createswr.sh 
+              to run the shell script file run_bandselect.sh 
               instead of setting environment variables. See 
               section 2 "Files to Deploy and Package".    
 
