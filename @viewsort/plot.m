@@ -99,7 +99,8 @@ if(~isempty(Args.NumericArguments))
             if isnan(obj.data.coeffV_ISI(xind(k)))
                 legendLabels{k} = 'N/A';
             else
-                legendLabels{k} = num2str(round(obj.data.coeffV_ISI(xind(k)),2));
+                label = round(obj.data.coeffV_ISI(xind(k)),2);
+                legendLabels{k} = sprintf('%u: %.2f', k-1, label);
             end
         end
         lgd = legend(legendLabels, 'FontSize', 12);
@@ -115,7 +116,7 @@ if(~isempty(Args.NumericArguments))
             perms = nchoosek(1:size(xind,2),2);
             perms(:,3) = obj.data.spikesim(spikeind);
             dim = [0.2, 0.2, 0.1, 0.1];
-            annotation('textbox',dim,'String', num2str(perms));
+            annotation('textbox',dim,'String', num2str(perms-1));
         end
     end  % if(Args.Array || Args.Session || Args.Day)
 else
@@ -151,7 +152,7 @@ if(~isempty(Args.Cmds))
     eval(Args.Cmds{1})
     drawnow
     disp('Press a key to continue') % wait for keypress
-    pause;
+    pause
     eval(Args.Cmds{2})
     % switch back to previous figure
     figure(h);
