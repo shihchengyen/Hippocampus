@@ -15,17 +15,12 @@ function [obj, varargout] = plot(obj,varargin)
 %           instead of 1s by 1s
 %           option: 'Trial' - plots only the trial part
 %
-%   Example
-%   
-%   >> cd /Volumes/Hippocampus/Data/picasso/20180406/session01/array01
-%   >> hmd = ProcessLevel(hidata,'Levels','Array','FileName','hmmsort.mat');
-%   >> InspectGUI(hmd,'Array','UseGMR','Objects',{'vmswr',{'Trials',0,'Time',1,'Event',1}})
-%
 %   'Cmds': accepts cmds such as InspectGUI (to display each channel data
 %   when analyzing array/session
-%   e.g.
-%   >> InspectGUI(hmd,'Objects',{{'vmswr',{'Cmds','InspectGUI(vmswr(''auto''),''addObjs'',...
-%       {vmswr(''auto'')},''optArgs'',{{''PlotAllData''},{''Rms''}},''SP'',[2 1])'}}}
+%   e.g. 
+%   >> cd /Volumes/Hippocampus/Data/picasso/20180406/session01/array02
+%   >> hmd = ProcessLevel(hidata,'Levels','Array','FileName','hmmsort.mat');
+%   >> InspectGUI(hmd,'Objects',{{'vmswr',{'Cmds','InspectGUI(vmswr(''auto''),''addObjs'',{vmswr(''auto'')},''optArgs'',{{''PlotAllData''},{''Rms''}},''SP'',[2 1])'}}})
 
 Args = struct('LabelsOff',0,'TitleOff', 0,'Color','b', ...
             'GroupPlots',1,'GroupPlotIndex',1,...
@@ -283,14 +278,17 @@ else
             end
             pcolor(1:2,1:2,mean(tIdx(:,3))*[1 1;1 1])
             caxis([0 20])
-            tx = 'Avg # Event/Trial';
+            tx = '# Event/Trial';
         else
             swrTime = sum(swrInfo(:,3)-swrInfo(:,2));
             totalTime = max(tIdx(:,2))-min(tIdx(:,1));
             pcolor(0:1,0:1,swrTime./totalTime*[1 1;1 1])
             caxis([0 0.1])
-            m = num2str(size(swrInfo,1));
-            text(0.5,0.5,strcat('#:',m));
+            for i = 1:length(tIdx)
+                tIdx(i,3) = sum(swrInfo(:,1)>tIdx(i,1) & swrInfo(:,1)<tIdx(i,2));
+            end
+            m = num2str(mean(tIdx(:,3)));
+            text(0.5,0.5,m(1:4));
             tx = 'Event Time/Total Time';
         end
         colormap(flipud(bone))

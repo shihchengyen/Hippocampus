@@ -2,6 +2,13 @@ function [obj, varargout] = plot(obj,varargin)
 %@viewband/plot Plot function for viewband object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
 %   response.
+%
+%   Examples (Array Level):
+%   vb = ProcessLevel(viewband,'Levels','Array');
+%   InspectGUI(vb)
+%
+%   bs = ProcessLevel(hidata,'Levels','Array','FileName','bandfield.mat');
+%   InspectGUI(bs,'Array','UseGMR','Objects',{'viewband',{'Heatmap','gamma'}})
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		'Channel',0, 'Array',0, 'Session',0, 'Day',0, ...
@@ -26,8 +33,8 @@ if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 
     n = Args.NumericArguments{1};
-
-	if(Args.Channel || Args.Array || Args.Session || Args.Day)
+    
+	if(Args.Channel || Args.Array || Args.Session || Args.Day) % when does this happen?
 		if(Args.Channel)
 		elseif(Args.Array)
 		elseif(Args.Session)
@@ -39,16 +46,8 @@ if(~isempty(Args.NumericArguments))
 % 			ylabel('')
         end
     else
-%         % getting path
-%         sidx = find(obj.data.ChannelIndex>=n);
-%         sdstr = get(obj,'SessionDirs');
-%         cwd = pwd;
-%         sidx1 = sidx(1) - 1;
-%         path = strrep(sdstr{sidx1},'/Users/shihcheng/afp','/');
-%         cd(path)
-% %         cd(sdstr{sidx1})
-%         delete(findall(findall(gcf,'Type','axe'),'Type','text')) %clear texts
         
+        % Loading mat file
         sidx = find(obj.data.ChannelIndex>=n);
 		sdstr = get(obj,'SessionDirs');
 		cwd = pwd;
