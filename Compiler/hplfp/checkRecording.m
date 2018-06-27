@@ -3,19 +3,19 @@ function checkRecording
 hd = ProcessLevel(hidata,'Levels','Session','FileName','rplhighpass.mat');
 
 figure('units','normalized','outerposition',[0 0 1 1]); 
-plot(hd,1,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'HighpassFreqs',[500 10000]}});
+plot(hd,1,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'redo','HighpassFreqs',[500 10000]}});
 saveas(gcf,'ha1.png')
 close
 figure('units','normalized','outerposition',[0 0 1 1]); 
-plot(hd,2,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'HighpassFreqs',[500 10000]}});
+plot(hd,2,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'redo','HighpassFreqs',[500 10000]}});
 saveas(gcf,'ha2.png')
 close
 figure('units','normalized','outerposition',[0 0 1 1]); 
-plot(hd,3,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'HighpassFreqs',[500 10000]}});
+plot(hd,3,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'redo','HighpassFreqs',[500 10000]}});
 saveas(gcf,'ha3.png')
 close
 figure('units','normalized','outerposition',[0 0 1 1]); 
-plot(hd,4,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'HighpassFreqs',[500 10000]}});
+plot(hd,4,'Array','UseGMR','Objects',{'rplhighpass',{'FFT'},{'redo','HighpassFreqs',[500 10000]}});
 saveas(gcf,'ha4.png')
 close
 
