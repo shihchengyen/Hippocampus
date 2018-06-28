@@ -1,4 +1,7 @@
 function eyehplfp(varargin)
+
+%startup
+
     % get channel string
     [p1, chstr] = nptFileParts(pwd);
     % get array string
@@ -7,6 +10,14 @@ function eyehplfp(varargin)
     [p3, sesstr] = nptFileParts(p2);
     % get day string
     [p4, daystr] = nptFileParts(p3);
+
+disp(p1)
+disp(p2)
+% addPathCmd = '/nfs/app1/common/matlab/R2018a/bin/glnxa64';
+% addpath(addPathCmd);
+%disp(['added path: ',addPathCmd])
+%system('ldd /nfs/app1/common/matlab/R2018a/bin/glnxa64/libmwxcp_dwarf.so')
+%disp('Finished running ldd')
     
     % to read Args
     load([p2,'/rsData']);
