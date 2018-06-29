@@ -272,6 +272,6 @@ if(~isempty(l.mlseq))
 		disp('Saved MAT')
 	    close all;
     
-	    clearvars -except nShuffles res numGrids gridSize horGridBound vertGridBound l sampleRate unityTriggers processTrials unityData rplTriggers rplTrialType rplTrialDur spikeSort spikeForms ncells 
+	    clearvars -except dirstr nShuffles res numGrids gridSize horGridBound vertGridBound l sampleRate unityTriggers processTrials unityData rplTriggers rplTrialType rplTrialDur spikeSort spikeForms ncells 
     end  % for si = 1:ncells
 end  % if(~isempty(l.mlseq))
