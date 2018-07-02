@@ -1,11 +1,19 @@
-#!/bin/bash
-
-#PBS -P Project_run_eyehplfp.sh
-#PBS -q short
+ -P Project_Name_of_Job
+#PBS -q matlab
 #PBS -l select=1:ncpus=1:mem=10GB
 #PBS -j oe
-#PBS -l walltime=24:00:00
+#PBS -N Job_Name
+###  -N Job_Name: set filename for standard output/error message.
 
-cd "$PBS_O_WORKDIR"
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify.
 
-$GITHUB_MATLAB/Hippocampus/Compiler/hplfp/run_eyehplfp.sh /app1/common/matlab/R2018a
+##--- Put your exec/application commands below ---
+## If your matlab program is < my_matlab_prog.m >.
+source /etc/profile.d/rec_modules.sh
+#module load jre/1.8.0_162
+
+source ~/.bashrc
+cp ~/matlab/Hippocampus/Compiler/hplfp/run_eyehplfp.sh .
+cp ~/matlab/Hippocampus/Compiler/hplfp/eyehplfp .
+matlab-run run_eyehplfp.sh
+rm run_eyehplfp.sh eyehplfp
