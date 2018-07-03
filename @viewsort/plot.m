@@ -121,7 +121,8 @@ if(~isempty(Args.NumericArguments))
     end  % if(Args.Array || Args.Session || Args.Day)
 else
 	% plot all data
-	numSets = obj.data.numSets;
+	% numSets = obj.data.numSets;
+    numSets = get(obj,'number');
     for index = 1:numSets
         if(numSets>1)
             nptSubplot(numSets,index);
@@ -132,7 +133,7 @@ else
         title(getDataOrder('ShortName','DirString',sdstr{index}))
         % plot noise on top of waveform
         hold on
-        line(repmat(xlim',1,2),repmat([-obj.data.Noise(xind) obj.data.Noise(xind)],2,1),'Color','r')
+        line(repmat(xlim',1,2),repmat([-obj.data.Noise(index) obj.data.Noise(index)],2,1),'Color','r')
         % plot(obj.data.Noise(xind(end),:),'r')
         % plot(0-(obj.data.Noise(xind(end),:)),'r')
         hold off
