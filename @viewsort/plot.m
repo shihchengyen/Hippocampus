@@ -4,9 +4,9 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		'Array',0, 'Session',0, 'Day',0, 'UseGMR',0, ...
+		'Array',0, 'Session',0, 'Day',0,  ...
 		'Cmds', '', 'ReturnVars',{''}, 'ArgsOnly',0);
-Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day', 'UseGMR'};
+Args.flags = {'LabelsOff','ArgsOnly','Array','Session','Day'};
 [Args,varargin2] = getOptArgs(varargin,Args,'removenumargs');
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -16,7 +16,6 @@ if Args.ArgsOnly
     return;
 end
 
-UseGMRlayout = 0;
 delete(findall(gcf,'type','annotation'))
 
 % plot waveform
@@ -30,18 +29,12 @@ if(~isempty(Args.NumericArguments))
             chnstart = obj.data.ArrayIndex(n);
             % get ending row in ChannelIndex
             chnend = obj.data.ArrayIndex(n+1);
-            if(Args.UseGMR)
-                UseGMRlayout = 1;
-            end
 		elseif(Args.Session)
 			% plot waveforms session by session
             % get starting row in ChannelIndex
             chnstart = obj.data.SessionIndex(n);
             % get ending row in ChannelIndex
             chnend = obj.data.SessionIndex(n+1);
-            if(Args.UseGMR)
-                UseGMRlayout = 1;
-            end
         elseif(Args.Day)
             % plot waveforms session by session
             % get starting row in ChannelIndex
