@@ -50,7 +50,12 @@ if(~isempty(Args.NumericArguments))
 	        end
 			chnindex = chnstart + index;
 			xind = (obj.data.ChannelIndex(chnindex)+1):obj.data.ChannelIndex(chnindex+1);
-			plot((obj.data.spikeForms(xind,:))','.-')
+			if(obj.data.Args.Saved==0)
+                plot((obj.data.spikeForms(xind,:))','.-')
+            else
+                % plot saved spikeforms in bold
+                plot((obj.data.spikeForms(xind,:))','.-', 'LineWidth', 2)
+            end
 			sdstr = get(obj,'SessionDirs');
 			title(getDataOrder('ShortName','DirString',sdstr{chnindex}))
             
@@ -69,7 +74,12 @@ if(~isempty(Args.NumericArguments))
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
         xind = (obj.data.ChannelIndex(n)+1):obj.data.ChannelIndex(n+1);
-        plot((obj.data.spikeForms(xind,:))','.-')
+        if(obj.data.Args.Saved==0)
+            plot((obj.data.spikeForms(xind,:))','.-')
+        else
+            % plot saved spikeforms in bold
+            plot((obj.data.spikeForms(xind,:))','.-', 'LineWidth', 2)
+        end
         sdstr = get(obj,'SessionDirs');
         title(getDataOrder('ShortName','DirString',sdstr{n}))
         
@@ -86,31 +96,33 @@ if(~isempty(Args.NumericArguments))
             ylabel('Voltage (uV)')
         end
         
-        % show ISI coefficients of variation
-        legendLabels = cell(1,size(xind,2));
-        for k = 1:size(xind,2)
-            if isnan(obj.data.coeffV_ISI(xind(k)))
-                legendLabels{k} = 'N/A';
-            else
-                label = round(obj.data.coeffV_ISI(xind(k)),2);
-                legendLabels{k} = sprintf('%u: %.2f', k-1, label);
+        if(obj.data.Args.Saved==0)
+            % show ISI coefficients of variation
+            legendLabels = cell(1,size(xind,2));
+            for k = 1:size(xind,2)
+                if isnan(obj.data.coeffV_ISI(xind(k)))
+                    legendLabels{k} = 'N/A';
+                else
+                    label = round(obj.data.coeffV_ISI(xind(k)),2);
+                    legendLabels{k} = sprintf('%u: %.2f', k-1, label);
+                end
             end
-        end
-        lgd = legend(legendLabels, 'FontSize', 12);
-        title(lgd,{'ISI Distribution','Coefficient of Variation:'})
-        % subplot(round((numUnits+1)/2),2,d+1);
-        % histogram(spike_ISI,1000,'facecolor',plotColour(d),'edgecolor',plotColour(d)); hold on
-        % title(strcat('(',num2str(d),')',' ISI Distribution, Coefficient of Variation: ', num2str(round(coeffV_ISI,2))));
-        % xlabel('ISI(ms)','FontSize',10); ylabel('Count','FontSize',10);
-        
-        % show spike similarities (dot product)
-        spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
-        if (~isnan(obj.data.spikesim(spikeind)))
-            perms = nchoosek(1:size(xind,2),2);
-            perms(:,3) = obj.data.spikesim(spikeind);
-            dim = [0.2, 0.2, 0.1, 0.1];
-            annotation('textbox',dim,'String', num2str(perms-1));
-        end
+            lgd = legend(legendLabels, 'FontSize', 12);
+            title(lgd,{'ISI Distribution','Coefficient of Variation:'})
+            % subplot(round((numUnits+1)/2),2,d+1);
+            % histogram(spike_ISI,1000,'facecolor',plotColour(d),'edgecolor',plotColour(d)); hold on
+            % title(strcat('(',num2str(d),')',' ISI Distribution, Coefficient of Variation: ', num2str(round(coeffV_ISI,2))));
+            % xlabel('ISI(ms)','FontSize',10); ylabel('Count','FontSize',10);
+            
+            % show spike similarities (dot product)
+            spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
+            if (~isnan(obj.data.spikesim(spikeind)))
+                perms = nchoosek(1:size(xind,2),2);
+                perms(:,3) = obj.data.spikesim(spikeind);
+                dim = [0.2, 0.2, 0.1, 0.1];
+                annotation('textbox',dim,'String', num2str(perms-1));
+            end
+        end %if(obj.data.Args.Saved==0)
     end  % if(Args.Array || Args.Session || Args.Day)
 else
 	% plot all data
