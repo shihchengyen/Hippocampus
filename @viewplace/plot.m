@@ -65,7 +65,9 @@ if(~isempty(Args.NumericArguments))
 		sdstr = get(obj,'SessionDirs');
 		cwd = pwd;
 		sidx1 = sidx(1) - 1;
-		cd(sdstr{sidx1})
+% 		cd(sdstr{sidx1})
+        path = strrep(sdstr{sidx1},'/Users/shihcheng/afp','/');
+        cd(path)
 		% need to figure which picture inside this directory we need to load
 		pnum = n - obj.data.ChannelIndex(sidx1);
 		% load the picture
