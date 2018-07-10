@@ -1,5 +1,13 @@
 function rsCreateObject()
 
+if ~isdeployed
+   addpath('~/matlab/DPV')
+   addpath('~/matlab/newNpt')
+   addpath('~/matlab/Hippocampus') 
+   addpath('~/matlab/neuroshare')
+   addpath('~/hmmsort')
+end
+
 % load arguments
 % we are doing this so this program can run in compiled form
 load('rsData');
@@ -127,16 +135,16 @@ if(rval~=-1)
         cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
         cmdScript = 'HPC';
     end
-    if(isempty(strfind(sesname,'eye')))
-        if(~Args.SkipSort)
-            display('Launching hplfp scripts...')
-            cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
-        else  % if(~Args.SkipSort)
-            display('Launching hplfp_nosort scripts...')
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-        end  % if(~Args.SkipSort)
-    else  % if(isempty(strfind(sesname,'eye')))
+%     if(isempty(strfind(sesname,'eye')))
+%         if(~Args.SkipSort)
+%             display('Launching hplfp scripts...')
+%             cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
+%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
+%         else  % if(~Args.SkipSort)
+%             display('Launching hplfp_nosort scripts...')
+%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
+%         end  % if(~Args.SkipSort)
+%     else  % if(isempty(strfind(sesname,'eye')))
         % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
         if(~Args.SkipSort)
             display('Launching eyehplfp scripts...')
@@ -146,7 +154,7 @@ if(rval~=-1)
             display('Launching eyehplfp_nosort scripts...')
             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
         end  % if(~Args.SkipSort)
-    end  % if(isempty(strfind(sesname,'eye')))
+%     end  % if(isempty(strfind(sesname,'eye')))
 end  %  if(rval~=-1)
 
 display('Done!')

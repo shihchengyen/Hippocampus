@@ -13,6 +13,15 @@ function eyehplfp(varargin)
 
 disp(p1)
 disp(p2)
+
+if ~isdeployed
+   addpath('~/matlab/DPV')
+   addpath('~/matlab/newNpt')
+   addpath('~/matlab/Hippocampus') 
+   addpath('~/matlab/neuroshare')
+   addpath('~/hmmsort')
+end
+
 % addPathCmd = '/nfs/app1/common/matlab/R2018a/bin/glnxa64';
 % addpath(addPathCmd);
 %disp(['added path: ',addPathCmd])
