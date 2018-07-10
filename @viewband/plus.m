@@ -1,7 +1,7 @@
 function r = plus(p,q,varargin)
-%@viewsort/plus Overloaded plus function for viewsort objects.
-%   R = plus(P,Q) combines viewsort objects P and Q and returns the
-%   viewsort object R.
+%@viewband/plus Overloaded plus function for viewband objects.
+%   R = plus(P,Q) combines viewband objects P and Q and returns the
+%   viewband object R.
 
 % get name of class
 classname = mfilename('class');
@@ -36,26 +36,15 @@ else
 		% object
 		r = p;
 		% useful fields for most objects
-		r.data.spikeForms = [p.data.spikeForms; q.data.spikeForms];
-        r.data.Noise = [p.data.Noise;q.data.Noise];
-        if(r.data.Args.Saved==0)
-            r.data.coeffV_ISI = [p.data.coeffV_ISI; q.data.coeffV_ISI];
-            r.data.spikesim = [p.data.spikesim; q.data.spikesim];
-        end
-        r.data.numChannels = p.data.numChannels + q.data.numChannels;
+		r.data.locSI = [p.data.locSI; q.data.locSI];
+		r.data.numChannels = p.data.numChannels + q.data.numChannels;
 		% object specific fields
 		r.data.ChannelIndex = [p.data.ChannelIndex; (p.data.ChannelIndex(end) ...
 			+ q.data.ChannelIndex(2:end))];
-        if(r.data.Args.Saved==0)
-            r.data.spikesimIndex = [p.data.spikesimIndex; (p.data.spikesimIndex(end) ...
-                + q.data.spikesimIndex(2:end))];
-        end
-
 
 		% check if p and q are from the same array
 		if(~strcmp(p.data.arrstr(end,:),q.data.arrstr))
-            % concatenate p and q
-			r.data.arrstr = strvcat(p.data.arrstr, q.data.arrstr);
+			r.data.arrstr = [p.data.arrstr; q.data.arrstr];
 			r.data.ArrayIndex = [p.data.ArrayIndex; (p.data.ArrayIndex(end) ...
 				+ q.data.ArrayIndex(2:end))];
 		else
@@ -65,8 +54,7 @@ else
 
 		% check if p and q are from the same session
 		if(~strcmp(p.data.sesstr(end,:),q.data.sesstr))
-            % concatenate p and q
-			r.data.sesstr = strvcat(p.data.sesstr, q.data.sesstr);
+			r.data.sesstr = [p.data.sesstr; q.data.sesstr];
 			r.data.SessionIndex = [p.data.SessionIndex; (p.data.SessionIndex(end) ...
 				+ q.data.SessionIndex(2:end))];
 		else
@@ -76,8 +64,7 @@ else
 
 		% check if p and q are from the same day
 		if(~strcmp(p.data.daystr(end,:),q.data.daystr))
-            % concatenate p and q
-			r.data.daystr = strvcat(p.data.daystr, q.data.daystr);
+			r.data.daystr = [p.data.daystr; q.data.daystr];
 			r.data.DayIndex = [p.data.DayIndex; (p.data.DayIndex(end) ...
 				+ q.data.DayIndex(2:end))];
 		else
