@@ -2,11 +2,23 @@
 % This will split the raw Ripple files in each session into 
 % rplraw and rplparallel objects. We will skip the LFP files
 % as we will perform our own low-pass filtering on the raw data
-ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/rplsplit/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+% This will create the highpass and lfp files, but not run the spike
+% sorting. Useful when debugging noise
+ProcessLevel(rplsplit,'Levels','Day','Exclude',{'session01','session02','session03','session04','sessioneye'},'SaveLevels',3,'SkipLFP','SkipSort','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+% This will generate frequency plots for highpass and lfp data
+ProcessLevel(nptdata,'Levels','Day','nptLevelCmd',{'Session','checkRecording'});
+% Generate unitymaze objects
+um = ProcessLevel(unitymaze,'Levels','Day','save');
+InspectGUI(um)
 
-ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Channel','system(''source ~/.bash_profile; condor_submit ~/Dropbox/Work/Matlab/Hippocampus/Compiler/hplfp/hplfp_submit_file.txt'')'})
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'Test','SkipLFP','SkipRaw','SkipAnalog','SkipParallel','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipSort','SkipLFP','SkipParallel','Channels',91:124,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
 
-ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Session','submitSort'})
+ProcessLevel(nptdata,'Levels','Day','Exclude',{'analog'},'nptLevelCmd',{'Channel','system(''source ~/.bash_profile; condor_submit ~/cbin/hplfp_submit_file.txt'')'})
+ProcessLevel(nptdata,'Levels','Session','Exclude',{'analog'},'nptLevelCmd',{'Channel','sortchannel'})
+
+ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Session','submitSort(''HPC'')'})
 
 % generate rpllfp objects in eyesession directories
 ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Channel','rpllfp(''auto'',''save'');'})
@@ -26,6 +38,9 @@ ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
 
 ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipLFP')
 
+% check 50 Hz and high-frequency noise
+checkRecording
+
 % check spike sorting
 
 
@@ -34,8 +49,6 @@ ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipLFP')
 ProcessLevel(vmhighpass,'Levels','Session','SaveLevels',2)
 % This will use rplraw to first create rpllfp, then use rplparallel
 % to create vmlfp
-ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
-
 ProcessLevel(vmlfp,'Levels','Session','SaveLevels',2)
 ProcessLevel(nptdata,'Levels','Session','nptLevelCmd',{'Array', ...
 	'ng = nptgroup(''auto'',''Levels'',''Array'',''LevelObject'',''Channel''); cwd = pwd; dirlist = dir(''channel*''); cd(dirlist(1).name); vp = vmlfp(''auto''); ntrials = vp.number; cd(cwd); a = nptSubplot(1,1); h = gcf; h.PaperOrientation = ''landscape''; h.PaperType = ''a4''; for i = 1:ntrials; plot(ng,i,''Object'',{''vmlfp''},''GroupPlotSep'',''Vertical''); title(pwd); print(''-dpdf'',''-fillpage'',''-noui'',[getDataOrder(''ShortName'') sprintf(''LFPt%03d.pdf'',i)]); subplot(a(1),a(2),1); end'})
