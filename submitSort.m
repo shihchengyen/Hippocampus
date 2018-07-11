@@ -129,13 +129,15 @@ else  % if(Args.SelectiveSort)
         % get username and machine
         usermachinestr = [Args.HPCUser '@' Args.HPCMachine];
         % create day, session, and array directories on the HPC
-        syscmd = ['ssh ' usermachinestr ' "cd ' Args.HPCDir '; mkdir ' daydirstr ' ' sesdirstr '; cd ' sesdirstr '; mkdir ' arstring '"'];
-        system(syscmd);
-        % find all rplhighpass files and create a tar archive
-        system('find . -name "rplhighpass.mat" | xargs tar --options gzip:compression-level=9 -cvzf sort.tar');
-        system(['scp sort.tar ' usermachinestr ':' Args.HPCDir sesdirstr]);
-        system(['ssh ' usermachinestr ' "cd ' Args.HPCDir '; cd ' sesdirstr '; tar -xvzf sort.tar; rm sort.tar; ' Args.HPCCommand '"']);
-        system('rm sort.tar');
+        if ~Args.UseHPC
+            syscmd = ['ssh ' usermachinestr ' "cd ' Args.HPCDir '; mkdir ' daydirstr ' ' sesdirstr '; cd ' sesdirstr '; mkdir ' arstring '"'];
+            system(syscmd);
+            % find all rplhighpass files and create a tar archive
+            system('find . -name "rplhighpass.mat" | xargs tar --options gzip:compression-level=9 -cvzf sort.tar');
+            system(['scp sort.tar ' usermachinestr ':' Args.HPCDir sesdirstr]);
+            system(['ssh ' usermachinestr ' "cd ' Args.HPCDir '; cd ' sesdirstr '; tar -xvzf sort.tar; rm sort.tar; ' Args.HPCCommand '"']);
+            system('rm sort.tar');
+        end
     else  % if(Args.HPC)
         % find directories named channel???, and run the SortCmd inside each directory
         system(['cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ' Args.SortCmd '; cd $cwd; done'])
