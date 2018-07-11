@@ -65,12 +65,10 @@ if(Args.SelectiveSort)
                 % add array prefix
                 arstring = sprintf('array%02d ', uarnum);
                 % send ssh command to create array directories
-                if Args.UseHPC
-                    syscmd = ['cd ' Args.HPCDir '; ' daydirstr ' ' sesdirstr '; cd ' sesdirstr '; ' arstring];
-                else
+                if ~Args.UseHPC
                     syscmd = ['ssh ' usermachinestr ' "cd ' Args.HPCDir '; mkdir ' daydirstr ' ' sesdirstr '; cd ' sesdirstr '; mkdir ' arstring '"'];
+                    system(syscmd);
                 end
-                system(syscmd);
                 
                 % find channels marked with 0's indicating that they are not working
                 ai0 =find(num(Args.ChannelRows,dayidx)==0);
@@ -117,7 +115,7 @@ if(Args.SelectiveSort)
     end  % if(~isempty(dayidx))
 else  % if(Args.SelectiveSort)
     % ignore spreadsheet and sort all channels
-    if(Args.HPC)
+    if(Args.HPC) && ~Args.UseHPC
         % get array directories string
         arstring = sprintf('array%02d ', 1:4);
         % assume we are in session directory
@@ -136,7 +134,7 @@ else  % if(Args.SelectiveSort)
         system(['scp sort.tar ' usermachinestr ':' Args.HPCDir sesdirstr]);
         system(['ssh ' usermachinestr ' "cd ' Args.HPCDir '; cd ' sesdirstr '; tar -xvzf sort.tar; rm sort.tar; ' Args.HPCCommand '"']);
         system('rm sort.tar');
-    else  % if(Args.HPC)
+    else  % if(Args.HPC) && ~Args.UseHPC
         % find directories named channel???, and run the SortCmd inside each directory
         system(['cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ' Args.SortCmd '; cd $cwd; done'])
     end  % if(Args.HPC)
