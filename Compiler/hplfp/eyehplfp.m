@@ -41,11 +41,8 @@ end
 	
 			% make channel direcory on HPC, copy to HPC, cd to channel directory, and then run hmmsort
 			display('Creating channel directory ...')
-            cmdRedirect = ''; % remain empty if using HPC directly
-            cmdSCP = ''; % remain empty if using HPC directly 
             if ~Args.UseHPC
-                cmdRedirect = 'ssh eleys@atlas7';
-                syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
+                syscmd = ['ssh eleys@atlas7; cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
                 display(syscmd)
                 system(syscmd);
                 display('Transferring rplhighpass file ...')
@@ -55,9 +52,10 @@ end
                 while(rval~=0)
                     rval=system(syscmd);
                 end
+                syscmd = ['cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr];
             end
 			display('Running spike sorting ...')
-			syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr '; ~/hmmsort/hmmsort_pbs.py ~/hmmsort'];
+			syscmd = '~/hmmsort/hmmsort_pbs.py ~/hmmsort';
 			display(syscmd)
 			system(syscmd);
 		end  % if(isempty(dir('skipsort.txt')))
