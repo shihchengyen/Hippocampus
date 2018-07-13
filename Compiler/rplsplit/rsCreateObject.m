@@ -109,23 +109,27 @@ if(~Args.SkipSplit)
 	ns_status = ns_CloseFile(hFile);
 end  % if(~Args.SkipSplit)
 
-display('Marking directories to skip for sorting...')
-rval = submitSort('HPC','SkipMarker');
+if(~Args.SkipSort)
+	if(Args.SelectiveSort)
+		display('Marking directories to skip for sorting...')
+		rval = submitSort('HPC','SkipMarker','SelectiveSort');
+	else
+		display('Sorting all channels...')
+		rval = submitSort('HPC','SkipMarker');
+	end	
+else
+	rval = 0;
+end  % if(~Args.SkipSort)
 
 if(rval~=-1)
 	% get session name
 	[p,sesname] = fileparts(pwd);
 	% check if we are in a sessioneye directory
-	if(isempty(strfind(sesname,'eye')))
-		if(~Args.SkipSort)
-			display('Launching hplfp scripts...')
-			system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; condor_submit ~/cbin/hplfp_submit_file.txt; cd $cwd; done');
-		else  % if(~Args.SkipSort)
-			display('Launching hplfp_nosort scripts...')
-			system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; condor_submit ~/cbin/hplfp_nosort_submit_file.txt; cd $cwd; done');
-		end  % if(~Args.SkipSort)
-	else  % if(isempty(strfind(sesname,'eye')))
-		% in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
+	if(~isempty(strfind(sesname,'test')))
+		% in sessiontest directory, so skip spike sorting
+		display('Launching eyehplfp_nosort scripts...')
+		system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; condor_submit ~/cbin/eyehplfp_nosort_submit_file.txt; cd $cwd; done');
+	else  % if(~isempty(strfind(sesname,'test')))
 		if(~Args.SkipSort)
 			display('Launching eyehplfp scripts...')
 			system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; condor_submit ~/cbin/eyehplfp_submit_file.txt; cd $cwd; done');
@@ -133,7 +137,7 @@ if(rval~=-1)
 			display('Launching eyehplfp_nosort scripts...')
 			system('source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; condor_submit ~/cbin/eyehplfp_nosort_submit_file.txt; cd $cwd; done');
 		end  % if(~Args.SkipSort)
-	end  % if(isempty(strfind(sesname,'eye')))
+	end
 end  %  if(rval~=-1)
 
 display('Done!')
