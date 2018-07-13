@@ -1,4 +1,4 @@
-function rval = submitSort(varargin)
+function varargout = submitSort(varargin)
 % submitSort Submits channels for spike sorting
 %   This function checks a spreadsheet to submit channels for spike sorting. This function should be called from
 %   the session directory, or can be used in the following manner to submit several days of data for spike sorting:
@@ -60,12 +60,12 @@ if(Args.SelectiveSort)
             usermachinestr = [Args.HPCUser '@' Args.HPCMachine];
             array_nums = floor((ch_nums-1)/Args.ChannelsPerArray)+1;
             if(Args.SkipMarker)
+                if ~Args.UseHPC
                 % create array directories
                 uarnum = unique(array_nums);
                 % add array prefix
                 arstring = sprintf('array%02d ', uarnum);
                 % send ssh command to create array directories
-                if ~Args.UseHPC
                     syscmd = ['ssh ' usermachinestr ' "cd ' Args.HPCDir '; mkdir ' daydirstr ' ' sesdirstr '; cd ' sesdirstr '; mkdir ' arstring '"'];
                     system(syscmd);
                 end
@@ -73,17 +73,19 @@ if(Args.SelectiveSort)
                 % find channels marked with 0's indicating that they are not working
                 ai0 =find(num(Args.ChannelRows,dayidx)==0);
                 skip_ch_nums = num(Args.ChannelRows(ai0),1);
-                skip_array_nums = floor((skip_ch_nums-1)/Args.ChannelsPerArray)+1;
-                for chidx = 1:size(skip_ch_nums,1)
-                    % convert channel number to array number
-                    array_dir = sprintf('array%02d', skip_array_nums(chidx));
-                    chan_dir = sprintf('channel%03d', skip_ch_nums(chidx));
-                    display(['Skip sorting ' array_dir filesep chan_dir])
-                    cd(array_dir);
-                    cd(chan_dir);
-                    system(['touch ' Args.SkipSortName]);
-                    cd(cwd)
-                end  % for chidx = 1:size(skip_ch_nums,1)
+                if nargout == 1
+                    skip_array_nums = floor((skip_ch_nums-1)/Args.ChannelsPerArray)+1;
+                    for chidx = 1:size(skip_ch_nums,1)
+                        % convert channel number to array number
+                        array_dir = sprintf('array%02d', skip_array_nums(chidx));
+                        chan_dir = sprintf('channel%03d', skip_ch_nums(chidx));
+                        display(['Skip sorting ' array_dir filesep chan_dir])
+                        cd(array_dir);
+                        cd(chan_dir);
+                        system(['touch ' Args.SkipSortName]);
+                        cd(cwd)
+                    end  % for chidx = 1:size(skip_ch_nums,1)
+                end
             else  % if(Args.SkipMarker)
                 system(['ssh ' usermachinestr ' "mkdir ' daydirstr ' ' sesdirstr '"']);
                 fid = fopen('tarlist.txt','w');
@@ -139,3 +141,11 @@ else  % if(Args.SelectiveSort)
         system(['cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ' Args.SortCmd '; cd $cwd; done'])
     end  % if(Args.HPC)
 end   % if(Args.SelectiveSort)
+
+if nargout == 1
+    varargout = rval;
+else
+    varargout{1} = rval;
+    varargout{2} = skip_ch_nums;
+end
+

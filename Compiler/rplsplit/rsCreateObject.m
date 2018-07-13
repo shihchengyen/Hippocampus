@@ -108,6 +108,24 @@ if(~Args.SkipSplit)
                         elseif(b_lfp)
                             rpllfp('auto','Data',tData,'save',varargin{:});
                         end
+                        [~,skip_ch_nums] = submitSort('HPC','SkipMarker','UseHPC');
+                        if ismember(chan_num,skip_ch_nums)
+                            if ~Args.UseHPC % swap between the HPC and HTCondor
+                                cmdPath = 'condor_submit ~/cbin/';
+                                cmdScript = '';
+                            else
+                                cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
+                                cmdScript = 'HPC';
+                            end
+                            if(~Args.SkipSort)
+                                disp('Launching eyehplfp scripts...')
+                                cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
+                                system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
+                            else  % if(~Args.SkipSort)
+                                disp('Launching eyehplfp_nosort scripts...')
+                                system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
+                            end  % if(~Args.SkipSort)
+                        end
                         cd(cwd);
                         clear tData
                     end % if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
@@ -117,24 +135,24 @@ if(~Args.SkipSplit)
     ns_status = ns_CloseFile(hFile);
 end  % if(~Args.SkipSplit)
 
-display('Marking directories to skip for sorting...')
-if Args.UseHPC
-    rval = submitSort('HPC','SkipMarker','UseHPC');
-else
-    rval = submitSort('HPC','SkipMarker');
-end
-
-if(rval~=-1)
-    % get session name
-    [p,sesname] = fileparts(pwd);
-    % check if we are in a sessioneye directory
-    if ~Args.UseHPC % swap between the HPC and HTCondor
-        cmdPath = 'condor_submit ~/cbin/';
-        cmdScript = '';
-    else
-        cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
-        cmdScript = 'HPC';
-    end
+% display('Marking directories to skip for sorting...')
+% if Args.UseHPC
+%     rval = submitSort('HPC','SkipMarker','UseHPC');
+% else
+%     rval = submitSort('HPC','SkipMarker');
+% end
+% 
+% if(rval~=-1)
+%     % get session name
+%     [p,sesname] = fileparts(pwd);
+%     % check if we are in a sessioneye directory
+%     if ~Args.UseHPC % swap between the HPC and HTCondor
+%         cmdPath = 'condor_submit ~/cbin/';
+%         cmdScript = '';
+%     else
+%         cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
+%         cmdScript = 'HPC';
+%     end
 %     if(isempty(strfind(sesname,'eye')))
 %         if(~Args.SkipSort)
 %             display('Launching hplfp scripts...')
@@ -145,16 +163,16 @@ if(rval~=-1)
 %             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
 %         end  % if(~Args.SkipSort)
 %     else  % if(isempty(strfind(sesname,'eye')))
-        % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
-        if(~Args.SkipSort)
-            display('Launching eyehplfp scripts...')
-            cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
-        else  % if(~Args.SkipSort)
-            display('Launching eyehplfp_nosort scripts...')
-            system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-        end  % if(~Args.SkipSort)
+%         % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
+%         if(~Args.SkipSort)
+%             display('Launching eyehplfp scripts...')
+%             cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
+%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
+%         else  % if(~Args.SkipSort)
+%             display('Launching eyehplfp_nosort scripts...')
+%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
+%         end  % if(~Args.SkipSort)
 %     end  % if(isempty(strfind(sesname,'eye')))
-end  %  if(rval~=-1)
+% end  %  if(rval~=-1)
 
 display('Done!')
