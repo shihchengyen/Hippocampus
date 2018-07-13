@@ -65,7 +65,11 @@ if(~Args.SkipSplit)
                         tData.analogInfo.NumberSamples = numSamples;
                         rplraw('auto','Data',tData,'save',varargin{:});
                         
-                        submitJob(); % submit job onto PBS queue
+                        if ~Args.UseHPC
+                            submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
+                        end
+                        
+                        submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd)
                         clear tData
@@ -116,7 +120,7 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        submitJob(); % submit job onto PBS queue
+                        submitJob(Args); % submit job onto PBS queue
 
                         cd(cwd);
                         clear tData
@@ -171,7 +175,7 @@ display('Done!')
 
 end
 
-function submitJob()
+function submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
     cmdPath = 'condor_submit ~/cbin/';
     cmdScript = '';

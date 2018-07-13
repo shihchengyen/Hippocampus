@@ -15,9 +15,9 @@ function [obj, varargout] = rplsplit(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 	'SkipRaw',0, 'SkipLFP',0, 'SkipParallel',0, 'SkipAnalog',0, 'SkipSort', 0, ...
 	'Channels',[], 'ChannelsPerArray',32, 'HPCCmd','', 'SkipSplit',0, ...
-    'HPCInputFilename','rsData.mat','UseHPC',0, 'SelectiveSort', 0);
+    'HPCInputFilename','rsData.mat','UseHPC',0, 'SelectiveSort', 0,'skipCheckingRplsplit',0);
 Args.flags = {'Auto','ArgsOnly','SkipRaw','SkipLFP','SkipParallel', 'SkipSort', ...
-	'SkipAnalog','SkipSplit','UseHPC','SelectiveSort'};
+	'SkipAnalog','SkipSplit','UseHPC','SelectiveSort','skipCheckingRplsplit'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};                            
 
@@ -33,7 +33,10 @@ Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'rs';
 
 % To decide the method to create or load the object
-command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
+if skipCheckingRplsplit && exist(fullfile(pwd,Args.matname),'file')
+    delete(Args.matname)
+end
+command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin,'saverplsplit',0);
 
 if(strcmp(command,'createEmptyObjArgs'))
     varargout{1} = {'Args',Args};
