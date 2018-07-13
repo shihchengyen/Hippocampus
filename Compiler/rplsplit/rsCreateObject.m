@@ -64,6 +64,9 @@ if(~Args.SkipSplit)
                         cd(chan_dir);
                         tData.analogInfo.NumberSamples = numSamples;
                         rplraw('auto','Data',tData,'save',varargin{:});
+                        
+                        submitJob(); % submit job onto PBS queue
+                        
                         cd(cwd)
                         clear tData
                     end
@@ -108,25 +111,13 @@ if(~Args.SkipSplit)
                         elseif(b_lfp)
                             rpllfp('auto','Data',tData,'save',varargin{:});
                         end
-                        [~,skip_ch_nums] = submitSort('HPC','SkipMarker','UseHPC','SelectiveSort');
                         
-                        if ismember(chan_num,skip_ch_nums)
-                            if ~Args.UseHPC % swap between the HPC and HTCondor
-                                cmdPath = 'condor_submit ~/cbin/';
-                                cmdScript = '';
-                            else
-                                cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
-                                cmdScript = 'HPC';
-                            end
-                            if(~Args.SkipSort)
-                                disp('Launching eyehplfp scripts...')
-                                cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-                                system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
-                            else  % if(~Args.SkipSort)
-                                disp('Launching eyehplfp_nosort scripts...')
-                                system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-                            end  % if(~Args.SkipSort)
+                        if ~Args.UseHPC
+                            submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
+                        
+                        submitJob(); % submit job onto PBS queue
+
                         cd(cwd);
                         clear tData
                     end % if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
@@ -177,3 +168,18 @@ end  % if(~Args.SkipSplit)
 % end  %  if(rval~=-1)
 
 display('Done!')
+
+end
+
+function submitJob()
+if ~Args.UseHPC % swap between the HPC and HTCondor
+    cmdPath = 'condor_submit ~/cbin/';
+    cmdScript = '';
+else
+    cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
+    cmdScript = 'HPC';
+end
+disp('Launching eyehplfp scripts...')
+cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
+system(['source ~/.bash_profile;', cmdSubmit]);
+end
