@@ -108,7 +108,8 @@ if(~Args.SkipSplit)
                         elseif(b_lfp)
                             rpllfp('auto','Data',tData,'save',varargin{:});
                         end
-                        [~,skip_ch_nums] = submitSort('HPC','SkipMarker','UseHPC');
+                        [~,skip_ch_nums] = submitSort('HPC','SkipMarker','UseHPC','SelectiveSort');
+                        
                         if ismember(chan_num,skip_ch_nums)
                             if ~Args.UseHPC % swap between the HPC and HTCondor
                                 cmdPath = 'condor_submit ~/cbin/';
