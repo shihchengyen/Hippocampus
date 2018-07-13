@@ -33,7 +33,7 @@ Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'rs';
 
 % To decide the method to create or load the object
-if skipCheckingRplsplit && exist(fullfile(pwd,Args.matname),'file')
+if Args.skipCheckingRplsplit && exist(fullfile(pwd,Args.matname),'file')
     delete(Args.matname)
 end
 command = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin,'saverplsplit',0);
