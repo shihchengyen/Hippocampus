@@ -1,11 +1,11 @@
 function rsCreateObject()
 
 if ~isdeployed
-   addpath('~/matlab/DPV')
-   addpath('~/matlab/newNpt')
-   addpath('~/matlab/Hippocampus') 
-   addpath('~/matlab/neuroshare')
-   addpath('~/hmmsort')
+    addpath('~/matlab/DPV')
+    addpath('~/matlab/newNpt')
+    addpath('~/matlab/Hippocampus')
+    addpath('~/matlab/neuroshare')
+    addpath('~/hmmsort')
 end
 
 % load arguments
@@ -121,7 +121,7 @@ if(~Args.SkipSplit)
                         end
                         
                         submitJob(Args); % submit job onto PBS queue
-
+                        
                         cd(cwd);
                         clear tData
                     end % if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
@@ -137,7 +137,7 @@ end  % if(~Args.SkipSplit)
 % else
 %     rval = submitSort('HPC','SkipMarker');
 % end
-% 
+%
 % if(rval~=-1)
 %     % get session name
 %     [p,sesname] = fileparts(pwd);
@@ -175,15 +175,15 @@ display('Done!')
 
 end
 
-function submitJob(Args)
+function [] = submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
-    cmdPath = 'condor_submit ~/cbin/';
+    cmdPath = ['condor_submit ',fullfile('~','cbin')];
     cmdScript = '';
 else
-    cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
+    cmdPath = ['qsub ',fullfile('$GITHUB_MATLAB','Hippocampus','Compiler','hplfp')];
     cmdScript = 'HPC';
 end
 disp('Launching eyehplfp scripts...')
-cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-system(['source ~/.bash_profile;', cmdSubmit]);
+cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+system(['source ',fullfile('~','.bash_profile'),'; ', cmdSubmit]);
 end
