@@ -1,0 +1,5 @@
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=24:00:00
+#PBS -l mem=6GB
+cd /hpctmp/a0126587/Data/20180515/sessioneye/array01/channel003/.
+/home/svu/a0126587/anaconda2/bin/hmm_learn.py --sourceFile rplhighpass.mat --iterations 3 --version 3 --chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 --min_snr 4.0 --max_size 1000000 --tempPath /hpctmp2/a0126587/tmp/

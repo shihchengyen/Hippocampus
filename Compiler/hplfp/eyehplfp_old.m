@@ -1,4 +1,7 @@
-function vmhplfp(varargin)
+function eyehplfp(varargin)
+
+%startup
+
     % get channel string
     [p1, chstr] = nptFileParts(pwd);
     % get array string
@@ -7,24 +10,32 @@ function vmhplfp(varargin)
     [p3, sesstr] = nptFileParts(p2);
     % get day string
     [p4, daystr] = nptFileParts(p3);
+
+disp(p1)
+disp(p2)
+% addPathCmd = '/nfs/app1/common/matlab/R2018a/bin/glnxa64';
+% addpath(addPathCmd);
+%disp(['added path: ',addPathCmd])
+%system('ldd /nfs/app1/common/matlab/R2018a/bin/glnxa64/libmwxcp_dwarf.so')
+%disp('Finished running ldd')
     
     % to read Args
     load([p2,'/rsData']);
 
-	vh = vmhighpass('auto','SaveLevels',2,varargin{:});
-	vl = vmlfp('auto','SaveLevels',2,varargin{:});
+    rh = rplhighpass('auto','SaveLevels',2,varargin{:});
+	rl = rpllfp('auto','SaveLevels',2,varargin{:});
 
 	if(~Args.SkipSort)
 		display('Launching spike sorting ...')
 		% check to see if we should sort this channel
 		if(isempty(dir('skipsort.txt')))
-
-            % make channel direcory on HPC, copy to HPC, cd to channel directory, and then run hmmsort
+	
+			% make channel direcory on HPC, copy to HPC, cd to channel directory, and then run hmmsort
 			display('Creating channel directory ...')
-            cmdRedirect = '';
-            cmdSCP = '';
-            if ~Args.UseHPC % swap between the HPC and HTCondor
-                cmdRedirect = 'ssh eleys@atlas7 ';
+            cmdRedirect = ''; % remain empty if using HPC directly
+            cmdSCP = ''; % remain empty if using HPC directly 
+            if ~Args.UseHPC
+                cmdRedirect = 'ssh eleys@atlas7';
                 syscmd = [cmdRedirect, 'cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '; mkdir ' chstr];
                 display(syscmd)
                 system(syscmd);
@@ -42,4 +53,3 @@ function vmhplfp(varargin)
 			system(syscmd);
 		end  % if(isempty(dir('skipsort.txt')))
 	end  % if(Args.SkipSort)
-	

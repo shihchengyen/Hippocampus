@@ -1,0 +1,27 @@
+ -P Project_Name_of_Job
+#PBS -q matlab
+#PBS -l select=1:ncpus=1:mem=10GB
+#PBS -j oe
+#PBS -N Job_Name
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify.
+
+##--- Put your exec/application commands below ---
+## If your matlab program is < my_matlab_prog.m >.
+source /etc/profile.d/rec_modules.sh
+#module load jre/1.8.0_162
+
+source ~/.bashrc
+cd ~/matlab/Hippocampus/Compiler/hplfp &&
+matlab-mcc eyehplfp.m -a ~/matlab/DPV -a ~/matlab/newNpt/ -a ~/matlab/Hippocampus/ -a ~/matlab/neuroshare/ -a ~/hmmsort &&
+matlab-mcc vmhplfp.m -a ~/matlab/DPV -a ~/matlab/newNpt/ -a ~/matlab/Hippocampus/ -a ~/matlab/neuroshare/ -a ~/hmmsort &&
+
+cd ~/hmmsort &&
+matlab-mcc ~/hmmsort/hmm_decode.m -a ~/matlab/DPV -a ~/matlab/newNpt/ -a ~/matlab/Hippocampus/ -a ~/matlab/neuroshare/ -a ~/hmmsort &&
+
+cd ~/matlab/Hippocampus/Compiler/rplsplit &&
+matlab-mcc rsCreateObject.m -a ~/matlab/DPV -a ~/matlab/newNpt/ -a ~/matlab/Hippocampus/ -a ~/matlab/neuroshare/ -a ~/hmmsort
+
+
+
