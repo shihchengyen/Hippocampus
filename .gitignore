@@ -97,4 +97,8 @@ octave-workspace
 *vmhplfp
 *placeselect
 *rsCreateObject
+*mccExcludedFiles.log
+*readme.txt
+*requiredMCRProducts.txt
+*.sh
 
