@@ -86,11 +86,32 @@ if(~isempty(rd))
 	        unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
 	    end
-
-	    unityTriggers(:,1) = find(unityData(:,1) > Args.TriggerVal1 & unityData(:,1) < Args.TriggerVal2); % look for triggers '1' (start trial, cue onset) in first column
-	    unityTriggers(:,2) = find(unityData(:,1) > Args.TriggerVal2 & unityData(:,1) < Args.TriggerVal3); % look for triggers '2' (start trial, cue offset) in first column
-	    unityTriggers(:,3) = find(unityData(:,1) > Args.TriggerVal3); % look for triggers '3' (reward) or '4' (timeout) in last column
-
+        % in case of an aborted session we might have to toss out the markers in the last
+        % trial. So check the number of rows in each column before creating an array
+		% with the smallest number of rows, which means we throw out the incomplete
+		% set of markers in the last trial
+		utRows = zeros(1,3);
+	    uT1 = find(unityData(:,1) > Args.TriggerVal1 & unityData(:,1) < Args.TriggerVal2); % look for triggers '1' (start trial, cue onset) in first column
+        utRows(1,1) = size(uT1,1);
+	    uT2 = find(unityData(:,1) > Args.TriggerVal2 & unityData(:,1) < Args.TriggerVal3); % look for triggers '2' (start trial, cue offset) in first column
+        utRows(1,2) = size(uT2,1);
+        uT3 = find(unityData(:,1) > Args.TriggerVal3);  % look for triggers '3' (reward) or '4' (timeout) in last column
+        utRows(1,3) = size(uT3,1);
+		% find smallest number of rows
+		mutrows = min(utRows);
+		% find largest number of rows
+		incompletetrials = max(utRows) - mutrows;
+		% check if there were any incomplete markers
+		if(incompletetrials>0)
+			% print warning to say that there were incomplete markers
+			disp(['Incomplete session! Last ' num2str(incompletetrials) ' trial discarded\n'])
+		end
+		unityTriggers = zeros(mutrows,3);
+		utIndices = 1:mutrows;
+		unityTriggers(:,1) = uT1(utIndices);
+		unityTriggers(:,2) = uT2(utIndices);
+		unityTriggers(:,3) = uT3;
+		
 		%% DIJKSTRA 
 		% Initialize adjacency matrix for graph (21 vertices, distance weights)
 		A = [0 5 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
