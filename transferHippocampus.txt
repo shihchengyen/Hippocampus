@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -q serial
+
+cd "$PBS_O_WORKDIR"
+
+cwd=$PWD
+
+channelStr=${cwd:`expr index "$cwd" 2018`-1}
+
+targetDir='/volume1/Hippocampus/Data/picasso/'
+targetDir+=$channelStr
+
+ssh -p 8398 hippocampus@cortex.nus.edu.sg mkdir -p $targetDir
+
+scp -P 8398 -r ./* hippocampus@cortex.nus.edu.sg:$targetDir &&
+rm -rv *
