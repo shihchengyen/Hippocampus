@@ -120,7 +120,9 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        submitJob(Args); % submit job onto PBS queue
+                        if(~contains(pwd,'analog'))
+                            submitJob(Args); % submit job onto PBS queue
+                        end
                         
                         cd(cwd);
                         clear tData
