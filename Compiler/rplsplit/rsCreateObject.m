@@ -120,7 +120,9 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        submitJob(Args); % submit job onto PBS queue
+                        if(~isempty(strfind(pwd,'analog')))
+                            submitJob(Args); % submit job onto PBS queue
+                        end
                         
                         cd(cwd);
                         clear tData
@@ -185,5 +187,5 @@ else
 end
 disp('Launching eyehplfp scripts...')
 cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
-system(['source ',fullfile('~','.bash_profile'),'; ', cmdSubmit]);
+system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end
