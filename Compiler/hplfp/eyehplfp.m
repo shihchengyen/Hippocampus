@@ -34,7 +34,7 @@ load([p2,'/rsData']);
 rh = rplhighpass('auto','SaveLevels',2,varargin{:});
 rl = rpllfp('auto','SaveLevels',2,varargin{:});
 
-if(~isequal(sesstr,'test'))
+if(isempty(strfind(sesstr,'test')))
     if(~Args.SkipSort)
         display('Launching spike sorting ...')
         % check to see if we should sort this channel
