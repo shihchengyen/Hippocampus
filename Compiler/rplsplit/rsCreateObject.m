@@ -69,8 +69,11 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
+                        system('transfersession.sh');
+			fid = fopen('transferred.txt','w');
+			fclose(fid);
                         % submitJob(Args); % submit job onto PBS queue
-                        
+                       
                         cd(cwd)
                         clear tData
                     end
@@ -120,7 +123,7 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        submitJob(Args); % submit job onto PBS queue
+                        jobid = submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd);
                         clear tData
@@ -128,6 +131,14 @@ if(~Args.SkipSplit)
                 end % if( chanArgs && (~chanArgs && ~isempty(find(Args.Channels==chan_num)) )
         end
     end
+    fid = fopen('checkFFT.pbs','w');
+    fprintf(fid,...
+	['#!/bin/bash\n'...
+	'#PBS -q serial\n'...
+	'#PBS -W depend=afterok:',decodejobid,'\n'...
+	'cd "$PBS_O_WORKDIR"\n'...
+	'matlab2016a2 -nosplash -nodisplay -r "ProcessLevel(nptdata,''\''''Levels''\'''',''\''''Day''\'''',''\''''nptLevelCmd''\'''',{''\''''Session''\'''',''\''''checkRecording''\''''});exit"']);
+    fclose(fid);
     ns_status = ns_CloseFile(hFile);
 end  % if(~Args.SkipSplit)
 
@@ -175,7 +186,7 @@ display('Done!')
 
 end
 
-function [] = submitJob(Args)
+function jobid = submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
     cmdPath = ['condor_submit ',fullfile('~','cbin')];
     cmdScript = '';
@@ -185,5 +196,5 @@ else
 end
 disp('Launching eyehplfp scripts...')
 cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
-system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
+[~,jobid] = system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end

@@ -78,8 +78,12 @@ if(isempty(strfind(sesstr,'test')))
             fclose(fid);
             
             % submit transfer job
-            system('qsub transfer_job0000.pbs');
+            system('source ~/.bash_profile; source /etc/profile.d/rec_modules.sh; module load pbs; qsub transfer_job0000.pbs');
             
         end  % if(isempty(dir('skipsort.txt')))
     end  % if(Args.SkipSort)
+else
+system('transfersession.sh');
+fid = fopen('transferred.txt','w');
+fclose(fid);
 end
