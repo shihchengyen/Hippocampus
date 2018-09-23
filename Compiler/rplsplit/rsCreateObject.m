@@ -123,7 +123,7 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        jobid = submitJob(Args); % submit job onto PBS queue
+                        decodejobid = submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd);
                         clear tData
