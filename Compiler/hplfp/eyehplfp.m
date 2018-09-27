@@ -30,13 +30,11 @@ rl = rpllfp('auto','SaveLevels',2,varargin{:});
 
 figure
 rh = plot(rplhighpass('auto','redo','HighpassFreqs',[500 10000]),1,'FFT');
-saveas(gcf,'hp.fig');
 saveas(gcf,'hp.png');
 close
 
 figure
 rl = plot(rpllfp('auto'),1,'FFT');
-saveas(gcf,'lfp.fig');
 saveas(gcf,'lfp.png');
 close
 
