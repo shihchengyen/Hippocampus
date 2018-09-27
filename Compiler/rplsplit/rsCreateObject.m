@@ -70,10 +70,10 @@ if(~Args.SkipSplit)
                         end
                         
                         system('transfersession.sh');
-			fid = fopen('transferred.txt','w');
-			fclose(fid);
+                        fid = fopen('transferred.txt','w');
+                        fclose(fid);
                         % submitJob(Args); % submit job onto PBS queue
-                       
+                        
                         cd(cwd)
                         clear tData
                     end
@@ -123,7 +123,7 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        decodejobid = submitJob(Args); % submit job onto PBS queue
+                        submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd);
                         clear tData
@@ -131,62 +131,15 @@ if(~Args.SkipSplit)
                 end % if( chanArgs && (~chanArgs && ~isempty(find(Args.Channels==chan_num)) )
         end
     end
-    fid = fopen('checkFFT.pbs','w');
-    fprintf(fid,...
-	['#!/bin/bash\n'...
-	'#PBS -q serial\n'...
-	'#PBS -W depend=afterok:',decodejobid,'\n'...
-	'cd "$PBS_O_WORKDIR"\n'...
-	'matlab2016a2 -nosplash -nodisplay -r "ProcessLevel(nptdata,''\''''Levels''\'''',''\''''Day''\'''',''\''''nptLevelCmd''\'''',{''\''''Session''\'''',''\''''checkRecording''\''''});exit"']);
-    fclose(fid);
     ns_status = ns_CloseFile(hFile);
 end  % if(~Args.SkipSplit)
 
-% display('Marking directories to skip for sorting...')
-% if Args.UseHPC
-%     rval = submitSort('HPC','SkipMarker','UseHPC');
-% else
-%     rval = submitSort('HPC','SkipMarker');
-% end
-%
-% if(rval~=-1)
-%     % get session name
-%     [p,sesname] = fileparts(pwd);
-%     % check if we are in a sessioneye directory
-%     if ~Args.UseHPC % swap between the HPC and HTCondor
-%         cmdPath = 'condor_submit ~/cbin/';
-%         cmdScript = '';
-%     else
-%         cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
-%         cmdScript = 'HPC';
-%     end
-%     if(isempty(strfind(sesname,'eye')))
-%         if(~Args.SkipSort)
-%             display('Launching hplfp scripts...')
-%             cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
-%         else  % if(~Args.SkipSort)
-%             display('Launching hplfp_nosort scripts...')
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-%         end  % if(~Args.SkipSort)
-%     else  % if(isempty(strfind(sesname,'eye')))
-%         % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
-%         if(~Args.SkipSort)
-%             display('Launching eyehplfp scripts...')
-%             cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
-%         else  % if(~Args.SkipSort)
-%             display('Launching eyehplfp_nosort scripts...')
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-%         end  % if(~Args.SkipSort)
-%     end  % if(isempty(strfind(sesname,'eye')))
-% end  %  if(rval~=-1)
 
 display('Done!')
 
 end
 
-function jobid = submitJob(Args)
+function [] = submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
     cmdPath = ['condor_submit ',fullfile('~','cbin')];
     cmdScript = '';
@@ -196,5 +149,5 @@ else
 end
 disp('Launching eyehplfp scripts...')
 cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
-[~,jobid] = system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
+system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end
