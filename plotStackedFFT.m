@@ -31,15 +31,21 @@ setY = fliplr(0 : offsetY : 1-offsetY);
 
 for i = 1:numArray
     set(pHp(i,1), 'Visible', 'on');
-    print(['session01',filesep,'array0',num2str(i),filesep,'stackedhp01'],'-dpng',resolutionValue);
+    fileNameTemp = ['session01',filesep,'array0',num2str(i),filesep,'stackedhp01'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pHp(i,1));
     
     set(pEHp(i,1), 'Visible', 'on');
-    print(['sessioneye',filesep,'array0',num2str(i),filesep,'stackedhpeye'],'-dpng',resolutionValue);
+    fileNameTemp = ['sessioneye',filesep,'array0',num2str(i),filesep,'stackedhpeye'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pEHp(i,1));
     
     set(pTHp(i,1), 'Visible', 'on');
-    print(['sessiontest',filesep,'array0',num2str(i),filesep,'stackedhptest.png'],'-dpng',resolutionValue);
+    fileNameTemp = ['sessiontest',filesep,'array0',num2str(i),filesep,'stackedhptest.png'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pTHp(i,1));
 end
 
@@ -47,15 +53,21 @@ end
 [pLfp,pELfp,pTLfp] = insertFFT(lfpInfo,numArray,channelGeo,setX,setY,offsetX,offsetY);
 for i = 1:numArray
     set(pLfp(i,1), 'Visible', 'on');
-    print(pLfp(i,1),['session01',filesep,'array0',num2str(i),filesep,'stackedlfp01.png'],'-dpng',resolutionValue);
+    fileNameTemp = ['session01',filesep,'array0',num2str(i),filesep,'stackedlfp01.png'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pLfp(i,1));
     
     set(pELfp(i,1), 'Visible', 'on');
-    print(pELfp(i,1),['sessioneye',filesep,'array0',num2str(i),filesep,'stackedlfpeye.png'],'-dpng',resolutionValue);
+    fileNameTemp = ['sessioneye',filesep,'array0',num2str(i),filesep,'stackedlfpeye.png'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pELfp(i,1));
     
     set(pTLfp(i,1), 'Visible', 'on');
-    print(pTLfp(i,1),['sessiontest',filesep,'array0',num2str(i),filesep,'stackedlfptest.png'],'-dpng',resolutionValue);
+    fileNameTemp = ['sessiontest',filesep,'array0',num2str(i),filesep,'stackedlfptest.png'];
+    print(fileNameTemp,'-dpng',resolutionValue);
+    disp([fileNameTemp,' is saved...'])
     delete(pTLfp(i,1));
 end
 
