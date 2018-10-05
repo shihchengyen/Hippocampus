@@ -26,23 +26,29 @@ offsetY = 1/numRow;
 setX = 0 : offsetX : 1;
 setY = fliplr(0 : offsetY : 1-offsetY);
 
-[pHp,pEHp] = insertFFT(hpInfo,numArray,channelGeo,setX,setY,offsetX,offsetY);
+[pHp,pEHp,pTHp] = insertFFT(hpInfo,numArray,channelGeo,setX,setY,offsetX,offsetY);
 for i = 1:numArray
-    saveas(pHp(i,1),['session01',filesep,'array0',num2str(i),filesep,'stackedhp.png']);
+    saveas(pHp(i,1),['session01',filesep,'array0',num2str(i),filesep,'stackedhp01.png']);
     delete(pHp(i,1));
     
-    saveas(pEHp(i,1),['sessioneye',filesep,'array0',num2str(i),filesep,'stackedhp.png']);
+    saveas(pEHp(i,1),['sessioneye',filesep,'array0',num2str(i),filesep,'stackedhpeye.png']);
     delete(pEHp(i,1));
+
+    saveas(pTHp(i,1),['sessiontest',filesep,'array0',num2str(i),filesep,'stackedhptest.png']);
+    delete(pTHp(i,1));
 end    
 
 
-[pLfp,pELfp] = insertFFT(lfpInfo,numArray,channelGeo,setX,setY,offsetX,offsetY);
+[pLfp,pELfp,PTLfp] = insertFFT(lfpInfo,numArray,channelGeo,setX,setY,offsetX,offsetY);
 for i = 1:numArray
-    saveas(pLfp(i,1),['session01',filesep,'array0',num2str(i),filesep,'stackedhp.png']);
+    saveas(pLfp(i,1),['session01',filesep,'array0',num2str(i),filesep,'stackedlfp01.png']);
     delete(pLfp(i,1));
     
-    saveas(pELfp(i,1),['sessioneye',filesep,'array0',num2str(i),filesep,'stackedhp.png']);
+    saveas(pELfp(i,1),['sessioneye',filesep,'array0',num2str(i),filesep,'stackedlfpeye.png']);
     delete(pELfp(i,1));
+
+    saveas(pTLfp(i,1),['sessiontest',filesep,'array0',num2str(i),filesep,'stackedlfptest.png']);
+    delete(pTLfp(i,1));
 end    
 
 disp('Done...')
@@ -66,12 +72,13 @@ end
 channelGeo(:,:,4) = vertcat( ... % last array
     fliplr(reshape(transpose(reshape(channelTbl(4,1):channelTbl(4,2),[],numRow-2)),numRow-2,[])),...
     horzcat(fliplr(119:125), nan),...
-    nan(1,size(channelGeo,2)));
+    horzcat(fliplr(126:132), nan));
+    %nan(1,size(channelGeo,2)));
 
 
 end
 
-function [p,pE] = insertFFT(info,numArray,channelGeo,setX,setY,offsetX,offsetY)
+function [p,pE,pT] = insertFFT(info,numArray,channelGeo,setX,setY,offsetX,offsetY)
 %INSERTFFT Insert the png into its corresponding figure
 %   Detailed explanation goes here
 
@@ -80,11 +87,14 @@ for i = 1:numArray
     set(gcf, 'Position', get(0,'Screensize')-[0 0 0 80],'PaperPositionMode', 'auto');
     pE(i,1) = figure; % for sessioneye
     set(gcf, 'Position', get(0,'Screensize')-[0 0 0 80],'PaperPositionMode', 'auto');
+    pT(i,1) = figure; % for sessioneye
+    set(gcf, 'Position', get(0,'Screensize')-[0 0 0 80],'PaperPositionMode', 'auto');
+
 end
 
-numHp = length(info);
+numP = length(info);
 
-for i = 1:numHp
+for i = 1:numP
     indexArray = strfind(info(i).folder,'array');
     arrayNum = str2num(info(i).folder(indexArray+5:indexArray+6)); % array number
     
@@ -95,10 +105,14 @@ for i = 1:numHp
     
     pTemp = fullfile(info(i,1).folder,info(i,1).name);
 
-    if isempty(strfind(info(i,1).folder,'eye'))
+    if ~isempty(strfind(info(i,1).folder,'01'))
         set(0,'CurrentFigure',p(arrayNum,1)); % change to the target figure of session01
-    else
+    elseif ~isempty(strfind(info(i,1).folder,'eye'))
         set(0,'CurrentFigure',pE(arrayNum,1)); % change to the target figure of sessiontest
+    elseif ~isempty(strfind(info(i,1).folder,'test'))
+        set(0,'CurrentFigure',pT(arrayNum,1)); % change to the target figure of sessiontest
+    else
+      warning('png appeared in inproper directory...') 
     end
     
     axes('pos',[setX(x), setY(y), offsetX, offsetY]);
