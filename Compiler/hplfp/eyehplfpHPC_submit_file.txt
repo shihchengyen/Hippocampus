@@ -2,7 +2,7 @@
 
 ##PBS -P Project_run_eyehplfp.sh
 #PBS -q serial
-#PBS -l select=1:ncpus=1:mem=10GB
+#PBS -l select=1:ncpus=1:mem=15GB
 ##PBS -j oe
 #PBS -l walltime=24:00:00
 
