@@ -69,9 +69,7 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        system('transfersession.sh');
-                        fid = fopen('transferred.txt','w');
-                        fclose(fid);
+                        system('transfersession.sh && touch transferred.txt');
                         % submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd)
