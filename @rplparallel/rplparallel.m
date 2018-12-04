@@ -61,6 +61,7 @@ function obj = createObject(Args,varargin)
 if(~isempty(Args.Data))
 	data = Args.Data;
 	% call function to figure out the data indices for different trials,
+	% which will create the markers, timeStamps, and trialIndices fields
 	data = arrangeMarkers(data);
 	data.numSets = 1;		
 	% create nptdata so we can inherit from it    
