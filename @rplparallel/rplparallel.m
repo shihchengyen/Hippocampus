@@ -60,6 +60,9 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(Args.Data))
 	data = Args.Data;
+	% call function to figure out the data indices for different trials,
+	% which will create the markers, timeStamps, and trialIndices fields
+	data = arrangeMarkers(data);
 	data.numSets = 1;		
 	% create nptdata so we can inherit from it    
     data.Args = Args;
@@ -76,11 +79,12 @@ function obj = createEmptyObject(Args)
 
 % useful fields for most objects
 data.numSets = 0;
-data.setNames = '';
 
 % these are object specific fields
-data.dlist = [];
-data.setIndex = [];
+data.markers = [];
+data.timeStamps = [];
+data.SampleRate = [];
+data.trialIndices = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;

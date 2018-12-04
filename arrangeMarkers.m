@@ -1,4 +1,4 @@
-function data = arrangeMarkers(data,rl)
+function data = arrangeMarkers(data)
 % Marker formats
 % A - 1 (start)
 %   - 3 (end trial correct)
@@ -34,7 +34,7 @@ function data = arrangeMarkers(data,rl)
 %   - 0 (found between separate markers)
 % e.g. [84	0	11     0    21     0    31     0    13     0    23     0]
 
-rawMarkers = rl.data.markers;
+rawMarkers = data.markers;
 % reshape into 2 rows
 rm1 = reshape(rawMarkers,2,[]);
 % check if there are 0's between markers
@@ -50,10 +50,10 @@ if(rm1(2,1)==0)
                 % skip the first two, since the first indicates version
                 % number, while the second is a 0 to clear the previous
                 % marker
-				rtime = rl.data.timeStamps(3:end);
+				rtime = data.timeStamps(3:end);
 				rt1 = reshape(rtime,6,[]);
 				data.timeStamps = rt1([1 3 5],:)';    
-				data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);				
+				data.trialIndices = floor(data.timeStamps*data.SampleRate);				
 			case(84)
 				% Format 204
 				% remove 1st column before reshaping
@@ -62,10 +62,10 @@ if(rm1(2,1)==0)
                 % skip the first two, since the first indicates version
                 % number, while the second is a 0 to clear the previous
                 % marker
-				rtime = rl.data.timeStamps(3:end);
+				rtime = data.timeStamps(3:end);
 				rt1 = reshape(rtime,6,[]);
 				data.timeStamps = rt1([1 3 5],:)';    
-				data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);				
+				data.trialIndices = floor(data.timeStamps*data.SampleRate);				
 			otherwise
 				% Format D
 				% format is: 1x for cue onset/start of trial; 2x for cue offset; 
@@ -74,10 +74,10 @@ if(rm1(2,1)==0)
 				% so we will reshape markers into 3 columns
 				data.markers = reshape(rm1(1,:),3,[])';
 				% get start time for each trial
-				rtime = rl.data.timeStamps;
+				rtime = data.timeStamps;
 				rt1 = reshape(rtime,6,[]);
 				data.timeStamps = rt1([1 3 5],:)';    
-				data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
+				data.trialIndices = floor(data.timeStamps*data.SampleRate);				
 			end
 	else
 		% check if 2nd markers is cue off (2)
@@ -88,29 +88,29 @@ if(rm1(2,1)==0)
 			% so we will reshape markers into 3 columns
 			data.markers = reshape(rm1(1,:),3,[])';
 			% get start time for each trial
-			rtime = rl.data.timeStamps;
+			rtime = data.timeStamps;
 			rt1 = reshape(rtime,6,[]);
 			data.timeStamps = rt1([1 3 5],:)';    
-			data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
+			data.trialIndices = floor(data.timeStamps*data.SampleRate);				
 		else
 			% Format B
 			% format is 1 marker for start of trial, and another for either
 			% correct or incorrect, so reshape into 2 columns
 			data.markers = reshape(rm1(1,:),2,[])';
 			% get start time for each trial
-			rtime = rl.data.timeStamps;
+			rtime = data.timeStamps;
 			% reshape to remove timestamps for 0's
 			rt1 = reshape(rtime,2,[]);
 			% select 1st row to remove 0's, and the reshape timestamps into 
 			% 2 columns
 			data.timeStamps = reshape(rt1(1,:),2,[])';
 			% compute the data indices corresponding to the marker timestamps
-			data.trialIndices = floor(data.timeStamps*data.analogInfo.SampleRate);
+			data.trialIndices = floor(data.timeStamps*data.SampleRate);				
 		end
 	end
 else
 	% Format A, so transpose and assign to data structure
 	data.markers = rm1';
     % get start time for each trial
-    data.trialIndices = floor(reshape(rl.data.timeStamps*data.analogInfo.SampleRate,2,[])');
+    data.trialIndices = floor(reshape(data.timeStamps*data.SampleRate,2,[])');
 end
