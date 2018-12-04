@@ -57,7 +57,10 @@ end
 function obj = createObject(rh,rl,Args,varargin)
 
 data = rh.data;
-data = arrangeMarkers(data,rl);
+% data = arrangeMarkers(data,rl);
+data.markers = rl.data.markers;
+data.timeStamps = rl.data.timeStamps;
+data.trialIndices = rl.data.trialIndices;
 data.numSets = size(data.trialIndices,1);
 
 % create nptdata so we can inherit from it    
@@ -70,6 +73,8 @@ saveObject(obj,'ArgsC',Args);
 function obj = createEmptyObject(Args)
 
 % useful fields for most objects
+data.markers = [];
+data.timeStamps = [];
 data.trialIndices = [];
 data.numSets = 0;
 
