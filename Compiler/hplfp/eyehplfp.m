@@ -22,17 +22,21 @@ if ~isdeployed
     addpath('~/hmmsort')
 end
 
-% addPathCmd = '/nfs/app1/common/matlab/R2018a/bin/glnxa64';
-% addpath(addPathCmd);
-%disp(['added path: ',addPathCmd])
-%system('ldd /nfs/app1/common/matlab/R2018a/bin/glnxa64/libmwxcp_dwarf.so')
-%disp('Finished running ldd')
-
 % to read Args
 load([p2,'/rsData']);
 
 rh = rplhighpass('auto','SaveLevels',2,varargin{:});
 rl = rpllfp('auto','SaveLevels',2,varargin{:});
+
+figure
+rh = plot(rplhighpass('auto','redo','HighpassFreqs',[500 10000]),1,'FFT');
+saveas(gcf,'hp.png');
+close
+
+figure
+rl = plot(rpllfp('auto'),1,'FFT');
+saveas(gcf,'lfp.png');
+close
 
 if(isempty(strfind(sesstr,'test')))
     if(~Args.SkipSort)
