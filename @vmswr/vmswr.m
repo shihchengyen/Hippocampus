@@ -98,7 +98,10 @@ function [obj, varargout] = vmswr(varargin)
                 data.analogRmsInfo.Swr = nptSwr(data.analogRmsData,data.analogRmsInfo.Threshold,data.analogRmsInfo.BeginEnd);
 
                 rl = rplparallel('auto',varargin{:});
-                data = arrangeMarkers(data,rl);
+				% data = arrangeMarkers(data,rl);
+				data.markers = rl.data.markers;
+				data.timeStamps = rl.data.timeStamps;
+				data.trialIndices = rl.data.trialIndices;
                 data.numSets = size(data.trialIndices,1);
 
                 % create nptdata so we can inherit from it    
