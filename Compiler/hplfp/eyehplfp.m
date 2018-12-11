@@ -11,17 +11,6 @@ function eyehplfp(varargin)
 % get day string
 [p4, daystr] = nptFileParts(p3);
 
-disp(p1)
-disp(p2)
-
-if ~isdeployed
-    addpath('~/matlab/DPV')
-    addpath('~/matlab/newNpt')
-    addpath('~/matlab/Hippocampus')
-    addpath('~/matlab/neuroshare')
-    addpath('~/hmmsort')
-end
-
 % to read Args
 load([p2,'/rsData']);
 
