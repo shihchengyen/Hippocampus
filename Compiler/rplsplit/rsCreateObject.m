@@ -1,13 +1,4 @@
 function rsCreateObject()
-
-if ~isdeployed
-    addpath('~/matlab/DPV')
-    addpath('~/matlab/newNpt')
-    addpath('~/matlab/Hippocampus')
-    addpath('~/matlab/neuroshare')
-    addpath('~/hmmsort')
-end
-
 % load arguments
 % we are doing this so this program can run in compiled form
 load('rsData');
@@ -38,6 +29,14 @@ if(~Args.SkipSplit)
                     tData.timeStamps = NaN(1, numSamples);
                     for i = 1:numSamples
                         [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, ni, i);
+                    end
+                    % add sampling rate information
+                    for hfi = 1:size(hFile.FileInfo,2)
+                        % check which one is ns5
+                        if(strcmp(hFile.FileInfo(hfi).Type,'ns5'))
+                            % get the sampling rate from the Period field
+                            tData.SampleRate = 1/(hFile.FileInfo(hfi).Period) * 30000;
+                        end
                     end
                     % create and save obj
                     rplparallel('auto','Data',tData,'save',varargin{:});
