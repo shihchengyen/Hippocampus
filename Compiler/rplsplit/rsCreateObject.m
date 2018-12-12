@@ -1,13 +1,4 @@
 function rsCreateObject()
-
-if ~isdeployed
-    addpath('~/matlab/DPV')
-    addpath('~/matlab/newNpt')
-    addpath('~/matlab/Hippocampus')
-    addpath('~/matlab/neuroshare')
-    addpath('~/hmmsort')
-end
-
 % load arguments
 % we are doing this so this program can run in compiled form
 load('rsData');
@@ -39,6 +30,14 @@ if(~Args.SkipSplit)
                     for i = 1:numSamples
                         [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, ni, i);
                     end
+                    % add sampling rate information
+                    for hfi = 1:size(hFile.FileInfo,2)
+                        % check which one is ns5
+                        if(strcmp(hFile.FileInfo(hfi).Type,'ns5'))
+                            % get the sampling rate from the Period field
+                            tData.SampleRate = 1/(hFile.FileInfo(hfi).Period) * 30000;
+                        end
+                    end
                     % create and save obj
                     rplparallel('auto','Data',tData,'save',varargin{:});
                     clear tData
@@ -69,7 +68,8 @@ if(~Args.SkipSplit)
                             submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
                         end
                         
-                        submitJob(Args); % submit job onto PBS queue
+                        system('transfersession.sh && touch transferred.txt');
+                        % submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd)
                         clear tData
@@ -131,45 +131,6 @@ if(~Args.SkipSplit)
     ns_status = ns_CloseFile(hFile);
 end  % if(~Args.SkipSplit)
 
-% display('Marking directories to skip for sorting...')
-% if Args.UseHPC
-%     rval = submitSort('HPC','SkipMarker','UseHPC');
-% else
-%     rval = submitSort('HPC','SkipMarker');
-% end
-%
-% if(rval~=-1)
-%     % get session name
-%     [p,sesname] = fileparts(pwd);
-%     % check if we are in a sessioneye directory
-%     if ~Args.UseHPC % swap between the HPC and HTCondor
-%         cmdPath = 'condor_submit ~/cbin/';
-%         cmdScript = '';
-%     else
-%         cmdPath = 'qsub $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/';
-%         cmdScript = 'HPC';
-%     end
-%     if(isempty(strfind(sesname,'eye')))
-%         if(~Args.SkipSort)
-%             display('Launching hplfp scripts...')
-%             cmdSubmit = [cmdPath, 'hplfp', cmdScript, '_submit_file.txt'];
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdSubmit, '; cd $cwd; done']);
-%         else  % if(~Args.SkipSort)
-%             display('Launching hplfp_nosort scripts...')
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdPath, 'hplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-%         end  % if(~Args.SkipSort)
-%     else  % if(isempty(strfind(sesname,'eye')))
-%         % in sessioneye directory, so don't try creating vmhighpass and vmlfp. Just create rplhighpass and rpllfp
-%         if(~Args.SkipSort)
-%             display('Launching eyehplfp scripts...')
-%             cmdSubmit = [cmdPath, 'eyehplfp', cmdScript, '_submit_file.txt'];
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ',cmdSubmit, '; cd $cwd; done']);
-%         else  % if(~Args.SkipSort)
-%             display('Launching eyehplfp_nosort scripts...')
-%             system(['source ~/.bash_profile; cwd=`pwd`; for i in `find . -name "channel???"`; do echo $i; cd $i; ', cmdPath, 'eyehplfp', cmdScript, '_nosort_submit_file.txt; cd $cwd; done']);
-%         end  % if(~Args.SkipSort)
-%     end  % if(isempty(strfind(sesname,'eye')))
-% end  %  if(rval~=-1)
 
 display('Done!')
 
@@ -185,5 +146,5 @@ else
 end
 disp('Launching eyehplfp scripts...')
 cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
-system(['source ',fullfile('~','.bash_profile'),'; ', cmdSubmit]);
+system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end
