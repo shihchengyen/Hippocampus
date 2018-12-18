@@ -68,8 +68,8 @@ if(~isempty(Args.NumericArguments))
             
             % add axis labels
             if(~Args.LabelsOff)
-            xlabel('Data Points')
-            ylabel('Voltage (uV)')
+				xlabel('Data Points')
+				ylabel('Voltage (uV)')
             end
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
@@ -118,7 +118,9 @@ if(~isempty(Args.NumericArguments))
             spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
             if (~isnan(obj.data.spikesim(spikeind)))
                 perms = nchoosek(1:size(xind,2),2);
-                perms(:,3) = obj.data.spikesim(spikeind);
+                % add 1 to the correlation coefficients as we are going to subtract 1 from
+                % all the values in perms to switch from 1 index to 0 index
+                perms(:,3:4) = [obj.data.spikesim(spikeind) obj.data.spikesp2pdiffs(spikeind)] + 1;
                 dim = [0.2, 0.2, 0.1, 0.1];
                 annotation('textbox',dim,'String', num2str(perms-1));
             end
