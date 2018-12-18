@@ -104,7 +104,8 @@ if(dnum>0)
             for ind = 1:sf1
                 [M,I] = min(data.spikeForms(ind,:)); % get index of peak
                 spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
-                spikeTimes = spikeTimes/30; spike_ISI = diff(spikeTimes);
+                spikeTimes = spikeTimes/30; 
+                spike_ISI = diff(spikeTimes);
                 data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
             end
         else
@@ -112,8 +113,9 @@ if(dnum>0)
         end
         
         if (sf1>1)
-            % get spike similarities (dot product)
-            perms = nchoosek(1:size(data.spikeForms,1),2); % number of possible pair-wise comparisons
+            % get spike similarities (correlation coefficient)
+            % number of possible pair-wise comparisons
+            perms = nchoosek(1:size(data.spikeForms,1),2); 
             perms_size = size(perms,1);
             % create memory
             corrcoefs = zeros(perms_size,1);
