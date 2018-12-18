@@ -1,7 +1,7 @@
 function [obj, varargout] = plot(obj,varargin)
 %@viewsort/plot Plot function for viewsort object.
 %   OBJ = plot(OBJ) creates a raster plot of the neuronal
-%   response.
+%   response. This is a test.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		'Array',0, 'Session',0, 'Day',0,  ...
