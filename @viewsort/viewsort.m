@@ -66,24 +66,28 @@ if(dnum>0)
 	data.numChannels = 1;
 	% this is a valid object
     
-    if (Args.Saved==1) && (exist('cell01', 'dir')==7)
-        % load saved spiketrains
-        cwd = pwd;
-        data.spikeForms = [];
-        celldir = 'cell0';
-        cellname = 'cell01';
-        i = 1;
-        while exist(cellname, 'dir')
-            cd(cellname)
-            s = load(Args.SavedFileName);
-            data.spikeForms(end+1,:) = s.spikeForm;
-            i = i + 1;
-            cellname = strcat(celldir, int2str(i));
-            cd(cwd)
-        end
+    if (Args.Saved==1)
+    	if(exist('cell01', 'dir')==7)
+	    % load saved spiketrains
+	    cwd = pwd;
+            data.spikeForms = [];
+	    celldir = 'cell0';
+       	    cellname = 'cell01';
+	    i = 1;
+       	    while exist(cellname, 'dir')
+	        cd(cellname)
+        	s = load(Args.SavedFileName);
+            	data.spikeForms(end+1,:) = s.spikeForm;
+            	i = i + 1;
+            	cellname = strcat(celldir, int2str(i));
+            	cd(cwd)
+            end
         
-        [sf1,sf2] = size(data.spikeForms);
-        
+	    [sf1,sf2] = size(data.spikeForms);
+	else  % if(exist('cell01', 'dir')==7)
+	    data.spikeForms = [];
+	    sf1 = 0;
+	end  % if(exist('cell01', 'dir')==7)        
     else %if (Args.Saved==1) && (exist('cell01', 'dir')==7)
         % load waveforms
         l = load(Args.FileName);
