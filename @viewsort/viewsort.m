@@ -99,6 +99,7 @@ if(dnum>0)
         
         % get and plot ISI coefficient of variation for waveform
         data.coeffV_ISI = zeros(sf1,1);
+        data.meanISI = data.coeffV_ISI;
         if (isfield(l,'mlseq') > 0) % skip incomplete files
             spikeSort = l.mlseq;
             for ind = 1:sf1
@@ -106,10 +107,13 @@ if(dnum>0)
                 spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
                 spikeTimes = spikeTimes/30; 
                 spike_ISI = diff(spikeTimes);
-                data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
+                mISI = mean(spike_ISI);
+                data.meanISI(ind) = mISI;
+                data.coeffV_ISI(ind) = std(spike_ISI)/mISI;
             end
         else
             data.coeffV_ISI = repmat(NaN,sf1,1);
+            data.meanISI = data.coeffV_ISI;
         end
         
         if (sf1>1)

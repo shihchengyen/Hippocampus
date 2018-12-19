@@ -40,6 +40,7 @@ else
         r.data.Noise = [p.data.Noise;q.data.Noise];
         if(r.data.Args.Saved==0)
             r.data.coeffV_ISI = [p.data.coeffV_ISI; q.data.coeffV_ISI];
+            r.data.meanISI = [p.data.meanISI; q.data.meanISI];
             r.data.spikesim = [p.data.spikesim; q.data.spikesim];
             r.data.spikesp2pdiffs = [p.data.spikesp2pdiffs; q.data.spikesp2pdiffs];
         end
