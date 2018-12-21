@@ -53,7 +53,8 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(Args.Data))
 	data = Args.Data;
-	data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+	% convert to single precision float to save disk space, and to make loading the files faster
+	data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
@@ -71,7 +72,8 @@ else
 	if(~isempty(rw))		
 		[lpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
 					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
-		data.analogData = lpdata;
+		% convert to single precision float to save disk space, and to make loading the files faster
+		data.analogData = single(lpdata);
 		data.analogInfo = rw.data.analogInfo;
 		data.analogInfo.SampleRate = resampleRate;
 		data.analogInfo.MinVal = min(lpdata);
@@ -82,7 +84,8 @@ else
 		data.analogInfo.HighFreqOrder = Args.LPFOrder;
 		data.analogInfo.LowFreqOrder = Args.LPFOrder;
 		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
-		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+		% convert to single precision float to save disk space, and to make loading the files faster
+		data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 		data.numSets = 1;
 		
 		% create nptdata so we can inherit from it    
