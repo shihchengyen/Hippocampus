@@ -10,7 +10,7 @@ if(~Args.SkipSplit)
     rawfname = dfile(1).name;
     fprintf('Splitting %s\n',rawfname);
     % open the file, and read the information
-    [ns_status, hFile] = ns_OpenFile(dfile(1).name);
+    [ns_status, hFile] = ns_OpenFile(rawfname);
     [ns_RESULT, nsFileInfo] = ns_GetFileInfo(hFile);
     % get number of EntityCount
     nec = nsFileInfo.EntityCount;
@@ -53,7 +53,10 @@ if(~Args.SkipSplit)
                         chan_num = sscanf(eLabel,'analog %d');
                         % read data
                         [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        % convert to single precision float to save disk space and make
+                        % file loading faster
+                        tData.analogData = single(analogData);
                         cwd = pwd;
                         nptMkDir('analog');
                         cd('analog');
@@ -91,7 +94,10 @@ if(~Args.SkipSplit)
                         % entity is raw data, so create a channel directory
                         % read data
                         [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        % convert to single precision float to save disk space and make
+                        % file loading faster
+                        tData.analogData = single(analogData);
                         % check how channels are arranged with respect to arrays
                         array_num = floor((chan_num-1)/Args.ChannelsPerArray)+1;
                         array_dir = sprintf('array%02d',array_num);
