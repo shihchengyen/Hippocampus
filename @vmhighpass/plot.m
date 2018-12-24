@@ -164,13 +164,33 @@ if(~isempty(Args.NumericArguments))
 			% add spike trains
             ncells = size(mlseq,1);
        		clist = nptDefaultColors(1:ncells);
+            % first get size of data being plotted
+            idxsize = size(idx,2);
+            % create a vector that is the same size
+            a = zeros(idxsize,1);
+            % get size of waveforms
+            wfsize = size(l.spikeForms,3);
             for si = 1:ncells
                 st1 = find(mlseq(si,idx)==spidx);
                 if(~isempty(st1))
                     % add stem plot
                     stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,[size(st1),1]), 'Color', clist(si,:))
-                end
-            end
+                    % plot the templates
+                    % find the starting index for each spike
+                    astart = st1-spidx;
+                    % get number of spikes
+                    nspikes = size(st1,2);
+                    % create array of indices
+                    aind = repmat(1:wfsize,nspikes,1)' + repmat(astart,wfsize,1);
+                    % insert the spike waveform, and add to existing values
+                    % for overlapping waveforms
+                    a(aind) = a(aind) + repmat(squeeze(l.spikeForms(si,:,:)),1,nspikes);
+                end  % if(~isempty(st1))
+            end  % for si = 1:ncells
+            % remove 0's so we only plot the spike waveforms
+            a(a==0) = nan;
+            % plot spike waveforms with dotted lines
+            plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1))) * 1000, a,'Color', clist(si,:), 'LineStyle',':');
 			hold off
 		end	
 	end
