@@ -153,8 +153,17 @@ if(~isempty(Args.NumericArguments))
 			end
 		end
 		if(Args.LoadSort)
-			l = load('hmmsort.mat');
-			Args.SpikeData = l.mlseq;
+            % if UserData does not contain hmmsort, then save it there so
+            % we don't have to load it every trial
+            a = get(gcf,'UserData');
+            if(~isfield(a,'hmmsort'))
+                l = load('hmmsort.mat');
+                a.hmmsort = l;
+                set(gcf,'UserData',a);
+            else
+                l = a.hmmsort;
+            end
+            Args.SpikeData = l.mlseq;
 		end			
 		if(~isempty(Args.SpikeData))
 			hold on
@@ -182,6 +191,10 @@ if(~isempty(Args.NumericArguments))
                     nspikes = size(st1,2);
                     % create array of indices
                     aind = repmat(1:wfsize,nspikes,1)' + repmat(astart,wfsize,1);
+                    % check to make sure aind does not contain indices 
+                    % larger than idxsize or smaller than 1
+                    aind(aind>idxsize) = idxsize;
+                    aind(aind<1) = 1;
                     % insert the spike waveform, and add to existing values
                     % for overlapping waveforms
                     a(aind) = a(aind) + repmat(squeeze(l.spikeForms(si,:,:)),1,nspikes);
