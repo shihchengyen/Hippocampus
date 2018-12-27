@@ -9,6 +9,6 @@ when_to_transfer_output = ON_EXIT
 transfer_executable = False
 stream_error = True
 stream_output = True
-request_memory = 12 GB
+request_memory = 10 GB
 
 Queue 1
