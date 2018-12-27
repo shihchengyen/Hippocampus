@@ -111,7 +111,31 @@ if(~isempty(rd))
 		unityTriggers(:,1) = uT1(utIndices);
 		unityTriggers(:,2) = uT2(utIndices);
 		unityTriggers(:,3) = uT3;
-		
+		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
+
+		% these should be read from the unity file
+		gridSteps = 5; % 5 x 5 grid resolution
+		overallGridSize = 25;
+		oGS2 = overallGridSize/2;
+		gridSize = overallGridSize/gridSteps;
+		horGridBound = -oGS2:gridSize:oGS2;
+		vertGridBound = horGridBound;
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ≤ X(i) < edges(k+1)
+		gpEdges = 1:(overallGridSize+1);
+
+		% get gridpositions
+		[h2counts,horGridBound,vertGridBound,binH,binV] = histcounts2(unityData(:,3),unityData(:,4),horGridBound,vertGridBound);
+
+		% compute grid position number
+		gridPosition = binH + ((binV - 1) * gridSteps);
+
+		% create memory for arrays
+		gpDurations = zeros(overallGridSize,totTrials);
+		% add 1 to have the correct number of rows because of the subtraction
+		% e.g. if uT3 was 50 and unityTriggers(:,2) was 1, there should be 50-1+1 rows
+		% add another 1 to have 0 as the first bin for histcounts
+		unityTrialTime = nan(max(uT3-unityTriggers(:,2))+2,totTrials);
+
 		%% DIJKSTRA 
 		% Initialize adjacency matrix for graph (21 vertices, distance weights)
 		A = [0 5 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
@@ -155,7 +179,6 @@ if(~isempty(rd))
 		x4Bound =[2.5,7.5,7.5,2.5,2.5]; % green pillar
 		z4Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
 
-		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
 		trialCounter = 0; % set up trial counter
 
 		for a = 1:totTrials
@@ -231,6 +254,30 @@ if(~isempty(rd))
                
 		        clear mpath pathdiff 
 		    end % if sumCost(a,3) <= 0,
+
+	        % get indices for this trial
+	        % unityTriggers(a,2) will be the index where the 2nd marker was found
+	        % and the time recorded on that line should be time since the last update
+	        % so we really want the time for the next update instead
+			uDidx = (unityTriggers(a,2)+1):unityTriggers(a,3);
+			
+			% get cumulative time from cue offset to end of trial for this specific trial
+			% this will make it easier to correlate to spike times
+			% add zero so that the edges for histcount will include 0 at the beginning
+			unityTrialTime(1:(size(uDidx,2)+1),a) = [0; cumsum(unityData(uDidx,2))]; 
+	
+			% get grid positions for this trial
+			tgp = gridPosition(uDidx);
+	
+			% get unique positions
+			utgp = unique(tgp);
+	
+			for pidx = 1:size(utgp,1)
+				tempgp = utgp(pidx);
+				% find indices that have this grid position
+				utgpidx = find(tgp==tempgp);
+				gpDurations(tempgp,a) = sum(unityData(utgpidx,2));
+			end  % for pidx = 1:size(utgp,1)
 		end % for a = 1:totTrials
 
 		cd(cwd)
@@ -243,9 +290,13 @@ if(~isempty(rd))
 		disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
 		processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
 
-		% clearvars -except day session directory unityTriggers unityData sumCost sumRoute sumActualRoute perf processTrials
-		% save('processTrials','processTrials'); save('unityData','unityData'); save('unityTriggers','unityTriggers');
-
+		data.gridSteps = gridSteps; 
+		data.overallGridSize = overallGridSize;
+		data.oGS2 = oGS2;
+		data.gridSize = gridSize;
+		data.horGridBound = horGridBound;
+		data.vertGridBound = vertGridBound;
+		data.gpEdges = gpEdges;
 		data.unityData = unityData;
 		data.unityTriggers = unityTriggers;
 		data.sumCost = sumCost;
@@ -254,6 +305,9 @@ if(~isempty(rd))
         data.sumActualTime = sumActualTime;
 		data.perf = perf;
 		data.processTrials = processTrials;
+		data.gridPosition = gridPosition;
+		data.gpDurations = gpDurations;
+		data.unityTrialTime = unityTrialTime;
 		data.setIndex = [1; totTrials];
 
 		% create nptdata so we can inherit from it
@@ -279,6 +333,13 @@ function obj = createEmptyObject(Args)
 data.numSets = 0;
 
 % these are object specific fields
+data.gridSteps = []; 
+data.overallGridSize = [];
+data.oGS2 = [];
+data.gridSize = [];
+data.horGridBound = [];
+data.vertGridBound = [];
+data.gpEdges = [];
 data.unityData = [];
 data.unityTriggers = [];
 data.sumCost = [];
@@ -287,6 +348,9 @@ data.sumActualRoute = [];
 data.sumActualTime = [];
 data.perf = [];
 data.processTrials = [];
+data.gridPosition = [];
+data.gpDurations = [];
+data.unityTrialTime = [];
 data.setIndex = [];
 
 % create nptdata so we can inherit from it
