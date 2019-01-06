@@ -12,8 +12,8 @@ function [obj, varargout] = vmhighpass(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0);
-Args.flags = {'Auto','ArgsOnly'};
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'Raw',0);
+Args.flags = {'Auto','ArgsOnly','Raw'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};
 
@@ -45,7 +45,11 @@ elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    rh = rplhighpass('auto',modvarargin{:});
+    if(Args.Raw)
+    	rh = rplraw('auto',modvarargin{:});
+    else
+    	rh = rplhighpass('auto',modvarargin{:});
+    end
     rl = rplparallel('auto',modvarargin{:});
     if( isempty(rh) | isempty(rl) )
     	obj = createEmptyObject(Args);
