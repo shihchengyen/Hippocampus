@@ -144,7 +144,7 @@ if(~isempty(Args.NumericArguments))
 		else
 			% indicate cue offset
 			line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
-			if(obj.data.markers(n,3)==Args.RewardMarker)
+			if(obj.data.markers(n,3)==Args.RewardMarker || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
 				% indicate correct trial
 				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
 			else
