@@ -57,10 +57,12 @@ end
 function obj = createObject(rp,rl,Args,varargin)
 
 data = rp.data;
-% data = arrangeMarkers(data,rl);
 data.markers = rl.data.markers;
-data.timeStamps = rl.data.timeStamps;
-data.trialIndices = rl.data.trialIndices;
+% rplparallel saves marker timestamps and indices at 30 kHz
+% so we need to downsample
+dsample = rl.data.SampleRate/rp.data.analogInfo.SampleRate;
+data.timeStamps = rl.data.timeStamps/dsample;
+data.trialIndices = round(rl.data.trialIndices/dsample);
 data.numSets = size(data.trialIndices,1);
 	
 % create nptdata so we can inherit from it    
