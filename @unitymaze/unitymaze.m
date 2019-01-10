@@ -15,10 +15,10 @@ function [obj, varargout] = unitymaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'FileLineOfffset',15, 'DirName','RawData*', 'ObjectLevel','Session', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
-				'TriggerVal3',30);
+				'TriggerVal3',30, 'GridSteps',5);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
-Args.DataCheckArgs = {};
+Args.DataCheckArgs = {'GridSteps'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -61,9 +61,9 @@ end
 
 function obj = createObject(Args,varargin)
 
-% save current directory
-cwd = pwd;
-	
+% move to correct directory
+[pdir,cwd] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
+
 % look for session_1_*.txt in RawData_T*
 rd = dir(Args.DirName);
 if(~isempty(rd))
@@ -114,14 +114,15 @@ if(~isempty(rd))
 		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
 
 		% these should be read from the unity file
-		gridSteps = 5; % 5 x 5 grid resolution
+		gridSteps = Args.GridSteps; % 5 x 5 grid resolution
+        gridBins = gridSteps * gridSteps;
 		overallGridSize = 25;
 		oGS2 = overallGridSize/2;
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
 		% need to add one more bin to the end as histcounts counts by doing: edges(k) ≤ X(i) < edges(k+1)
-		gpEdges = 1:(overallGridSize+1);
+		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
 		[h2counts,horGridBound,vertGridBound,binH,binV] = histcounts2(unityData(:,3),unityData(:,4),horGridBound,vertGridBound);
@@ -130,7 +131,7 @@ if(~isempty(rd))
 		gridPosition = binH + ((binV - 1) * gridSteps);
 
 		% create memory for arrays
-		gpDurations = zeros(overallGridSize,totTrials);
+		gpDurations = zeros(gridBins,totTrials);
 		% add 1 to have the correct number of rows because of the subtraction
 		% e.g. if uT3 was 50 and unityTriggers(:,2) was 1, there should be 50-1+1 rows
 		% add another 1 to have 0 as the first bin for histcounts
