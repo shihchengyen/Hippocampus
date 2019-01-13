@@ -1,0 +1,16 @@
+universe     = vanilla
+Executable   = /Applications/MATLAB_R2016b.app/bin/matlab
+Arguments    = -nodisplay -nojvm -singleCompThread -r vmplacecell('auto','save');pwd
+Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
+Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
+Error        = /Users/shihcheng/condor/distro.$(Cluster).$(Process).err
+# RunAsOwner	 = FALSE
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_executable = False
+transfer_input_files = ../../../unitymaze.mat, ../../../rplparallel.mat, spiketrain.mat
+stream_error = True
+stream_output = True
+request_memory = 12 GB
+
+Queue 1
