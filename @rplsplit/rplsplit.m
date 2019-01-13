@@ -79,7 +79,7 @@ elseif(strcmp(command,'createObj'))
                 fprintf('%s\n',w);
 
                 % create plot unity maze job
-		cwd = pwd;
+				cwd = pwd;
                 if(~isempty(strfind(cwd,'session01')))
                     fid = fopen('unitymaze_job0000.pbs','w');
                     fprintf(fid,...
@@ -93,7 +93,7 @@ elseif(strcmp(command,'createObj'))
                     
                     % submit transfer job
                     [s,w] = system('source ~/.bash_profile; source /etc/profile.d/rec_modules.sh; module load pbs; qsub unitymaze_job0000.pbs');
-                end
+                end  % if(~isempty(strfind(cwd,'session01')))
                 
                 % transfer raw data, rplparallel.mat, um.fig, um.png
                 fid = fopen('transferRaw_job0000.pbs','w');
