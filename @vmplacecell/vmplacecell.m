@@ -30,6 +30,7 @@ function [obj, varargout] = vmplacecell(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
+				'ChannelFile','hmmsort.mat', ...
 				'HPC',0, 'HPCInputFilename','vpData.mat', ...
 				'HPCCmd','condor_submit placeselect_submit.txt', ...
 				'MaxTimeDiff',0.002, 'MinTrials',5);
@@ -76,6 +77,8 @@ if(~isempty(dir(Args.RequiredFile)))
 	um = unitymaze('auto',varargin{:});
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
+	% load spike train file
+	spiketrain = load(Args.RequiredFile)
 	% save(Args.HPCInputFilename,'Args','um','rp','varargin');
 
 	if(Args.HPC)
@@ -91,13 +94,44 @@ if(~isempty(dir(Args.RequiredFile)))
 	else
 		% run in Matlab
 		% data = placeselect(pwd);
-		data = placeselect(um,rp,Args);
+		data = placeselect(um,rp,spiketrain,Args);
 	end
 
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
 	data.Args = Args;
 	n = nptdata(1,0,pwd);
+	d.data = data;
+	obj = class(d,Args.classname,n);
+	saveObject(obj,'ArgsC',Args);
+elseif(~isempty(dir(Args.ChannelFile)))
+	% load unitymaze object
+	um = unitymaze('auto',varargin{:});
+	% load rplparallel object
+	rp = rplparallel('auto',varargin{:});
+
+	% read hmmsort.mat and call placeselect for each waveform found
+	l = load(Args.ChannelFile);
+    ncells = size(l.mlseq,1);
+    % allocate memory so we don't have to change memory size inside the
+    % for loop
+    data.gridSteps = um.data.gridSteps;
+    data.meanFRs = zeros(size(um.data.gpDurations,1),ncells);
+    data.semFRs = data.meanFRs;
+    
+    for si = 1:ncells
+        [wfmin,wfmidx] = min(l.spikeForms(si,:)); % get index of peak
+        spikeIdx = find(l.mlseq(si,:) == wfmidx); 
+		spiketrain.timestamps = spikeIdx/rp.data.SampleRate; % get peak times
+		spiketrain.spikeForm = l.spikeForms(si,:);
+		tdata = placeselect(um,rp,spiketrain,Args);
+		data.meanFRs(:,si) = tdata.meanFRs;
+		data.semFRs(:,si) = tdata.semFRs;
+	end
+	
+	data.numSets = ncells;
+	data.Args = Args;
+	n = nptdata(ncells,0,pwd);
 	d.data = data;
 	obj = class(d,Args.classname,n);
 	saveObject(obj,'ArgsC',Args);
