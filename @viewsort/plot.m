@@ -157,14 +157,16 @@ end
 if(~isempty(Args.Cmds))
     % save the current figure in case Args.Cmds switches to another figure
     h = gcf;
+    % save current directory
+    cwd = pwd;
+    % change to corresponding session directory
     cd(sdstr{n})
-    eval(Args.Cmds{1})
-    drawnow
-    disp('Press a key to continue') % wait for keypress
-    pause
-    eval(Args.Cmds{2})
+    % run command
+    eval(Args.Cmds)
     % switch back to previous figure
     figure(h);
+    % switch back to previous directory
+    cd(cwd);
 end
 
 % % add code for plot options here
