@@ -1,4 +1,4 @@
-function data = placeselect(um,rp,Args)
+function data = placeselect(um,rp,spiketrain,Args)
 % function data = placeselect(dirstr)
 
 % load arguments
@@ -32,7 +32,7 @@ rpTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
 trialcount = 0; % count total number of trials
 spikecountSess = 0; % count number of spikes (per trial)
 
-spiketrain = load('spiketrain.mat');
+% spiketrain = load('spiketrain.mat');
 sTimes = spiketrain.timestamps;
 
 % create memory
