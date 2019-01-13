@@ -1,7 +1,12 @@
-function data = placeselect(dirstr)
-	
-um = unitymaze('auto');
-rp = rplparallel('auto');
+function data = placeselect(um,rp,Args)
+% function data = placeselect(dirstr)
+
+% load arguments
+% we are doing this so this program can run in compiled form
+% load('vpData');
+
+% um = unitymaze('auto');
+% rp = rplparallel('auto');
 
 gridBins = um.data.gridSteps * um.data.gridSteps;
 % triggers that indicate cue onset, offset, and end of trial
@@ -56,7 +61,7 @@ for npi = 1:nptrials
 	tDiff(npi) = uTrialTime(end) - rpTrialDur(g);
 
 	% only process trials with trigger discrepancies < 2 ms
-	if (abs(tDiff(npi)) < 0.002)
+	if (abs(tDiff(npi)) < Args.MaxTimeDiff)
 		% compute number of spikes at each grid position
 		% e.g. trialSpikeTimes is 0.3885    0.4156    6.1729    6.1768    6.1810    6.3559    6.3575    6.4199    8.6585    8.6661    8.9505
 		% bins will be 9     9   150   150   150   156   156   158   240   240   248
@@ -71,14 +76,17 @@ for npi = 1:nptrials
 	end
 end 
 
+% if there are any grid positions with less than 5 observations
+% set them to 0 to avoid having outliers caused by a single observation
+spikeLocTrial( (sum(spikeLocTrial>0,2)<Args.MinTrials) ,:) = 0;
 % we divide by gpDurations to get number of spikes per duration
 anovaMatrix = spikeLocTrial./gpDurations(:,processTrials);
-meanSpikeCount = nanmean(anovaMatrix,2);
-semSpikeCount = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
+meanFRs = nanmean(anovaMatrix,2);
+semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
 
-data.anovaMatrix = anovaMatrix;
-data.meanSpikeCount = meanSpikeCount;
-data.semSpikeCount = semSpikeCount;
+data.gridSteps = um.data.gridSteps;
+data.meanFRs = meanFRs;
+data.semFRs = semFRs;
 
 if(isdeployed)
 	% save data into a mat file
