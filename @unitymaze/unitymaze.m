@@ -281,8 +281,6 @@ if(~isempty(rd))
 			end  % for pidx = 1:size(utgp,1)
 		end % for a = 1:totTrials
 
-		cd(cwd)
-
 		% Calculate performance
 		errorInd = find(sumCost(:,5) == 40); 
 		sumCost(errorInd,6) = 0; 
@@ -316,6 +314,8 @@ if(~isempty(rd))
 		n = nptdata(data.numSets,0,pwd);
 		d.data = data;
 		obj = class(d,Args.classname,n);
+		% move back to session directory from RawData directory
+		cd ..
 		saveObject(obj,'ArgsC',Args);
 	else % if(dnum>0)
 		% create empty object
@@ -326,6 +326,9 @@ else % if(~isempty(rd))
 	% create empty object
 	obj = createEmptyObject(Args);
 end % if(~isempty(rd))
+
+% move back to previous directory
+cd(cwd)
 
 
 function obj = createEmptyObject(Args)
