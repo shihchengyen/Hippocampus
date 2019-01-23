@@ -15,8 +15,9 @@ if(~Args.SkipSplit)
     % run through only the specifc channel, only printing segment files
     if ~isempty(Args.Channels)
         ns_entity_table = struct2table(hFile.Entity);
-        nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels) & ...
-            strcmp(ns_entity_table.EntityType,'Analog'));
+        nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels));
+%         nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels) & ...
+%             strcmp(ns_entity_table.EntityType,'Analog'));
     else
         % get number of EntityCount
         nec = 1:nsFileInfo.EntityCount;
