@@ -79,7 +79,7 @@ elseif(strcmp(command,'createObj'))
                 fprintf('%s\n',w);
 
                 % create plot unity maze job
-		cwd = pwd;
+                cwd = pwd;
                 if(~isempty(strfind(cwd,'session01')))
                     fid = fopen('unitymaze_job0000.pbs','w');
                     fprintf(fid,...

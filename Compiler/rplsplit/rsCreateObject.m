@@ -12,12 +12,19 @@ if(~Args.SkipSplit)
     % open the file, and read the information
     [ns_status, hFile] = ns_OpenFile(dfile(1).name);
     [ns_RESULT, nsFileInfo] = ns_GetFileInfo(hFile);
-    % get number of EntityCount
-    nec = nsFileInfo.EntityCount;
+    % run through only the specifc channel, only printing segment files
+    if ~isempty(Args.Channels)
+        ns_entity_table = struct2table(hFile.Entity);
+        nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels) & ...
+            strcmp(ns_entity_table.EntityType,'Analog'));
+    else
+        % get number of EntityCount
+        nec = 1:nsFileInfo.EntityCount;
+    end
     % go through and create the appropriate subdirectory for entity
-    for ni = 1:nec
+    for ni = 1:length(nec)
         % get info on the type of entity
-        [ns_status, nsEI] = ns_GetEntityInfo(hFile, ni);
+        [ns_status, nsEI] = ns_GetEntityInfo(hFile, nec(ni));
         numSamples = nsEI.ItemCount;
         switch(nsEI.EntityType)
             case 1
@@ -28,7 +35,7 @@ if(~Args.SkipSplit)
                     tData.markers = NaN(1, numSamples);
                     tData.timeStamps = NaN(1, numSamples);
                     for i = 1:numSamples
-                        [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, ni, i);
+                        [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, nec(ni), i);
                     end
                     % add sampling rate information
                     for hfi = 1:size(hFile.FileInfo,2)
@@ -52,8 +59,8 @@ if(~Args.SkipSplit)
                     if(~Args.SkipAnalog)
                         chan_num = sscanf(eLabel,'analog %d');
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         cwd = pwd;
                         nptMkDir('analog');
                         cd('analog');
@@ -90,8 +97,8 @@ if(~Args.SkipSplit)
                     if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
                         % entity is raw data, so create a channel directory
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, tData.analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         % check how channels are arranged with respect to arrays
                         array_num = floor((chan_num-1)/Args.ChannelsPerArray)+1;
                         array_dir = sprintf('array%02d',array_num);
