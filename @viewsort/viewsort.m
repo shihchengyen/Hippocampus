@@ -66,24 +66,28 @@ if(dnum>0)
 	data.numChannels = 1;
 	% this is a valid object
     
-    if (Args.Saved==1) && (exist('cell01', 'dir')==7)
-        % load saved spiketrains
-        cwd = pwd;
-        data.spikeForms = [];
-        celldir = 'cell0';
-        cellname = 'cell01';
-        i = 1;
-        while exist(cellname, 'dir')
-            cd(cellname)
-            s = load(Args.SavedFileName);
-            data.spikeForms(end+1,:) = s.spikeForm;
-            i = i + 1;
-            cellname = strcat(celldir, int2str(i));
-            cd(cwd)
-        end
+    if (Args.Saved==1)
+    	if(exist('cell01', 'dir')==7)
+			% load saved spiketrains
+			cwd = pwd;
+			data.spikeForms = [];
+			celldir = 'cell0';
+			cellname = 'cell01';
+			i = 1;
+       	    while exist(cellname, 'dir')
+				cd(cellname)
+				s = load(Args.SavedFileName);
+            	data.spikeForms(end+1,:) = s.spikeForm;
+            	i = i + 1;
+            	cellname = strcat(celldir, int2str(i));
+            	cd(cwd)
+			end  % while exist(cellname, 'dir')
         
-        [sf1,sf2] = size(data.spikeForms);
-        
+	    	[sf1,sf2] = size(data.spikeForms);
+		else  % if(exist('cell01', 'dir')==7)
+			data.spikeForms = [];
+			sf1 = 0;
+		end  % if(exist('cell01', 'dir')==7)        
     else %if (Args.Saved==1) && (exist('cell01', 'dir')==7)
         % load waveforms
         l = load(Args.FileName);
@@ -95,32 +99,48 @@ if(dnum>0)
         
         % get and plot ISI coefficient of variation for waveform
         data.coeffV_ISI = zeros(sf1,1);
+        data.meanISI = data.coeffV_ISI;
         if (isfield(l,'mlseq') > 0) % skip incomplete files
             spikeSort = l.mlseq;
             for ind = 1:sf1
                 [M,I] = min(data.spikeForms(ind,:)); % get index of peak
                 spikeTimes = find(spikeSort(ind,:) == I); % get index of peaks
-                spikeTimes = spikeTimes/30; spike_ISI = diff(spikeTimes);
-                data.coeffV_ISI(ind) = std(spike_ISI)/mean(spike_ISI);
+                spikeTimes = spikeTimes/30; 
+                spike_ISI = diff(spikeTimes);
+                mISI = mean(spike_ISI);
+                data.meanISI(ind) = mISI;
+                data.coeffV_ISI(ind) = std(spike_ISI)/mISI;
             end
         else
             data.coeffV_ISI = repmat(NaN,sf1,1);
+            data.meanISI = data.coeffV_ISI;
         end
         
         if (sf1>1)
-            % get spike similarities (dot product)
-            perms = nchoosek(1:size(data.spikeForms,1),2); % number of possible pair-wise comparisons
-            for a = 1:size(perms,1)
-                perms(a,3) = (dot(data.spikeForms(perms(a,1),:),data.spikeForms(perms(a,2),:)))/(norm(data.spikeForms(perms(a,1),:))*norm(data.spikeForms(perms(a,2),:))); % dot product divided by the magnitude of each vector
-                perms(a,3) = round(perms(a,3),2); % round to 2 decimal places
-                amp1 = abs(min(data.spikeForms(perms(a,1),:)))+abs(max(data.spikeForms(perms(a,1),:))); % peak-to-peak amplitude of first waveform in comparison
-                amp2 = abs(min(data.spikeForms(perms(a,2),:)))+abs(max(data.spikeForms(perms(a,2),:))); % peak-to-peak amplitude of second waveform in comparison
-                perms(a,4) = round(abs(amp2-amp1),1); % abs difference in peak-to-peak amplitude
+            % get spike similarities (correlation coefficient)
+            % number of possible pair-wise comparisons
+            perms = nchoosek(1:size(data.spikeForms,1),2); 
+            perms_size = size(perms,1);
+            % create memory
+            corrcoefs = zeros(perms_size,1);
+            p2pdiffs = corrcoefs;
+            for a = 1:perms_size
+            	% compute correlation coefficient
+            	cc = corrcoef(data.spikeForms(perms(a,1),:),data.spikeForms(perms(a,2),:));
+                corrcoefs(a) = cc(2,1);
+                % peak-to-peak amplitude of first waveform in comparison
+                amp1 = abs(min(data.spikeForms(perms(a,1),:)))+abs(max(data.spikeForms(perms(a,1),:))); 
+                % peak-to-peak amplitude of second waveform in comparison
+                amp2 = abs(min(data.spikeForms(perms(a,2),:)))+abs(max(data.spikeForms(perms(a,2),:))); 
+                % abs difference in peak-to-peak amplitude
+                p2pdiffs(a) = round(abs(amp2-amp1),1); 
             end
-            data.spikesim = perms(:,3);
+            data.spikesim = corrcoefs;
+            data.spikesp2pdiffs = p2pdiffs;
             numperms = nchoosek(sf1,2);
         else
             data.spikesim = NaN;
+            data.spikesp2pdiffs = NaN;
             numperms = 1;
         end
         data.spikesimIndex = [0; numperms];

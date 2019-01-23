@@ -13,7 +13,8 @@ function [obj, varargout] = rpllfp(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[], 'LowpassFreqs',[1 150], 'LPFOrder',8);
+				'Data',[], 'LowpassFreqs',[1 150], 'LPFOrder',8, ...
+				'ResampleRate', 1000);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments that are critical when loading saved data
 Args.DataCheckArgs = {'LowpassFreqs'};                            
@@ -53,12 +54,14 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(Args.Data))
 	data = Args.Data;
-	data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+	resampleRate = Args.ResampleRate;
+	% convert to single precision float to save disk space, and to make loading the files faster
+	data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
-	Args.LowpassFreqs = [data.analogInfo.HighFreqCorner/1000 ...
-		data.analogInfo.LowFreqCorner/1000];
+	Args.LowpassFreqs = [data.analogInfo.HighFreqCorner/resampleRate ...
+		data.analogInfo.LowFreqCorner/resampleRate];
 		
 	% create nptdata so we can inherit from it   
 	data.Args = Args; 
@@ -68,21 +71,23 @@ if(~isempty(Args.Data))
 	saveObject(obj,'ArgsC',Args);	
 else
 	rw = rplraw('auto',varargin{:});
-	if(~isempty(rw))		
-		[lpdata,resampleRate] = nptLowPassFilter(rw.data.analogData,rw.data.analogInfo.SampleRate, ...
+	if(~isempty(rw))
+        [lpdata,resampleRate] = nptLowPassFilter(double(rw.data.analogData),rw.data.analogInfo.SampleRate, ...
 					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
-		data.analogData = lpdata;
+		% convert to single precision float to save disk space, and to make loading the files faster
+		data.analogData = single(lpdata);
 		data.analogInfo = rw.data.analogInfo;
 		data.analogInfo.SampleRate = resampleRate;
 		data.analogInfo.MinVal = min(lpdata);
 		data.analogInfo.MaxVal = max(lpdata);
-		data.analogInfo.HighFreqCorner = Args.LowpassFreqs(1)*1000;
-		data.analogInfo.LowFreqCorner = Args.LowpassFreqs(2)*1000;
+		data.analogInfo.HighFreqCorner = Args.LowpassFreqs(1)*resampleRate;
+		data.analogInfo.LowFreqCorner = Args.LowpassFreqs(2)*resampleRate;
 		data.analogInfo.NumberSamples = length(lpdata);
 		data.analogInfo.HighFreqOrder = Args.LPFOrder;
 		data.analogInfo.LowFreqOrder = Args.LPFOrder;
 		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
-		data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
+		% convert to single precision float to save disk space, and to make loading the files faster
+		data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 		data.numSets = 1;
 		
 		% create nptdata so we can inherit from it    

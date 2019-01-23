@@ -144,7 +144,7 @@ if(~isempty(Args.NumericArguments))
 		else
 			% indicate cue offset
 			line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
-			if(obj.data.markers(n,3)==Args.RewardMarker)
+			if(obj.data.markers(n,3)==Args.RewardMarker || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
 				% indicate correct trial
 				line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
 			else
@@ -153,8 +153,17 @@ if(~isempty(Args.NumericArguments))
 			end
 		end
 		if(Args.LoadSort)
-			l = load('hmmsort.mat');
-			Args.SpikeData = l.mlseq;
+            % if UserData does not contain hmmsort, then save it there so
+            % we don't have to load it every trial
+            a = get(gcf,'UserData');
+            if(~isfield(a,'hmmsort'))
+                l = load('hmmsort.mat');
+                a.hmmsort = l;
+                set(gcf,'UserData',a);
+            else
+                l = a.hmmsort;
+            end
+            Args.SpikeData = l.mlseq;
 		end			
 		if(~isempty(Args.SpikeData))
 			hold on
@@ -164,13 +173,71 @@ if(~isempty(Args.NumericArguments))
 			% add spike trains
             ncells = size(mlseq,1);
        		clist = nptDefaultColors(1:ncells);
+            % first get size of data being plotted
+            idxsize = size(idx,2);
+            % create a vector that is the same size
+            a = nan(idxsize,1);
+            % create a vector that will be used to plot overlapping waveforms
+            as = zeros(idxsize,1);
+            % keep track of which indices need to be plotted because they
+            % are overlaps
+            asi = as;
+            % get size of waveforms
+            wfsize = size(l.spikeForms,3);
+            % create vector from 1 to wfsize
+            wfsvec = 1:wfsize;
             for si = 1:ncells
                 st1 = find(mlseq(si,idx)==spidx);
                 if(~isempty(st1))
                     % add stem plot
                     stem( (obj.data.analogTime(idx(st1))-obj.data.analogTime(tIdx(1))) * 1000, repmat(Args.SpikeHeight,[size(st1),1]), 'Color', clist(si,:))
-                end
-            end
+                    % plot the templates
+                    % find the starting index for each spike
+                    astart = st1-spidx;
+                    % get number of spikes
+                    nspikes = size(st1,2);
+                    % create array of indices
+                    aind = repmat(wfsvec,nspikes,1)' + repmat(astart,wfsize,1);
+                    % check to make sure aind does not contain indices 
+                    % larger than idxsize or smaller than 1
+                    aind(aind>idxsize) = idxsize;
+                    aind(aind<1) = 1;
+                    % create spike waveforms
+                    swaveforms = repmat(squeeze(l.spikeForms(si,:,:)),1,nspikes);
+                    % initialize ai to all nan's
+                    ai = a;
+                    ai(aind) = swaveforms;
+		            plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1))) * 1000, ai,'Color', clist(si,:), 'LineStyle',':');
+                    % insert the spike waveform, and add to existing values
+                    % for overlapping waveforms
+                    as(aind) = as(aind) + swaveforms;
+                    asi(aind) = asi(aind) + 1;
+                end  % if(~isempty(st1))
+            end  % for si = 1:ncells
+            % find points with overlaps
+            asio = asi>1;
+            % set those points to 2 since we just need to differentiate
+            % them from points with no overlaps
+            asi(asio) = 2;
+            % find points where we transition from no overlap to overlap
+            % and vice versa
+            dasi = diff(asi);
+            % find points where dasi is positive
+            dasip = dasi>0;
+            % find points where dasi is negative
+            dasim = dasi<0;
+            % we need to shift the indices to account for the fact that
+            % diff will produce vectors shorter than the original vectors
+            dasip2 = [dasip; 0];
+            dasim2 = [0; dasim];
+            % combine both together
+            asit = dasip2 | dasim2;
+            % combine with indices with overlaps
+            asc = asio | asit;
+            % remove the other points
+            as(~asc) = nan;
+            % plot spike waveforms with dotted lines
+            plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1))) * 1000, as,'Color', 'k', 'LineStyle','--');
 			hold off
 		end	
 	end

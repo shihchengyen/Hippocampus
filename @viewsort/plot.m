@@ -68,8 +68,8 @@ if(~isempty(Args.NumericArguments))
             
             % add axis labels
             if(~Args.LabelsOff)
-            xlabel('Data Points')
-            ylabel('Voltage (uV)')
+				xlabel('Data Points')
+				ylabel('Voltage (uV)')
             end
 		end  % for index = 1:numSets
 	else  % if(Args.Array || Args.Session || Args.Day)
@@ -97,18 +97,19 @@ if(~isempty(Args.NumericArguments))
         end
         
         if(obj.data.Args.Saved==0)
-            % show ISI coefficients of variation
+            % show ISI coefficients of variation and mean firing rate
             legendLabels = cell(1,size(xind,2));
             for k = 1:size(xind,2)
                 if isnan(obj.data.coeffV_ISI(xind(k)))
                     legendLabels{k} = 'N/A';
                 else
-                    label = round(obj.data.coeffV_ISI(xind(k)),2);
-                    legendLabels{k} = sprintf('%u: %.2f', k-1, label);
+                    cvlabel = round(obj.data.coeffV_ISI(xind(k)),2);
+                    frlabel = 1000./obj.data.meanISI(xind(k));
+                    legendLabels{k} = sprintf('%u: %.2f %.2f', k-1, cvlabel,frlabel);
                 end
             end
             lgd = legend(legendLabels, 'FontSize', 12);
-            title(lgd,{'ISI Distribution','Coefficient of Variation:'})
+            title(lgd,{'ISI Distribution','Coefficient of Variation:','Firing Rate:'})
             % subplot(round((numUnits+1)/2),2,d+1);
             % histogram(spike_ISI,1000,'facecolor',plotColour(d),'edgecolor',plotColour(d)); hold on
             % title(strcat('(',num2str(d),')',' ISI Distribution, Coefficient of Variation: ', num2str(round(coeffV_ISI,2))));
@@ -118,7 +119,9 @@ if(~isempty(Args.NumericArguments))
             spikeind = (obj.data.spikesimIndex(n)+1):obj.data.spikesimIndex(n+1);
             if (~isnan(obj.data.spikesim(spikeind)))
                 perms = nchoosek(1:size(xind,2),2);
-                perms(:,3) = obj.data.spikesim(spikeind);
+                % add 1 to the correlation coefficients as we are going to subtract 1 from
+                % all the values in perms to switch from 1 index to 0 index
+                perms(:,3:4) = [obj.data.spikesim(spikeind) obj.data.spikesp2pdiffs(spikeind)] + 1;
                 dim = [0.2, 0.2, 0.1, 0.1];
                 annotation('textbox',dim,'String', num2str(perms-1));
             end
@@ -154,14 +157,16 @@ end
 if(~isempty(Args.Cmds))
     % save the current figure in case Args.Cmds switches to another figure
     h = gcf;
+    % save current directory
+    cwd = pwd;
+    % change to corresponding session directory
     cd(sdstr{n})
-    eval(Args.Cmds{1})
-    drawnow
-    disp('Press a key to continue') % wait for keypress
-    pause
-    eval(Args.Cmds{2})
+    % run command
+    eval(Args.Cmds)
     % switch back to previous figure
     figure(h);
+    % switch back to previous directory
+    cd(cwd);
 end
 
 % % add code for plot options here
