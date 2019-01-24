@@ -60,8 +60,8 @@ if(~Args.SkipSplit)
                     if(~Args.SkipAnalog)
                         chan_num = sscanf(eLabel,'analog %d');
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         % convert to single precision float to save disk space and make
                         % file loading faster
                         tData.analogData = single(analogData);
@@ -101,8 +101,8 @@ if(~Args.SkipSplit)
                     if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
                         % entity is raw data, so create a channel directory
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         % convert to single precision float to save disk space and make
                         % file loading faster
                         tData.analogData = single(analogData);
