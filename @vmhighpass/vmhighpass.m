@@ -61,6 +61,10 @@ end
 function obj = createObject(rh,rl,Args,varargin)
 
 data = rh.data;
+% compute analogTime to make it easier to plot the data
+% replace analogTime in rplhighpass, which is single precision, with double 
+% precision variable to avoid plotting errors after 40 or so trials
+data.analogTime = (0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate;
 % data = arrangeMarkers(data,rl);
 data.markers = rl.data.markers;
 data.timeStamps = rl.data.timeStamps;
@@ -77,6 +81,7 @@ saveObject(obj,'ArgsC',Args);
 function obj = createEmptyObject(Args)
 
 % useful fields for most objects
+data.analogTime = [];
 data.markers = [];
 data.timeStamps = [];
 data.trialIndices = [];
