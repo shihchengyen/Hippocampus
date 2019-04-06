@@ -53,8 +53,6 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(Args.Data))
 	data = Args.Data;
-	% convert to single precision float to save disk space, and to make loading the files faster
-	data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
