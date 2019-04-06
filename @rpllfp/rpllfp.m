@@ -55,8 +55,6 @@ function obj = createObject(Args,varargin)
 if(~isempty(Args.Data))
 	data = Args.Data;
 	resampleRate = Args.ResampleRate;
-	% convert to single precision float to save disk space, and to make loading the files faster
-	data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 	data.numSets = 1;
 	% clear Data in Args so it is not saved
 	Args.Data = [];
@@ -86,8 +84,6 @@ else
 		data.analogInfo.HighFreqOrder = Args.LPFOrder;
 		data.analogInfo.LowFreqOrder = Args.LPFOrder;
 		data.analogInfo.ProbeInfo = strrep(data.analogInfo.ProbeInfo,'raw','lfp');
-		% convert to single precision float to save disk space, and to make loading the files faster
-		data.analogTime = single((0:(data.analogInfo.NumberSamples-1))' ./ data.analogInfo.SampleRate);
 		data.numSets = 1;
 		
 		% create nptdata so we can inherit from it    
