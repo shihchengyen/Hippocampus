@@ -308,9 +308,10 @@ if(~isempty(rd))
 		data.gpDurations = gpDurations;
 		data.unityTrialTime = unityTrialTime;
 		data.setIndex = [1; totTrials];
-		% move back to session directory from RawData directory
-		cd ..
 
+		% move back to session directory from RawData directory to make
+		% the object is created and saved in the correct directory
+		cd ..
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
 		n = nptdata(data.numSets,0,pwd);
@@ -318,6 +319,8 @@ if(~isempty(rd))
 		obj = class(d,Args.classname,n);
 		saveObject(obj,'ArgsC',Args);
 	else % if(dnum>0)
+		% move back to session directory from RawData directory
+		cd ..
 		% create empty object
 		obj = createEmptyObject(Args);
 	end % if(dnum>0)
