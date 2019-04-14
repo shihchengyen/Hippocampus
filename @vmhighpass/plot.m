@@ -24,6 +24,17 @@ if Args.ArgsOnly
     return;
 end
 
+% analogTime needs to be in double-precision in order to avoid rounding
+% error, but we don't really want to save it on disk as it takes up too
+% much space and makes loading the object slower. So we will create it the
+% first time we need it
+% check if the field analogTime exists OR if the analogTime field exists
+% and is not a double precision variable
+% we will create the variable here.
+if( ~isfield(obj.data,'analogTime') || ~isa(obj.data.analogTime,'double') )
+	obj.data.analogTime = (0:(obj.data.analogInfo.NumberSamples-1))' ./ obj.data.analogInfo.SampleRate;
+end
+
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
