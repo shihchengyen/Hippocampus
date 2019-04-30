@@ -130,11 +130,12 @@ if(~Args.SkipSplit)
                             rpllfp('auto','Data',tData,'save',varargin{:});
                         end
                         
-                        if ~Args.UseHPC
-                            submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
-                        end
-                        
-                        submitJob(Args); % submit job onto PBS queue
+                        if(~Args.SkipSort)
+							if ~Args.UseHPC
+								submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
+							end					
+	                        submitJob(Args); % submit job onto PBS queue
+	                    end
                         
                         cd(cwd);
                         clear tData
