@@ -41,6 +41,8 @@ else
 		% object specific fields
 		r.data.meanFRs = [p.data.meanFRs q.data.meanFRs];
 		r.data.semFRs = [p.data.semFRs q.data.semFRs];
+		r.data.SIC = [p.data.SIC; q.data.SIC];
+        r.data.SICsh = [p.data.SICsh q.data.SICsh];
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
