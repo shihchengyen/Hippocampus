@@ -86,6 +86,7 @@ if(~isempty(rd))
 	        unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
 	    end
+
         % in case of an aborted session we might have to toss out the markers in the last
         % trial. So check the number of rows in each column before creating an array
 		% with the smallest number of rows, which means we throw out the incomplete
@@ -113,8 +114,9 @@ if(~isempty(rd))
 		unityTriggers(:,3) = uT3;
 		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
 
+		% default grid is 5 x 5 but can be changed 
+		gridSteps = Args.GridSteps;
 		% these should be read from the unity file
-		gridSteps = Args.GridSteps; % 5 x 5 grid resolution
         gridBins = gridSteps * gridSteps;
 		overallGridSize = 25;
 		oGS2 = overallGridSize/2;
@@ -181,6 +183,8 @@ if(~isempty(rd))
 		z4Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
 
 		trialCounter = 0; % set up trial counter
+        % initialize index for setting non-navigating gridPositions to 0
+        gpreseti = 1;
 
 		for a = 1:totTrials
 			trialCounter = trialCounter + 1;
@@ -279,6 +283,10 @@ if(~isempty(rd))
 				utgpidx = find(tgp==tempgp);
 				gpDurations(tempgp,a) = sum(unityData(utgpidx,2));
 			end  % for pidx = 1:size(utgp,1)
+			
+			% set gridPositions when not navigating to 0
+			gridPosition(gpreseti:uDidx(1)) = 0;
+            gpreseti = unityTriggers(a,3)+1;
 		end % for a = 1:totTrials
 
 		% Calculate performance
@@ -308,6 +316,10 @@ if(~isempty(rd))
 		data.gpDurations = gpDurations;
 		data.unityTrialTime = unityTrialTime;
 		data.setIndex = [1; totTrials];
+        % compute cumulative sum of unity time to make it easy for
+        % placeselect.m to compute histograms for shuffled data
+        % add a zero at the beginning to avoid spike from being missed
+        data.unityTime = [0; cumsum(unityData(:,2))];
 
 		% move back to session directory from RawData directory to make
 		% the object is created and saved in the correct directory
@@ -359,6 +371,7 @@ data.gridPosition = [];
 data.gpDurations = [];
 data.unityTrialTime = [];
 data.setIndex = [];
+data.unityTime = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;
