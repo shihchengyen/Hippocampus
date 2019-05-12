@@ -9,8 +9,8 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0);
-Args.flags ={'ObjectLevel','AnalysisLevel'};
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'SigSIC',0);
+Args.flags ={'ObjectLevel','AnalysisLevel','SigSIC'};
 Args = getOptArgs(varargin,Args);
 
 % set variables to default
@@ -22,6 +22,13 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
+elseif(Args.SigSIC)
+	% returns indices of cells that have SIC that are larger than the
+	% shuffled spike trains
+    shSIC = obj.data.SICsh(2:end,:);
+    shSIC95 = prctile(shSIC,95);
+    SIC = obj.data.SICsh(1,:);
+    r = find(SIC>shSIC95);
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way
