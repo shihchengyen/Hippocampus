@@ -100,7 +100,8 @@ if(~isempty(Args.NumericArguments))
 			end
 			datam = mean(data);
 			spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
-				sRate,'yaxis')
+				sRate,'yaxis','MinThreshold',-10)
+            ylim([0,100])
 		end
 	elseif(Args.TFWavelets)
 		% not fully completed yet
