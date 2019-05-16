@@ -10,9 +10,10 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, ...
 		    'TFWavelets',0,  ...
+            'Filter',0,'FilterWindow',[],'CorrCoeff',0,   ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'LogPlot','TFWavelet','PlotAllData','TitleOff'};
+				'LogPlot','TFWavelet','PlotAllData','TitleOff','Filter','CorrCoeff'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -93,16 +94,119 @@ if(~isempty(Args.NumericArguments))
 			end
 			imagesc(0:(Args.TFfftWindow-Args.TFfftOverlap):mIdx,0:(sRate/Args.TFfftPoints):(sRate/2),ops./opsCount)
             set(gca,'Ydir','normal')
-		else
-			data = obj.data.analogData(idx);
-			if(~isempty(Args.RemoveLineNoise))
-				data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
-			end
-			datam = mean(data);
-			spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
-				sRate,'yaxis','MinThreshold',-10)
-            ylim([0,100])
-		end
+        else    
+            tIdx = obj.data.trialIndices(n,:); % Obtain trial indexes
+            
+            %     Spectrogram data for the 'normalisation period NP'
+            idx = (tIdx(1)-(1000/1000*1000)):(tIdx(1)-(501/1000*1000)); %Inter-trial interval data (-1000ms to -500ms)
+            data = obj.data.analogData(idx);
+            datam = mean(data);
+            [~,~,~,P]=spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints,sRate,'yaxis');
+            
+            %     Normalization parameters of the NP
+            Pmean=mean(P,2); %mean power density of each frequency bin
+            Pstd=std(P,0,2); %standard deviation of each frequency bin
+            
+            %     Spectrogram data for trials
+            idx = (tIdx(1)-(500/1000*1000)):tIdx(3); %Trial data including the pre-trial data of -500ms
+            data = obj.data.analogData(idx);
+            datam = mean(data);
+            [spec.S,spec.F,spec.T,spec.P,spec.Fc,spec.Tc]=...
+                spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints,sRate,'yaxis');
+            
+            % trial psd normalised to NP
+            spec.Pnorm=(spec.P-Pmean)./Pstd;
+            spec.T=(-0.5:0.05:spec.T(end)-0.6);
+            
+            %     Computes correlation coefficients for each trial
+            CCmean=mean(spec.Pnorm,2); %mean power density of each frequency spectrum of trials
+            Pdiff=zeros((size(spec.Pnorm,1)),(size(spec.Pnorm,2))); % Initialises Pdiff
+            
+            for r=1:size(spec.Pnorm,1)
+                % Difference at each time point with the mean power density for that frequency
+                Pdiff(r,:)=spec.Pnorm(r,:)-CCmean(r);
+            end
+            
+            for r=1:size(spec.Pnorm,1)
+                for c=1:size(spec.Pnorm,1)
+                    %Correlation coefficient for each frequency band
+                    spec.cc(r,c)=sum(Pdiff(r,:).*Pdiff(c,:))/...
+                        sqrt(sum(Pdiff(r,:).*Pdiff(r,:),2)*sum(Pdiff(c,:).*Pdiff(c,:),2));
+                end
+            end
+            
+            % Plots the normalized PSD data in a figure
+            surf(spec.T,spec.F,spec.Pnorm,'EdgeColor','none');
+            axis xy; axis([-0.5 inf 0 150]); colormap(jet); view(0,90); caxis([-10 10]);
+            set(gca,'FontSize',6); xticks(-0.5:0.5:7); yticks(0:10:150);
+            title(strcat("Normalised Spectrogram of Trial:",string(n)),'FontSize',10);
+            colorbar;
+            
+            % Plot lines to mark the cue presentation period
+            hold on
+            line([0 0],[0 150],[100 100; 100 100],'Color','k');
+            line([1 1],[0 150],[100 100; 100 100],'Color','k');
+            hold off
+            
+% 			data = obj.data.analogData(idx);
+% 			if(~isempty(Args.RemoveLineNoise))
+% 				data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+% 			end
+% 			datam = mean(data);
+% 			spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints, ...
+% 				sRate,'yaxis','MinThreshold',-10)
+%             ylim([0,100])
+        end
+        
+    elseif(Args.CorrCoeff)
+        tIdx = obj.data.trialIndices(n,:); % Obtain trial indexes
+            
+            %     Spectrogram data for the 'normalisation period NP'
+            idx = (tIdx(1)-(1000/1000*1000)):(tIdx(1)-(501/1000*1000)); %Inter-trial interval data (-1000ms to -500ms)
+            data = obj.data.analogData(idx);
+            datam = mean(data);
+            [~,~,~,P]=spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints,sRate,'yaxis');
+            
+            %     Normalization parameters of the NP
+            Pmean=mean(P,2); %mean power density of each frequency bin
+            Pstd=std(P,0,2); %standard deviation of each frequency bin
+            
+            %     Spectrogram data for trials
+            idx = (tIdx(1)-(500/1000*1000)):tIdx(3); %Trial data including the pre-trial data of -500ms
+            data = obj.data.analogData(idx);
+            datam = mean(data);
+            [spec.S,spec.F,spec.T,spec.P,spec.Fc,spec.Tc]=...
+                spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints,sRate,'yaxis');
+            
+            % trial psd normalised to NP
+            spec.Pnorm=(spec.P-Pmean)./Pstd;
+            spec.T=(-0.5:0.05:spec.T(end)-0.6);
+            
+            %     Computes correlation coefficients for each trial
+            CCmean=mean(spec.Pnorm,2); %mean power density of each frequency spectrum of trials
+            Pdiff=zeros((size(spec.Pnorm,1)),(size(spec.Pnorm,2))); % Initialises Pdiff
+            
+            for r=1:size(spec.Pnorm,1)
+                % Difference at each time point with the mean power density for that frequency
+                Pdiff(r,:)=spec.Pnorm(r,:)-CCmean(r);
+            end
+            
+            for r=1:size(spec.Pnorm,1)
+                for c=1:size(spec.Pnorm,1)
+                    %Correlation coefficient for each frequency band
+                    spec.cc(r,c)=sum(Pdiff(r,:).*Pdiff(c,:))/...
+                        sqrt(sum(Pdiff(r,:).*Pdiff(r,:),2)*sum(Pdiff(c,:).*Pdiff(c,:),2));
+                end
+            end
+                        
+            % Plots the CC plots in one figure
+            heatmap(spec.F,flipud(spec.F),flipud(spec.cc),...
+                'XLimits',{0,150.39063},'YLimits',{150.39063,0},...
+                'XDisplayLabels',(round(spec.F)),'YDisplayLabels',(flipud(round(spec.F))),...
+                'XLabel','Frequency (Hz)','YLabel','Frequency (Hz)','FontSize',6,...
+                'Colormap', jet,'ColorLimits',[-0.2,0.7],'ColorbarVisible','on',...
+                'Title',strcat("Correlation coefficients of Trial:",string(n)));
+            
 	elseif(Args.TFWavelets)
 		% not fully completed yet
     	cdata = nptRemoveLineNoise(obj.data.analogData',50,1000);
@@ -124,6 +228,46 @@ if(~isempty(Args.NumericArguments))
         cfg.pad = 'nextpow2';
         
         TFRwave = ft_freqanalysis(cfg,data);
+    elseif (Args.Filter) 
+        % Filter is a flag that plots the time-domain signal with a
+        % bandpass filter defined by 'FilterWindow'
+        data = obj.data.analogData(idx,:);
+        drows = size(data,2);
+		if(~isempty(Args.RemoveLineNoise))
+			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
+		end
+		axesPositions = separateAxis('Vertical',drows);
+		for spi = 1:drows
+			% do subplot if there are multiple rows of data
+			subplot('Position',axesPositions(spi,:));
+			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,...
+                bandpass(data(:,spi),Args.FilterWindow,1000),'.-')
+            % bandpass function used to filter the time domain signal
+            if(spi>1)
+                set(gca,'XTickLabel',{})
+            end
+			% indicate trial start
+			line([0 0],ylim,'Color','g')
+			if(OldMarkerFormat)
+				if(obj.data.markers(n,2)==Args.RewardMarker)
+					% indicate correct trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+				else
+					% indicate incorrect trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+				end
+			else
+				% indicate cue offset
+				line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
+				if( (obj.data.markers(n,3)==Args.RewardMarker) || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
+					% indicate correct trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+				else
+					% indicate incorrect trial
+					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+				end
+			end
+		end
 	else
 		data = obj.data.analogData(idx,:);
         drows = size(data,2);
