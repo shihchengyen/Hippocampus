@@ -30,7 +30,12 @@ if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
     if(Args.Errorbar)
-        errorbar(obj.data.meanFRs(:,n),obj.data.semFRs(:,n),'.')
+    	if(obj.data.Args.UseMedian)
+    		errorbar(1:size(obj.data.meanFRs,1),obj.data.meanFRs(:,n), ...
+    			obj.data.semFRs(:,(n*2)-1),obj.data.semFRs(:,n*2),'x')
+    	else
+	        errorbar(obj.data.meanFRs(:,n),obj.data.semFRs(:,n),'.')
+	    end
     elseif(Args.SIC)
         % get shuffled SIC
         shSIC = obj.data.SICsh(2:end,n);
