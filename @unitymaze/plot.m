@@ -5,8 +5,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Trial',0, 'FrameIntervals',0, ...
-		  'FrameIntervalTriggers',[2 3]);
-Args.flags = {'LabelsOff','ArgsOnly','Trial','FrameIntervals'};
+		  'FrameIntervalTriggers',[2 3], 'DurationDiff',0);
+Args.flags = {'LabelsOff','ArgsOnly','Trial','FrameIntervals','DurationDiff'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -63,7 +63,7 @@ if(~isempty(Args.NumericArguments))
             rpTrialDur = diff(rp.data.timeStamps(n,2:3),1,2);
             uet = cumsum(uData);
 			title([sessionstr ' Trial ' num2str(n) ' Duration disparity: ' num2str(1000*(uet(end)-rpTrialDur)) ' ms'])
-		else
+		else  % if(Args.FrameIntervals)
 			plot(xBound,zBound,'k','LineWidth',1.5);
 			hold on
 			plot(x1Bound,z1Bound,'k','LineWidth',1);
@@ -88,8 +88,40 @@ if(~isempty(Args.NumericArguments))
 			sessionstr = getDataOrder('ShortName','DirString',sdstr{sessionnum(end)});
 				
 			title([sessionstr ' T: ' num2str(n-obj.data.setIndex(sessionnum(end))) ' Route: ' rstr ' Shortest: ' sstr ' Ratio: ' ratiostr])
-		end
-	else
+		end  % if(Args.FrameIntervals)
+	elseif(Args.DurationDiff)  % if(Args.Trial)
+		uTrigs = obj.data.unityTriggers((obj.data.setIndex(n)+1):obj.data.setIndex(n+1),:);
+		uTime = obj.data.unityTime(:,n);
+		% add 1 to start index since we want the duration between triggers
+		startind = uTrigs(:,1)+1;
+		endind = uTrigs(:,3);
+		starttime = uTime(startind);
+		endtime = uTime(endind);
+		trialDurations = diff([starttime endtime],1,2)
+		% in order to display the duration difference, we will need to
+		% load the rplparallel object to get the Ripple timestamps
+		% first save the current directory
+		cwd = pwd;
+		% use n and setIndex to find which session this trial belongs to
+		sessionnum = find(obj.data.setIndex<=n);
+		sdstr = get(obj,'SessionDirs');
+		sessionDir = sdstr{sessionnum(end)};
+		% change directory to find the appropriate rplparallel object
+		cd(sessionDir)
+		rp = rplparallel('auto',varargin2{:});
+		% change back to the previous directory
+		cd(cwd)
+		rpTrialDur = diff(rp.data.timeStamps(:,[1 3]),1,2);
+		% multiply by 1000 to convert to ms
+		histogram((trialDurations - rpTrialDur)*1000);
+		xlabel('Time (ms)')
+		ylabel('Frequency')
+		sessionstr = getDataOrder('ShortName','DirString',sessionDir);
+		title(['Unity trial duration - Ripple trial duration ' sessionstr])
+		set(gca,'YScale','log','YGrid','on')
+		cylim = ylim;
+		ylim([0.5 cylim(2)])
+	else  % if(Args.Trial)
 		xind = (obj.data.setIndex(n)+1):obj.data.setIndex(n+1);
 		[h,l1,l2] = plotyy(xind,obj.data.sumCost(xind,1:2),xind,obj.data.sumCost(xind,2)./obj.data.sumCost(xind,1),'bar','stem');
 		h(2).YColor = 'm';
