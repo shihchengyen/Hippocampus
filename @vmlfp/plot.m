@@ -8,7 +8,7 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
             'TimeOutMarker',4, 'PlotAllData',0, 'TitleOff', 0, ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
-		    'TFfftPoints',256, ...
+		    'TFfftPoints',256, 'TFfftStart',500,'TFfftFreq',150,...
 		    'TFWavelets',0,  ...
             'Filter',0,'FilterWindow',[],'CorrCoeff',0,   ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
@@ -98,7 +98,9 @@ if(~isempty(Args.NumericArguments))
             tIdx = obj.data.trialIndices(n,:); % Obtain trial indexes
             
             %     Spectrogram data for the 'normalisation period NP'
-            idx = (tIdx(1)-(1000/1000*1000)):(tIdx(1)-(501/1000*1000)); %Inter-trial interval data (-1000ms to -500ms)
+            idx = (tIdx(1)-((Args.TFfftStart+500)/1000*sRate)):(tIdx(1)-((Args.TFfftStart+1)/1000*sRate));
+            %Inter-trial interval data used for normalisation will always
+            %be 500ms before TfftStart
             data = obj.data.analogData(idx);
             datam = mean(data);
             [~,~,~,P]=spectrogram(data-datam,Args.TFfftWindow,Args.TFfftOverlap,Args.TFfftPoints,sRate,'yaxis');
@@ -108,7 +110,8 @@ if(~isempty(Args.NumericArguments))
             Pstd=std(P,0,2); %standard deviation of each frequency bin
             
             %     Spectrogram data for trials
-            idx = (tIdx(1)-(500/1000*1000)):tIdx(3); %Trial data including the pre-trial data of -500ms
+            idx = (tIdx(1)-(Args.TFfftStart/1000*sRate)):tIdx(3);
+            %Trial data including pre-trial data of duration determined by TfftStart
             data = obj.data.analogData(idx);
             datam = mean(data);
             [spec.S,spec.F,spec.T,spec.P,spec.Fc,spec.Tc]=...
@@ -116,12 +119,12 @@ if(~isempty(Args.NumericArguments))
             
             % trial psd normalised to NP
             spec.Pnorm=(spec.P-Pmean)./Pstd;
-            spec.T=(-0.5:(Args.TFfftWindow-Args.TFfftOverlap)/sRate:spec.T(end)-0.6);
+            spec.T=(-Args.TFfftStart/1000:(Args.TFfftWindow-Args.TFfftOverlap)/sRate:spec.T(end)-(Args.TFfftStart/1000+Args.TFfftWindow/sRate/2));
            
             % Plots the normalized PSD data in a figure
             surf(spec.T,spec.F,spec.Pnorm,'EdgeColor','none');
-            axis xy; axis([-0.5 inf 0 150]); colormap(jet); view(0,90); caxis([-10 10]);
-            set(gca,'FontSize',6); xticks(-0.5:0.5:spec.T(end)); yticks(0:10:150);
+            axis xy; axis([-Args.TFfftStart/1000 inf 0 Args.TFfftFreq]); colormap(jet); view(0,90); caxis([-10 10]);
+            set(gca,'FontSize',6); xticks(-Args.TFfftStart/1000:0.5:spec.T(end)); yticks(0:10:Args.TFfftFreq);
             title(strcat("Normalised Spectrogram of Trial:",string(n)),'FontSize',10);
             colorbar;
             
@@ -148,7 +151,7 @@ if(~isempty(Args.NumericArguments))
         tIdx = obj.data.trialIndices(n,:); % Obtain trial indexes
             
             %     Spectrogram data for the 'normalisation period NP'
-            idx = (tIdx(1)-(1000/1000*1000)):(tIdx(1)-(501/1000*1000)); %Inter-trial interval data (-1000ms to -500ms)
+            idx = (tIdx(1)-((Args.TFfftStart+500)/1000*sRate)):(tIdx(1)-((Args.TFfftStart+1)/1000*sRate));
             data = obj.data.analogData(idx);
             datam = mean(data);
             [~,~,~,P]=spectrogram(data-datam,Args.TFfftWindow,0,Args.TFfftPoints,sRate,'yaxis');
@@ -158,7 +161,7 @@ if(~isempty(Args.NumericArguments))
             Pstd=std(P,0,2); %standard deviation of each frequency bin
             
             %     Spectrogram data for trials
-            idx = (tIdx(1)-(500/1000*1000)):tIdx(3); %Trial data including the pre-trial data of -500ms
+            idx = (tIdx(1)-(Args.TFfftStart/1000*1000)):tIdx(3);
             data = obj.data.analogData(idx);
             datam = mean(data);
             [spec.S,spec.F,spec.T,spec.P,spec.Fc,spec.Tc]=...
@@ -183,10 +186,15 @@ if(~isempty(Args.NumericArguments))
                         sqrt(sum(Pdiff(r,:).*Pdiff(r,:),2)*sum(Pdiff(c,:).*Pdiff(c,:),2));
                 end
             end
-                        
+            
+            % Determines the data to enter into XLimits and YLimits based
+            % on the TFfftFreq limit initialised as an option
+            [~,FreqI]=min(abs(spec.F-Args.TFfftFreq));
+            FreqLim=spec.F(FreqI);
+
             % Plots the CC plots in one figure
             heatmap(spec.F,flipud(spec.F),flipud(spec.cc),...
-                'XLimits',{0,150.39063},'YLimits',{150.39063,0},...
+                'XLimits',{0,FreqLim},'YLimits',{FreqLim,0},...
                 'XDisplayLabels',(round(spec.F)),'YDisplayLabels',(flipud(round(spec.F))),...
                 'XLabel','Frequency (Hz)','YLabel','Frequency (Hz)','FontSize',6,...
                 'Colormap', jet,'ColorLimits',[-0.2,0.7],'ColorbarVisible','on',...
@@ -226,7 +234,7 @@ if(~isempty(Args.NumericArguments))
 			% do subplot if there are multiple rows of data
 			subplot('Position',axesPositions(spi,:));
 			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,...
-                bandpass(data(:,spi),Args.FilterWindow,1000),'.-')
+                bandpass(data(:,spi),Args.FilterWindow,sRate),'.-')
             % bandpass function used to filter the time domain signal
             if(spi>1)
                 set(gca,'XTickLabel',{})
