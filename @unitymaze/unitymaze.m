@@ -15,7 +15,7 @@ function [obj, varargout] = unitymaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', 'FileLineOfffset',15, 'DirName','RawData*', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
-				'TriggerVal3',30, 'GridSteps',5);
+				'TriggerVal3',30, 'GridSteps',5, 'MaxTimeDiff',0.002);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {'GridSteps'};
@@ -64,6 +64,12 @@ function obj = createObject(Args,varargin)
 % move to correct directory
 [pdir,cwd] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
 
+% need to correct timestamps by comparing to the marker timestamps
+% in rplparallel
+rp = rplparallel('auto',varargin{:});
+% compute trial durations from the timestamps in rplparallel
+rplTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
+
 % look for session_1_*.txt in RawData_T*
 rd = dir(Args.DirName);
 if(~isempty(rd))
@@ -86,6 +92,10 @@ if(~isempty(rd))
 	        unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
 	    end
+	    
+		% move back to session directory from RawData directory to make
+		% the object is created and saved in the correct directory
+		cd ..
 
         % in case of an aborted session we might have to toss out the markers in the last
         % trial. So check the number of rows in each column before creating an array
@@ -131,7 +141,7 @@ if(~isempty(rd))
 
 		% compute grid position number
 		gridPosition = binH + ((binV - 1) * gridSteps);
-
+		
 		% create memory for arrays
 		gpDurations = zeros(gridBins,totTrials);
 		% add 1 to have the correct number of rows because of the subtraction
@@ -185,6 +195,45 @@ if(~isempty(rd))
 		trialCounter = 0; % set up trial counter
         % initialize index for setting non-navigating gridPositions to 0
         gpreseti = 1;
+
+		% create memory for array for histogram time bins, grid position,
+		% and interval
+		sessionTime = zeros(size(gridPosition,1),3);	
+		% sessionTime will have the start and end timestamps of each trial
+		% along with when the grid position changed in the 1st column and 
+		% the grid positions in the 2nd column. The 3rd column will be
+		% filled in later with the interval between successive timestamps
+		% in the 1st column. 
+		% e.g.
+		% 0			0
+		% 7.9724	181
+		% 8.1395	221
+		% ...
+		% 10.6116	826
+		% 10.7876	0
+		% 13.8438	826
+		% ...
+		% 22.7543	693
+		% 23.5624	0
+		% 27.2817	0
+		% 36.2458	0
+		% 39.4584	701
+		% The 1st trial started at 7.9724 s, with the animal at grid position
+		% 181. The animal then moved to position 221 at 8.1395 s. Near
+		% the end of the trial, the animal moved to position 826 at 10.6116 s,
+		% and stayed there until the end of the 1st trial at 10.7876 s, which 
+		% was marked by a 0 in the 2nd column. The 2nd trial started at 
+		% 13.8438 s at position 826, and ended at 23.5624 s at position 693.
+		% The next 2 lines illustrates what happens if the mismatch in the 
+		% duration between Unity and Ripple is too large. The start of the
+		% trial at 27.2817 s is marked with position 0, and is immediately
+		% followed by the end of the trial at 36.2458 s, marked as before
+		% with a 0 in the 2nd column.
+		% 
+		% start the array with 0 to make sure any spike times before the 
+		% first trigger	are captured 
+		% increment the index for sessionTime
+		sTi = 2;
 
 		for a = 1:totTrials
 			trialCounter = trialCounter + 1;
@@ -260,20 +309,68 @@ if(~isempty(rd))
 		        clear mpath pathdiff 
 		    end % if sumCost(a,3) <= 0,
 
+			% check how much of a discrepancy there is between Unity and Ripple
 	        % get indices for this trial
 	        % unityTriggers(a,2) will be the index where the 2nd marker was found
 	        % and the time recorded on that line should be time since the last update
 	        % so we really want the time for the next update instead
 			uDidx = (unityTriggers(a,2)+1):unityTriggers(a,3);
+			% get number of frames in this trial
+			numUnityFrames = size(uDidx,2);
 			
 			% get cumulative time from cue offset to end of trial for this specific trial
 			% this will make it easier to correlate to spike times
 			% add zero so that the edges for histcount will include 0 at the beginning
-			unityTrialTime(1:(size(uDidx,2)+1),a) = [0; cumsum(unityData(uDidx,2))]; 
+			% get indices for this trial
+			tindices = 1:(numUnityFrames+1);
+			tempTrialTime = [0; cumsum(unityData(uDidx,2))]; 
+			% unityTrialTime(tindices,a) = [0; cumsum(unityData(uDidx,2))]; 
+			
+			% get Unity end time for this trial
+			uet = tempTrialTime(end);
+			% get Ripple end time for this trial
+			ret = rplTrialDur(a);
+			% compute the difference
+			tdiff = uet - ret;
 	
 			% get grid positions for this trial
 			tgp = gridPosition(uDidx);
 	
+			% get the starting Ripple timestamp
+			tstart = rp.data.timeStamps(a,2);
+			tend = rp.data.timeStamps(a,3);
+			
+			% compare trial durations
+			% if the difference is acceptable, we will add the timestamps
+			% to the histogram bin limits. Otherwise, we will skip to the
+			% end of the trial
+			if(abs(tdiff) < Args.MaxTimeDiff)
+				sessionTime(sTi,:) = [tstart tgp(1) 0];
+				sTi = sTi + 1;
+				% shift the Unity timestamps to match the Ripple timestamps
+				% by distributing the difference over all the frames
+				unityTrialTime(tindices,a) = tempTrialTime - [0; cumsum(repmat(tdiff/numUnityFrames,numUnityFrames,1))];
+
+				% find the timepoints where grid positions changed
+				gpc = find(diff(tgp)~=0);
+				ngpc = size(gpc,1);
+			
+				% add the Unity frame intervals to the starting timestamp to
+				% create corrected version of unityTime, which will also be the
+				% bin limits for the histogram function call
+				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
+				sTi = sTi + ngpc;		
+			else
+				unityTrialTime(tindices,a) = tempTrialTime;
+				% leave the 2nd column as 0 to indicate this was a skipped trial
+				sessionTime(sTi,1) = tstart;
+				sTi = sTi + 1;			
+			end			
+				
+			% add an entry for the end of the trial
+			sessionTime(sTi,1:2) = [tend 0];
+			sTi = sTi + 1;
+
 			% get unique positions
 			utgp = unique(tgp);
 	
@@ -285,7 +382,9 @@ if(~isempty(rd))
 			end  % for pidx = 1:size(utgp,1)
 			
 			% set gridPositions when not navigating to 0
-			gridPosition(gpreseti:uDidx(1)) = 0;
+			% subtract 1 from uDidx(1) as we set the start of uDidx to 1
+			% row after unityTrigger(a,2)
+			gridPosition(gpreseti:(uDidx(1)-1)) = 0;
             gpreseti = unityTriggers(a,3)+1;
 		end % for a = 1:totTrials
 
@@ -296,6 +395,47 @@ if(~isempty(rd))
 		perf = sum(sumCost(:,6))/50; 
 		disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
 		processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
+
+		% get number of rows in sessionTime
+		snum = sTi - 1;
+		% reduce memory for sessionTime
+		sTime = sessionTime(1:snum,:);
+		% fill in 3rd column with time interval so it will be easier to compute
+		% firing rate
+		sTime(1:(snum-1),3) = diff(sTime(:,1));
+		% sort the 2nd column so we can extract the firing rates by position
+		[sTP,sTPi] = sort(sTime(:,2));
+		% find the number of observations per position by looking for 
+		% the indices when position changes. The first change should be from
+		% position 0 to 1st non-zero position. Add 1 to adjust for the change
+		% in index when using diff. These will be the starting indices for 
+		% the unique positions.
+		sTPsi = find(diff(sTP)~=0) + 1;
+		% find the ending indices by subtracting 1 from sTPsi, and adding
+		% snum at the end
+		sTPind = [sTPsi [[sTPsi(2:end)-1]; snum]];
+		sTPin = diff(sTPind,1,2);
+		% then we find the differences between consecutive sTPi2
+		% this means that we are counting the number of points from the 1st
+		% non-zero position, so we don't need to drop the 1st value.
+		% But we need to add the last value, which will go to the end of snum.
+		% sTPn = [diff(sTPsi); (snum-sTPsi(end))];
+		% find the largest number of observations, which can be used to 
+		% pre-allocate memory for matrix to store firing rates
+		% sTPnmax = max(sTPn);
+		% find unique positions, which will include 0
+		tempsTPu = unique(sTP);
+		% remove 0
+		sTPu = tempsTPu(2:end);
+		% find number of unique positions
+		nsTPu = size(sTPu,1);
+		% when we need to pre-allocate memory, we can do something like: 
+		% fri = nan(sTPnmax,nsTPu);
+		% compute occupancy proportion
+		ou_i = zeros(nsTPu,1);
+		for pi = 1:nsTPu
+			ou_i(pi) = sum(sTime(sTPi(sTPind(pi,1):sTPind(pi,2)),3));
+		end
 
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
@@ -315,15 +455,20 @@ if(~isempty(rd))
 		data.gridPosition = gridPosition;
 		data.gpDurations = gpDurations;
 		data.unityTrialTime = unityTrialTime;
-		data.setIndex = [1; totTrials];
+		data.setIndex = [0; totTrials];
         % compute cumulative sum of unity time to make it easy for
         % placeselect.m to compute histograms for shuffled data
         % add a zero at the beginning to avoid spike from being missed
         data.unityTime = [0; cumsum(unityData(:,2))];
+        data.sTime = sTime;
+        data.sTPi = sTPi;
+        data.sTPind = sTPind;
+        data.sTPin = sTPin;
+        data.sTPu = sTPu;
+        data.nsTPu = nsTPu;
+        data.ou_i = ou_i;
+        data.P_i = ou_i / sum(ou_i);
 
-		% move back to session directory from RawData directory to make
-		% the object is created and saved in the correct directory
-		cd ..
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
 		n = nptdata(data.numSets,0,pwd);
