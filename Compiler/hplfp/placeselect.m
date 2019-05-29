@@ -46,6 +46,9 @@ spikeLocTrial = zeros(gridBins,nptrials);
 anovaMatrix = spikeLocTrial;
 tDiff = nan(nptrials,1);
 
+% This is the 1st of 2 ways that we are going to compute place selectivity.
+% For this method, we loop through trials to compute spike counts, and
+% the mean and stderr of the firing rate across trials. 
 % loop over number of trials            
 for npi = 1:nptrials
 	if(Args.UseAllTrials)
@@ -98,9 +101,15 @@ if(Args.UseAllTrials)
 else
 	anovaMatrix = spikeLocTrial./gpDurations(:,processTrials);
 end
-meanFRs = nanmean(anovaMatrix,2);
-semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
+if(Args.UseMedian)
+	meanFRs = nanmedian(anovaMatrix,2);
+	semFRs = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
+else
+	meanFRs = nanmean(anovaMatrix,2);
+	semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
+end
 
+% We take the mean firing rates computed above to compute the SIC.
 % compute SIC
 % compute total duration for each position
 if(Args.UseAllTrials)
@@ -126,11 +135,18 @@ SIC2 = log2(FRratio);
 SIC2(isinf(SIC2)) = 0;
 SIC = SIC1' * SIC2;
 
+% This is the 2nd method for computing place selectivity, which compares
+% the results we get from the data to shuffled surrogates. This method
+% attempts to count spikes at 1 go for the entire session, instead of 
+% looping over trials, to make computing place selectivity for the data and 
+% the shuffled spikes more efficient.
 % compare SIC to SIC from shuffled spike trains
 % remove spikes that occurred after the unity program ended to avoid
 % problems with the histogram function
 % get max time, i.e. last marker in the session
-maxTime = um.data.unityTime(end);
+% maxTime = um.data.unityTime(end);
+% use rplparallel timestamps instead of unity timestamps
+maxTime = rp.data.timeStamps(end,3);
 si = find(sTimes>maxTime);
 % get number of spikes
 if(isempty(si))
@@ -147,30 +163,87 @@ spTimes = repmat(sTimes(1:nSpikes)',1,shuffleSize);
 % generate circularly shifted spike trains
 % first seed the random number generator to make sure we get a different
 % sequence of numbers
-rng('shuffle');
+% rng('shuffle');
 % generate 1000 random time shifts between 0.1 and 0.9 of maxTime
 tShifts = ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime;
 shuffleInd = 2:shuffleSize;
 spTimes(:,shuffleInd) = sort(mod(spTimes(:,shuffleInd) + tShifts,maxTime));
-% compute histogram of data and shuffled data
-[n,bin] = histcie(spTimes,um.data.unityTime);
-% compute histogram for location
-[n2,bin2] = histcie(gridPosition(bin),um.data.gpEdges);
+
+% get variables stored in unitymaze
+sTime = um.data.sessionTime;
+% get indices to sTime sorted by position
+sTPi = um.data.sTPi;
+% get positions with a minimum number of observations
+sTPu = um.data.sTPu;
+% get number of positions
+nsTPu = um.data.nsTPu;
+% get starting and ending indices to sTPi for each of those positions
+sTPind = um.data.sTPind;
+% get number of observations for each of those positions
+sTPin = um.data.sTPin;
+% get occupancy for each position
+ou_s = um.data.ou_i;
+% divide ou_s by sum of ou_s
+P_i = um.data.P_i;
+nFRBins = Args.NumFRBins;
+
 % compute SIC
-% compute total duration for each position
-o_i = sum(gpDurations,2);
+% compute histogram of data and shuffled data
+% get corrected timeline for entire session
+n = histcie(spTimes,sTime(:,1));
+% divide by interval to get firing rates
+fr = n ./ repmat(sTime(:,3),1,size(n,2));
+% get maximum firing rate across data and surrogates
+frmax = max(max(fr));
+% divide range into nFRbins
+frbins = 0:frmax/nFRBins:frmax;
+% compute histogram of fr using frbins
+[frn,frni] = histcie(fr,frbins,'DropLast');
+% compute P_j from frn
+P_j = frn / sum(frn);
+% create array for storing mean and stderr firing rate
+lambda_i = zeros(nsTPu,shuffleSize);
+lambda_ise = lambda_i;
+
+% create array for P_ij
+P_ij = zeros(nFRBins,nsTPu,shuffleSize);
+% bin indices should be 1 to nFRBins, so shift the limits by 0.5
+frnbins = 0.5:1:(nFRBins+0.5);
+for fri = 1:nsTPu
+	% get relevant indices
+	frindices = sTPi(sTPind(fri,1):sTPind(fri,2));
+	% get firing rates for this position for data and surrogates
+	frncounts = frni(frindices,:);
+	% count number of rbins in each category
+	P_ij(:,fri,:) = histcie(frncounts,frnbins,'DropLast','DataCols');
+	frvals = fr(frindices,:);
+	lambda_i(fri,:) = mean(frvals);
+	lambda_ise(fri,:) = std(frvals)/sqrt(sTPin(fri));
+end
+
 % compute total duration across all positions
-So_i = sum(o_i);
+% So_i = sum(o_i);
 % compute proportion of occupied time
-P_i = o_i/So_i;
+% P_i = o_i/So_i;
+
+% divide P_ij by its sum to get probability
+P_ijs = sum(sum(P_ij));
+P_ij = P_ij ./ P_ijs;
+
+% create matrices for computing denominator in MI calculation
+P_i_mat = repmat(P_i',[nFRBins,1,shuffleSize]);
+P_j_mat = repmat(P_j,[1,nsTPu,shuffleSize]);
+MI = sum(nansum(P_ij .* log2 ( P_ij ./ (P_i_mat .* P_j_mat) )));
+
 % compute mean firing rate over all positions weighed by proportion of
 % occupied time
 % replace NaN with 0 in meanFRs;
-lambda_i = n2(1:gridBins,:) ./ repmat(o_i,1,shuffleSize);
-lambda_i(isnan(lambda_i)) = 0;
+% lambda_i = n2(1:gridBins,:) ./ repmat(o_i,1,shuffleSize);
+% lambda_i(isnan(lambda_i)) = 0;
+
 lambda_bar = P_i' * lambda_i;
 % divide firing for each position by the overall mean
-FRratio = lambda_i ./ repmat(lambda_bar,gridBins,1);
+FRratio = lambda_i ./ repmat(lambda_bar,nsTPu,1);
 % compute first term in SIC
 SIC1 = repmat(P_i,1,shuffleSize) .* FRratio;
 SIC2 = log2(FRratio);
@@ -187,6 +260,7 @@ else
 end
 data.SIC = SIC;
 data.SICsh = SICsh';
+data.MI = MI;
 
 if(isdeployed)
 	% save data into a mat file
