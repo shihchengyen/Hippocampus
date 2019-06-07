@@ -72,7 +72,7 @@ else
 		% fields inside the data structure inside objects, so we are going to
 		% have to get the data structure first and then access the fields inside it
 		rwdata = rw.data;
-		hpdata = nptHighPassFilter(rwdata.analogData,rwdata.analogInfo.SampleRate, ...
+		hpdata = nptHighPassFilter(double(rwdata.analogData),rwdata.analogInfo.SampleRate, ...
 					Args.HighpassFreqs(1),Args.HighpassFreqs(2));
 		% convert to single precision float to save disk space, and to make loading the files faster
 		data.analogData = single(hpdata);
