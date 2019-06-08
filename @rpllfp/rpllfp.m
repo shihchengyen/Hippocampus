@@ -70,6 +70,8 @@ if(~isempty(Args.Data))
 else
 	rw = rplraw('auto',varargin{:});
 	if(~isempty(rw))
+		% analogData in rplraw should be in single precision format, so we have to
+		% convert to double to avoid errors in nptLowPassFilter
         [lpdata,resampleRate] = nptLowPassFilter(double(rw.data.analogData),rw.data.analogInfo.SampleRate, ...
 					Args.LowpassFreqs(1),Args.LowpassFreqs(2));
 		% convert to single precision float to save disk space, and to make loading the files faster
