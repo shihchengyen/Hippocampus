@@ -9,8 +9,8 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'Number', 0, 'Trial', 0);
-Args.flags ={'ObjectLevel','AnalysisLevel', 'Number', 'Trial'};
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'Number', 0, 'Trial', 0, 'XY', 0, 'Calibration', 0);
+Args.flags ={'ObjectLevel','AnalysisLevel', 'Number', 'Trial', 'XY', 'Calibration'};
 Args = getOptArgs(varargin,Args);
 
 % set variables to default
@@ -22,14 +22,15 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
-elseif (Args.Number && Args.Trial)
+elseif (Args.Number && (Args.Trial || Args.XY))
     %get the number of trials that are in the object
     %add every third column of the matrix 
     
    n = obj.data.noOfTrials;
    disp (n);
    r = sum (n,2);
-    
+elseif (Args.Number && Args.Calibration) 
+    n = size(obj.data.trial_timestamps,1); 
 else 
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way
