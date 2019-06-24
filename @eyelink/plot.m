@@ -34,9 +34,9 @@ if(~isempty(Args.NumericArguments))
            if ( (n-l) > 0)
                n = n-l;
            else 
-               disp(n);
-               fprintf('and');
-               disp(i);
+               %disp(n);
+               %fprintf('and');
+               %disp(i);
                break;
            end 
        end 
@@ -63,9 +63,9 @@ if(~isempty(Args.NumericArguments))
         plot (timestamps, y(:,1), 'b-');
         %plot the y data and label all the axes 
         hold on
-        title ('Eye Movements versus Time for Trial');
-        xlabel ('Time');
-        ylabel ('Position');
+        title (strcat(['Eye Movements versus Time for Trial' ' ' num2str(n)]));
+        xlabel ('Time (ms)');
+        ylabel ('Position (screen pixels)');
         plot (timestamps, y(:,2), 'g-');
         legend ('X position', 'Y Position');
 
@@ -94,9 +94,9 @@ if(~isempty(Args.NumericArguments))
         %plot all the data points 
         plot (y(:,1), y(:,2), 'bo');
         hold on
-        title ('Eye Movements on the screen for Trial');
-        xlabel ('x pos');
-        ylabel ('y pos');
+        title (['Eye Movements on the screen for trial' ' ' num2str(n)]);
+        xlabel ('Gaze position X (screen pixels)');
+        ylabel ('Gaze position Y (screen pixels)');
         hold off
     
     elseif (Args.Calibration)
@@ -108,8 +108,8 @@ if(~isempty(Args.NumericArguments))
         plot(y(:,1), y(:,2), 'bo');
         hold on
         title ('Calibration Eye movements from session');
-        xlabel ('xpos');
-        ylabel ('ypos');
+        xlabel ('Gaze Position X (screen pixels)');
+        ylabel ('Gaze Position Y (screen pixels)');
         hold off 
     
     else %some other argument - code to plot yet another kind of plot
@@ -129,7 +129,7 @@ if(~isempty(Args.NumericArguments))
         
         histogram (sacc_durations, edges);
         hold on;
-        title ('Distribution of saccades and fixations for per Session');
+        title ('Distribution of Saccades and Fixations for the Session');
         histogram (fix_durations, edges);
         legend ('Saccades', 'Fixations');
         ylabel ('# of events');
