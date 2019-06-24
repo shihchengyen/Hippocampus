@@ -228,20 +228,17 @@ if(dnum>0) %you can create the object now
              data.timeouts = timeouts;
              data.noOfTrials= noOfTrials(1, idx);
 
-%              % create nptdata so we can inherit from it
-%              data.numSets = 1;    %eyelink is a session object = each session has only object 
-%              data.Args = Args;
-%              n = nptdata(data.numSets,0,pwd);
-%              d.data = data;
-%              obj = class(d,Args.classname,n);
-%              saveObject(obj,'ArgsC',Args);
+             % create nptdata so we can inherit from it
+             data.numSets = 1;    %eyelink is a session object = each session has only object 
+             data.Args = Args;
+             n = nptdata(data.numSets,0,pwd);
+             d.data = data;
+             obj = class(d,Args.classname,n);
+             saveObject(obj,'ArgsC',Args);
 
              %after saving object, we cd back to the parent directory 
              cd ..
-         end
-
-         %Return to the directory that you were in
-         cd (cwd); 
+         end 
          
 %This creates an object containing the data from the calibration tests
 %performed in the day
@@ -306,8 +303,6 @@ if(dnum>0) %you can create the object now
         data.indices = indices;
         data.eyePos = eyePos;
         data.noOfSessions = 1; 
-
-    end 
     
         % create nptdata so we can inherit from it
         data.numSets = 1;    %eyelink is a session object = each session has only object 
@@ -317,6 +312,8 @@ if(dnum>0) %you can create the object now
         obj = class(d,Args.classname,n);
         saveObject(obj,'ArgsC',Args);
         cd (cwd);
+
+    end
              
 else
 	 % create empty object
