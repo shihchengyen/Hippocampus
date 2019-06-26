@@ -41,7 +41,25 @@ elseif(strcmp(command,'passedObj'))
     obj = varargin{1};
 elseif(strcmp(command,'loadObj'))
     l = load(Args.matname);
-    obj = eval(['l.' Args.matvarname]);
+    oname = fieldnames(l);
+    tmpobj = eval(['l.' oname{:}]);
+    if(isstruct(tmpobj))
+        obj = createEmptyObject(Args);
+        for fn = fieldnames(tmpobj)'    %enumerat fields
+            if(~strcmp(fn,'nptdata'))
+                try
+                    obj.(fn{1}) = tmpobj.(fn{1});   %and copy
+                catch
+                    warning('Could not copy field %s', fn{1});
+                end
+            else
+               obj = set(obj,'Number',obj.data.numSets);
+               obj = set(obj,'SessionDirs',tmpobj.nptdata.sessiondirs);
+            end
+        end
+    elseif(isa(tmpobj,Args.classname))
+        obj = tmpobj;
+    end
 elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!! 
     % If there is additional requirements for creating the object, add
