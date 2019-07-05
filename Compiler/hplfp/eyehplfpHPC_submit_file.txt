@@ -8,6 +8,6 @@
 
 cd "$PBS_O_WORKDIR"
 
-$GITHUB_MATLAB/Hippocampus/Compiler/hplfp/run_eyehplfp.sh /app1/common/matlab/R2016a
+$GITHUB_MATLAB/Hippocampus/Compiler/hplfp/run_eyehplfp.sh /app1/common/matlab/R2016b
 
 #exec $GITHUB_MATLAB/Hippocampus/Compiler/hplfp/run_eyehplfp.sh /app1/common/matlab/MCR/v90
