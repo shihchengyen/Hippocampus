@@ -101,13 +101,6 @@ if(Args.UseAllTrials)
 else
 	anovaMatrix = spikeLocTrial./gpDurations(:,processTrials);
 end
-if(Args.UseMedian)
-	meanFRs = nanmedian(anovaMatrix,2);
-	semFRs = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
-else
-	meanFRs = nanmean(anovaMatrix,2);
-	semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
-end
 
 % We take the mean firing rates computed above to compute the SIC.
 % compute SIC
@@ -116,6 +109,35 @@ if(Args.UseAllTrials)
 	o_i = sum(gpDurations,2);
 else
 	o_i = sum(gpDurations(:,processTrials),2);
+end
+% Compute spike count per grid position
+spikeLoc = sum(spikeLocTrial,2);
+if Args.AdaptiveSmooth
+    % Scaling factor
+    alpha = 1e5; 
+    % Restructure bins from linear to square grid
+    o_iGrid = nan(Args.GridSteps);
+    spikeLocGrid = nan(Args.GridSteps);
+    for ii = 1:Args.GridSteps
+        o_iGrid(ii,:) = o_i( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
+        spikeLocGrid(ii,:) = spikeLoc( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
+    end
+    % Smooth firing rate maps
+    [meanFRsGrid,spikeLocGrid_smoothed,o_iGrid_smoothed] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
+    semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2)); %%% CHECK???
+    % Restructure bins back into linear array
+    meanFRs = nan(Args.GridSteps*Args.GridSteps,1);
+    for ii = 1:Args.GridSteps
+        meanFRs((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = meanFRsGrid(ii,:);
+        o_i((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = o_iGrid_smoothed(ii,:);
+        o_i(isnan(o_i)) = 0;
+    end
+elseif (Args.UseMedian)
+    meanFRs = nanmedian(anovaMatrix,2);
+	semFRs = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
+else
+    meanFRs = nanmean(anovaMatrix,2);
+    semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
 end
 % compute total duration across all positions
 So_i = sum(o_i);
