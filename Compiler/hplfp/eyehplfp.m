@@ -1,7 +1,5 @@
 function eyehplfp(varargin)
 
-%startup
-
 % get channel string
 [p1, chstr] = nptFileParts(pwd);
 % get array string
@@ -14,18 +12,27 @@ function eyehplfp(varargin)
 % to read Args
 load([p2,'/rsData']);
 
-rh = rplhighpass('auto','SaveLevels',2,varargin{:});
-rl = rpllfp('auto','SaveLevels',2,varargin{:});
+if (~Args.SkipSort)
+    rh = rplhighpass('auto','SaveLevels',2,varargin{:});
+    rl = rpllfp('auto','SaveLevels',2,varargin{:});
 
-figure
-rh = plot(rplhighpass('auto','redo','HighpassFreqs',[500 10000]),1,'FFT');
-saveas(gcf,'hp.png');
-close
+    figure
+    rh = plot(rplhighpass('auto','redo','HighpassFreqs',[500 10000]),1,'FFT');
+    saveas(gcf,'hp.png');
+    close
 
-figure
-rl = plot(rpllfp('auto'),1,'FFT');
-saveas(gcf,'lfp.png');
-close
+    figure
+    rl = plot(rpllfp('auto'),1,'FFT');
+    saveas(gcf,'lfp.png');
+    close    
+elseif (~Args.SkipOSort) 
+    rh = rplhighpass('auto','SaveLevels',2,varargin{:});
+    
+    figure
+    rh = plot(rplhighpass('auto','redo','HighpassFreqs',[500 10000]),1,'FFT');
+    saveas(gcf,'hp.png');
+    close
+end
 
 if(isempty(strfind(sesstr,'test')))
     if(~Args.SkipSort)
@@ -49,7 +56,7 @@ if(isempty(strfind(sesstr,'test')))
                 syscmd = ['cd ~/hpctmp/Data/' daystr '/' sesstr '/' arrstr '/' chstr];
             end
             display('Running spike sorting ...')
-            syscmd = '~/hmmsort/hmmsort_pbs.py ~/hmmsort';
+            syscmd = 'python ~/matlab/hmmsort.py/hmmsort_pbs.py ~/matlab/hmmsort.py/hmmsort';
             display(syscmd)
             [~,decodejobid] = system(syscmd);
             
@@ -61,7 +68,9 @@ if(isempty(strfind(sesstr,'test')))
                 '#PBS -W depend=afterok:',decodejobid,'\n'...
                 'cd "$PBS_O_WORKDIR"\n'...
                 'cwd=$PWD\n'...
-                'channelStr=${cwd:`expr index "$cwd" 2018`-1}\n'...
+                'b="2018"\n'...
+                'index="${cwd%%$b*}"\n'...
+                'channelStr=${cwd:${#index}}\n'...
                 'targetDir=''/volume1/Hippocampus/Data/picasso/''\n'...
                 'targetDir+=$channelStr\n'...
                 'ssh -p 8398 hippocampus@cortex.nus.edu.sg mkdir -p $targetDir\n'...
@@ -74,6 +83,32 @@ if(isempty(strfind(sesstr,'test')))
             system('source ~/.bash_profile; source /etc/profile.d/rec_modules.sh; module load pbs; qsub transfer_job0000.pbs');
             
         end  % if(isempty(dir('skipsort.txt')))
+    elseif(~Args.SkipOSort)        
+        syscmd = 'qsub ~/matlab/osort-v4-rel/runosort-short.pbs';
+        display(syscmd)
+        [~,decodejobid] = system(syscmd);
+
+        % create transfer job
+        fid = fopen('transfer_job0000.pbs','w');
+        fprintf(fid,...
+            ['#!/bin/bash\n'...
+            '#PBS -q serial\n'...
+            '#PBS -W depend=afterok:',decodejobid,'\n'...
+            'cd "$PBS_O_WORKDIR"\n'...
+            'cwd=$PWD\n'...
+            'b="2018"\n'...
+            'index="${cwd%%$b*}"\n'...
+            'channelStr=${cwd:${#index}}\n'...
+            'targetDir=''/volume1/Hippocampus/Data/picasso/''\n'...
+            'targetDir+=$channelStr\n'...
+            'ssh -p 8398 hippocampus@cortex.nus.edu.sg mkdir -p $targetDir\n'...
+            'scp -P 8398 -r ./* hippocampus@cortex.nus.edu.sg:$targetDir &&\n'...
+            'rm -rv *&&\n'...
+            'touch transferred.txt']);
+        fclose(fid);
+
+        % submit transfer job
+        system('source ~/.bash_profile; source /etc/profile.d/rec_modules.sh; module load pbs; qsub transfer_job0000.pbs');
     end  % if(Args.SkipSort)
 else
 system('transfersession.sh');

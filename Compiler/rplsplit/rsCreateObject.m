@@ -135,7 +135,9 @@ if(~Args.SkipSplit)
 								submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
 							end					
 	                        submitJob(Args); % submit job onto PBS queue
-	                    end
+                        elseif (~Args.SkipOSort)
+                            submitJob(Args);
+                        end
                         
                         cd(cwd);
                         clear tData
@@ -153,13 +155,26 @@ end
 
 function [] = submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
-    cmdPath = ['condor_submit ',fullfile('~','cbin')];
-    cmdScript = '';
+    display('htcondor')
+    if (~Args.SkipSort)
+        cmdPath = ['condor_submit ',fullfile('~','cbin')];
+        cmdScript = '';
+        disp('Launching HTCondor for hmmsort...')
+        cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+    elseif(~Args.SkipOSort)
+        cmdPath = ['condor_submit ',fullfile('$GITHUB_MATLAB','osort-v4-rel')];
+        disp('Launching HTCondor for OSort...')
+        cmdSubmit = [cmdPath, filesep, 'runosort_submit_file.txt'];
+    end
 else
-    cmdPath = ['qsub ',fullfile('$GITHUB_MATLAB','Hippocampus','Compiler','hplfp')];
-    cmdScript = 'HPC';
+    display('HPC')
+    if (~Args.SkipSort || ~Args.SkipOSort)
+        cmdPath = ['qsub ',fullfile('$GITHUB_MATLAB','Hippocampus','Compiler','hplfp')];
+        cmdScript = 'HPC';
+        disp('Launching eyehplfp scripts...')
+        cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+    end
 end
-disp('Launching eyehplfp scripts...')
-cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+
 system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end

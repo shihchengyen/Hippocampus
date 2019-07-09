@@ -6,4 +6,4 @@
 ##PBS -j oe
 
 cd "$PBS_O_WORKDIR"
-$GITHUB_MATLAB/Hippocampus/Compiler/rplsplit/run_rsCreateObject.sh /app1/common/matlab/R2016a/
+$GITHUB_MATLAB/Hippocampus/Compiler/rplsplit/run_rsCreateObject.sh /app1/common/matlab/R2016b/
