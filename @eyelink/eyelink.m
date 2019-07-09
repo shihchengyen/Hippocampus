@@ -70,8 +70,10 @@ if(dnum>0) %you can create the object now
 
     if(Args.Navigation)
         %get to the day directory and create the object
-        cwd = pwd; %save the current working directory
+        %for normal circumstances
         str = getDataOrder('day');
+        
+        %for HTCondor
         cd (str);
 
         %look for the edf file
@@ -79,9 +81,11 @@ if(dnum>0) %you can create the object now
         %convert the edf file into a MATLAB accessible format
         edfdata = edfmex (dlist(1).name);
 
-        %get the experiment start time
-        %expTime = edfdata.FEVENT(1).sttime;
-
+        %get the number of ACTUAL sessions
+        names = nptDir;
+        names = {names.name};
+        names = contains(names, {'session0'});
+        names = size(find(names),2);
         %%Storing the eye positions: extract the x ad y positions of the eye
         %%and remove the eye movements where the monkey was not looking at the
         %%screen, i.e. the eye positions were outside the screen bounds
@@ -116,44 +120,65 @@ if(dnum>0) %you can create the object now
         noOfSessions = size (sessionIndex, 1); %this stores the number of sessions in the day
         fprintf ('No of Sessions ');
         disp(noOfSessions);
+        
+        extraSessions = 0;
+        if(noOfSessions ~= names) %If there are more sessions than there should be
+            extraSessions = names - noOfSessions;
+        end
 
         %In this for loop, we interatively call completeData function to check
         %on the various
         trialTimestamps = zeros(size(m,1), 3*noOfSessions); 
-        noOfTrials = zeros(1, noOfSessions);
+        noOfTrials = zeros(1, 1);
         missingData = [];
-
+        
+        %if the number of sessions are consistent, then we can go ahead and
+        %do all of this stuff. Otherwise, get the new number of sessions
+        %and continue with the fix-sacc stuff 
+     
+       	sessionFolder = 1;
+        
         for i=1:noOfSessions 
 
             sessionName = dir('session*');
-            if(contains(sessionName(i).name, num2str(i)) == 1) 
-                fprintf(strcat('Session Name: ', sessionName(i).name, '\n'));
-                idx = sessionIndex(i,1);
+            if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1) 
+                fprintf(strcat('Session Name: ', sessionName(sessionFolder).name, '\n'));
+                idx = sessionIndex(i,1); 
 
                 if (i==noOfSessions)  
-                    [corrected_times,tempMissing] = completeData(edfdata, m(idx:end, 1), messageEvent(idx:end,1), sessionName(i).name);
+                    [corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:end, 1), messageEvent(idx:end,1), sessionName(sessionFolder).name, extraSessions);
                 else
                     idx2 = sessionIndex(i+1,1);
-                    [corrected_times,tempMissing] = completeData(edfdata, m(idx:idx2, 1), messageEvent(idx:idx2,1), sessionName(i).name);
+                    [corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:idx2, 1), messageEvent(idx:idx2,1), sessionName(sessionFolder).name, extraSessions);
                 end
 
-                l = 1 + (i-1)*3;
-                u = 3 + (i-1)*3;
-                row = size(corrected_times,1);
-                trialTimestamps (1:row, l:u) = corrected_times;
-                noOfTrials (1,i) = size(corrected_times, 1);
-                missingData = vertcat(missingData, tempMissing);
+                if (flag == 0) 
+                    l = 1 + (sessionFolder-1)*3;
+                    u = 3 + (sessionFolder-1)*3;
+                    row = size(corrected_times,1);
+                    trialTimestamps (1:row, l:u) = corrected_times;
+                    noOfTrials (1,sessionFolder) = size(corrected_times, 1);
+                    missingData = vertcat(missingData, tempMissing);
+                    sessionFolder = sessionFolder+1;
+                else 
+                    fprintf (strcat('Dummy Session skipped ', num2str(i), '\n'));
+                end 
             end 
         end
 
          %edit the size of the array and remove all zero rows '
          trialTimestamps = trialTimestamps(any(trialTimestamps,2),:);
-
+         trialTimestamps=trialTimestamps(:,any(trialTimestamps));
+         %remove any extra columns 
+         %modify noOf Sessions 
+         noOfSessions = size(trialTimestamps,2)/3;
+         
          if(size(missingData,1) ~= 0) %if the table is not empty 
              str = strcat('missingData_', (dlist(1).name), '.csv');
              writetable(missingData, (str));
          end 
-
+        
+        
          %%Make a matrix with all the timeouts in all the trials in the session
          %%which we can check when we are graphing lines for the end trial (refer plot.m)
          c = {'Timeout'};
@@ -172,7 +197,7 @@ if(dnum>0) %you can create the object now
          events = {edfdata.FEVENT(:).codestring}';
          indexFix = find(strcmp(events,'ENDFIX')); % get index of fixations (end fixations)
          indexSacc = find(strcmp(events,'ENDSACC')); % get index of saccades (end saccades)
-
+         fixTimes = zeros(size(indexFix, 3*noOfSessions));
 
          for j=1:noOfSessions
 
@@ -189,6 +214,8 @@ if(dnum>0) %you can create the object now
             fixEvents (:,2)=  {edfdata.FEVENT(idx1).entime}';
             fixEvents = cell2mat(fixEvents);
             fixEvents(:,3)  = fixEvents(:,2) - fixEvents(:,1); %get the duration
+            col = (j-1)*3+1;
+            fixTimes(1:size(idx1,1),col:col+2)= fixEvents;
             fixEvents (:, 1:2) = [];
             fix(1:size(idx1,1), j) = fixEvents;
 
@@ -202,12 +229,9 @@ if(dnum>0) %you can create the object now
 
          end
 
-         %remove all the excess 0 rows
+         %remove all the excess 0 row
          fix = fix(any(fix,2),:);
          sacc = sacc(any(sacc,2), :);
-
-         %Assign values to the data object structure
-         noOfSessions = size(trialTimestamps,2)/3;
 
          for idx=1:noOfSessions
 
@@ -222,11 +246,13 @@ if(dnum>0) %you can create the object now
 
              data.sacc_event = sacc;
              data.fix_event = fix;
+             data.fix_times = fixTimes;
              data.timestamps = (edfdata.FSAMPLE.time)'; %all the time that the experiments were run for
              data.eye_pos = eyePos;  %contains all the eye positions in all the sessions
              data.noOfSessions = noOfSessions;
              data.timeouts = timeouts;
              data.noOfTrials= noOfTrials(1, idx);
+             data.expTime =  edfdata.FEVENT(1).sttime; 
 
              % create nptdata so we can inherit from it
              data.numSets = 1;    %eyelink is a session object = each session has only object 
@@ -244,6 +270,7 @@ if(dnum>0) %you can create the object now
 %performed in the day
     elseif (Args.Calibration) 
         %get to the day directory and create the object
+        
         cwd = pwd; %save the current working directory
         str = getDataOrder('day');
         cd (str);
