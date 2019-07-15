@@ -1,14 +1,14 @@
-function [obj, varargout] = raycasting(varargin)
-%@raycasting Constructor function for raycasting class
-%   OBJ = raycasting(varargin)
+function [obj, varargout] = raycast(varargin)
+%@raycast Constructor function for raycast class
+%   OBJ = raycast(varargin)
 %
-%   OBJ = raycasting('auto') attempts to create a raycasting object by 
+%   OBJ = raycast('auto') attempts to create a raycast object by 
 %   extracting data from a csv file.
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on raycasting %
+%   % Instructions on raycast %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%example [as, Args] = raycasting('save','redo')
+%example [as, Args] = raycast('save','redo')
 %
 %dependencies: 
 
@@ -26,9 +26,9 @@ Args.DataCheckArgs = {};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'raycasting';
+Args.classname = 'raycast';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'df';
+Args.matvarname = 'el';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -70,8 +70,8 @@ if(dnum>0)
     file = readtable('session_1_5112018105323_out.csv');
     cd (rd);
     el = load ('eyelink.mat');
-    %assuming the edf file is completed 
-    trialTimestamps = el.df.data.trial_timestamps + double(el.df.data.expTime);
+    %assuming the eel file is completed 
+    trialTimestamps = el.el.data.trial_timestamps + double(el.el.data.expTime);
     allTimes = file.Var2; %stores all the times in the csv file 
     
     %look for all the timestamps for the start, cue and end/timeout 
@@ -84,7 +84,7 @@ if(dnum>0)
 
     %Stores the indices for fixations as well to be abe to access relevant
     %information at that event
-    fixTimes = sortrows(vertcat(el.df.data.fix_times(:,1), el.df.data.fix_times(:,2)));
+    fixTimes = sortrows(vertcat(el.el.data.fix_times(:,1), el.el.data.fix_times(:,2)));
     fixIndex = find(ismember(allTimes,fixTimes));
     
     %Stores the names to check for any missing trials or markers 

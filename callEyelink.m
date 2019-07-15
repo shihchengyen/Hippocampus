@@ -1,17 +1,22 @@
+%callEyelink function:
+%(1)Checks if rplparallel object is missing information, and if it is,
+%use the eyelink data to complete the missing rpl markers. 
+%(2)If eyelink is missing markers, and rplparallel has them, it ignores it
+%(3)Common trials that are missing - they are deleted 
 function [markersNew, timesNew] = callEyelink(markersRaw, messages, eltimes, rpltimeStamps ) %(markersRaw)
- %rpl = rplparallel('auto');
-% markersRaw = rpl.data.markers;
+
+%stores the timestamps from eyelink 
 eldurations = [0; eltimes(2:end)-eltimes(1:end-1)];
 eldurations = double(eldurations);
 eldurations = eldurations/1000; %conversion to seconds
-
 eltimes = eldurations;
-%turn messages into number array
+
+%Get rid of the 0s that separate the markers and the first 84 markers 
+%Do the same for the rplparallel timestamps to reconstruct them.
 if (markersRaw(1) == 84)
     markersRaw(1) = [];
     rpltimeStamps(1) = [];
 end
-
 rpltimeStamps(find(~markersRaw)) = [];
 markersRaw(markersRaw==0) = [];
 
@@ -21,21 +26,22 @@ n = size(markersRaw,2); %stores all the trial elementsin it;
 if(n < size(messages,1)) 
 
     m = size(messages, 1);
+    
     %first, check if edf file is missing something too
     remainder = rem(m, 3); 
     if (remainder ~=0)
         fprintf('Edf file incomplete\n ');
     end 
-    
     markersNew = zeros (m, 1);
     timesNew = zeros(m,3); 
     idx = 1;
     idx2 = 1;
     sz = m+n;
     count = 1;
+    
     for i=1:sz
        
-        %index for markersNew
+        %Convert to row-column indexing for markersNew 
         r = floor(i/3) + 1; %row 
         c = rem(i,3); %column
 
@@ -44,7 +50,8 @@ if(n < size(messages,1))
             c = 3;
         end
         
-        if (idx2<=m)%convert cell to string to number 
+        if (idx2<=m)%prevent accessing more than the array size 
+            %Convert the string to a number for easier manipulation
             message = (cell2str(messages(idx2,1)));
             message = str2num(message(end-4:end-2));
         end 
@@ -56,8 +63,6 @@ if(n < size(messages,1))
                 idx = idx+1;
             else %rplparallel is missing a marker
                 fprintf('Missing in rplparallel but found in messages\n');
-                disp(r) 
-                disp(c)
                 if (c==1 && r~=1)
                     timesNew (r,c) = timesNew(r-1, 3)+eltimes(idx2,1);
                 elseif(c==1 && r==1) %assume the first existing time is cue offset 
@@ -140,7 +145,6 @@ else
             if(floor(message/10) == c || (floor(message/10) == 4 && c == 3)) %message has it 
                 fprintf('Missing in rplparallel. But found in messages\n'); 
                 markersNew(r,c) = message;
-                disp([r,c])
                 if (c==1)
                     timesNew (r,c) = timesNew(r-1, 3)+eltimes(idx2,1);
                 else
@@ -167,6 +171,7 @@ end
 markersNew = markersNew(any(markersNew,2),:);  
 timesNew = timesNew(any(timesNew,2),:);  
 disp(count); 
+
 %check if the last trial was missed by both 
 if (~isempty(find(~markersNew)))
    fprintf('Last event missing. Use Unity Maze\n');

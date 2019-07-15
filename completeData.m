@@ -1,12 +1,18 @@
-%%This function fills in the missing timestamps and messages for incomplete
-%%edf files. The function returns elTrials, which stores the normalised
-%%time for the session, while missingData returns a table containing the
-%%missing messages and timestamps. This is turned into a .csv file
-%%containing all the missing events timestamps and messages across all
-%%sessions in the day
+%%Performs the following function
+%(1)Completes the missing data from the edf file using rplparallel marker
+%   data
+%(2)In case rplparallel is also missing markers, it calls callEyelink
+%   function to complete the missing data from rplparallel using eyelink, or
+%   delete common missing trials
+%(3)Returns elTrials that contains the completed and corrected eyelink
+%   times, missingData that contains all the timestamps that were missing
+%   from the edf file (which is then saved in .csv form in eyelink.m)
+%(4)Returns a flag that is set 0 if the session is valid, and 1 if the
+%   the session is a dummy session with too few trials (and so it is
+%   skipped)
 function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, sessionName, moreSessionsFlag)
 
-    %WE extract the start time of the session in case the start time of the 
+    %Extract the start time of the session in case the start time of the 
     %1st trial is missing (the 1st index of messageEvent is the session
     %index
     sessionStart = edfdata.FEVENT(messageEvent(1,1)).sttime; 
@@ -45,6 +51,7 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         markers = rpl.data.markers;
         rpltimeStamps = rpl.data.timeStamps; %stores the event time for ripple
         n = size(markers, 1);
+        
         %CHECK IF THE RPLPARALLEL OBJECT IS FORMATTED CORRECTLY OR IS
         %MISSING INFORMATION
         if(n==1) %if the formatting is 1xSIZE
@@ -60,28 +67,30 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
                rpltimeStamps = rpl.data.timeStamps;
                [markers,rpltimeStamps] = callEyelink(markers, messages, eltimes-expTime, rpltimeStamps);
                
-            else 
+            else %if the rplparallel object dimension is divisibly by 3 - better to use arrangeMarkers directly.
                 markers = reshape (markers, [3 n]);
                 rpltimeStamps = reshape(rpltimeStamps, [3 n]);
                 markers = markers';
                 rpltimeStamps = rpltimeStamps';
             end 
+            %Save the newly created rplparallel object into the folder 
              n = size(markers, 1);
-             
              df.data.markers = markers;
              df.data.timeStamps = rpltimeStamps;
              save('rplparallel.mat', 'df');
              
-        elseif (n*3 < size(m,1)) %If rplparallel obj is missing data   
-            df = rpl;  
-            [markers,rpltimeStamps] = callEyelink(markers, messages, eltimes-expTime, rpltimeStamps);
-            
-            n = size(markers, 1);
-            df.data.markers = markers;
-            df.data.timeStamps = rpltimeStamps;
-            save('rplparallel.mat', 'df');
+        elseif (n*3 < size(m,1)) %If rplparallel obj is missing data, use callEyelink 
+            if (exist('rplparallel0.mat', 'file')~=2)
+                df = rpl;  
+                [markers,rpltimeStamps] = callEyelink(markers, messages, eltimes-expTime, rpltimeStamps);
+                %save object and then return
+                n = size(markers, 1);
+                df.data.markers = markers;
+                df.data.timeStamps = rpltimeStamps;
+                save('rplparallel.mat', 'df');
+            end
         end
-        %save object and then return
+        
         cd ..;
         
         noOfmessages = size(messages, 1); %stores the number of messages recorded by eyelink in the session 
@@ -90,10 +99,7 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         rpldurations = zeros (n, size(markers,2)); %stores the rpl durations for filling missing eyelink timestamps
         elTrials = zeros (n, size(markers,2)); %stores the eyelink timestamps for the events in a trial
          
-        %To check if there are more sessions than must be - put a session
-        %NUMBER check as well to ensure that you aren't nerfing normal
-        %files
-        
+        %To check if there are more sessions than must be
         if(moreSessionsFlag ~= 0)
            if ((n*3) - size(messageEvent,1)-2 >= 100)
                flag = 1;
@@ -106,7 +112,8 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
            end 
         end 
         flag = 0; 
-        %calculate the durations
+        
+        %calculate the durations between rplparallel timestamps 
         %rpldurations(1,1) is assumed to be the time difference between the
         %start of the session and the trial start time
         rpldurations (:,1) = [rpltimeStamps(1,1); rpltimeStamps(2:end, 1) - rpltimeStamps(1:end-1, 3)]; %end of last trial - start of this trial
@@ -116,7 +123,14 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         idx = 1;
         n = n*3; %size of the markers 
         newMessages = cell(n,1); %stores all the missing messages 
-
+        
+        %For loop that goes through the entire rplparallel markers matrix
+        %(1) Checks if edf message markers are missing, and accordingly
+        %corrects the missing time using the rpldurations
+        %(2) ensures that missing trials common to eyelink and rplparallel
+        %are deleted
+        %(3) creates the missing array that is later addded to the
+        %missingData table 
         for i = 1:n
             %convert a linear index into a 2D index 
             r = floor(i/3) + 1; %row 
@@ -158,15 +172,14 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
             
         end 
         
-        %SAVING THE OBJECT  
-        %Now, turn the time into a csv file
+        %Get rid of extra zeros 
         [row ~] = find(~elTrials);
         elTrials(row, :) = []; 
-        disp('Missing messages');   
-        n = size(find(missing),1)
+        n = size(find(missing),1);
         elTrials = uint32(elTrials); %convert to uint to get rid of floating points
 
         if (n ~= 0) %if there are missing messages in this session, make the missingData matrix to add to the .csv file 
+            fprintf('Missing messages\n');
             type = cell(n,1);
             type(:,:) = {24};
             correctedTimes = num2cell(sortrows(elTrials(find(missing))));
@@ -175,18 +188,18 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
             missingData = cell2table(missingData, 'VariableNames', {'Type', 'Timestamps', 'Messages'}); 
             clear correctedTimes;
             
-        else %if there are not any missing messages 
-            disp('No missing messages');
+        else %if there are not any missing messages, make the missingData matrix empty 
+            fprintf('No missing messages\n');
             missingData = cell(n,3);
             missingData (:,:) = {0};
             missingData = cell2table(missingData, 'VariableNames', {'Type', 'Timestamps', 'Messages'});
         end 
 
-        elTrials = elTrials - expTime;
-
-        %%We now plot a histogram of the discrepancies in the start-cue,
+        %%To ensure that the correction of the eyelink object went correctly, 
+        %%we now plot a histogram of the discrepancies in the start-cue,
         %%cue-end and end-start durations for ripple and eyelink objects for
         %%the same session to ensure that the data recorded is consistent 
+        elTrials = elTrials - expTime;
         eldurations (:,1) = [0; elTrials(2:end, 1) - elTrials(1:end-1, 3)]; %end of last trial - start of this trial
         eldurations (:,2) = elTrials(:,2) - elTrials(:,1); %cue time - start time
         eldurations (:,3) = elTrials (:,3) - elTrials(:,2); %end - cue time
@@ -194,6 +207,7 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         eldurations = eldurations/1000; %conversion to seconds
         
         discrepancies = abs(rpldurations - eldurations); %stores the discrepancy between the two times in seconds
+        discrepancies(1,1) = 0; 
 
         %%Plot the distributions of the durations in ms
         figure (1)
