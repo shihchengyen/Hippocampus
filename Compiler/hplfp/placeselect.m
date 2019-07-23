@@ -86,7 +86,7 @@ for npi = 1:nptrials
 		% e.g. tgp(bins) will be  3     3    18    18    18    18    18    23    24    24    24
 		% we then call histcounts again to count number of times each grid position appears
 		% to get spikeLocTrial to be 0     0     2     0     0     0     0     0     0     0     0     0     0     0     0     0     0     5     0     0     0     0     1     3
-		% need to remove 0’s from bins in case there were any spikes that were just outside the edges of the histcounts
+		% need to remove 0?s from bins in case there were any spikes that were just outside the edges of the histcounts
 		% compute histogram in parallel, and then extract the 1st column for data and the rest for shuffle
 		spikeLocTrial(:,npi) = histcounts(tgp(bins(bins~=0)),um.data.gpEdges);
 	end
@@ -288,3 +288,89 @@ if(isdeployed)
 	% save data into a mat file
 	save vmplacecelldata.mat data
 end
+
+
+function [smoothedRate,smoothedSpk,smoothedPos] = adaptivesmooth(pos,spk,alpha)
+% Adapted from rates_adaptivesmooth.m (Wills et al)
+% pos = occupancy map/dwell time in each position bin (in seconds)
+% spk = spike map/spike count in each position bin
+% alpha = scaling parameter (1e6 for Skaggs et al 1996, 1e5 for Wills et al 2010)
+
+% Check for empty spk maps %
+if sum(sum(spk))==0
+    smoothedPos=pos;    smoothedPos(pos==0)=nan;
+    smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
+    smoothedRate=spk;   smoothedRate(pos==0)=nan;
+    return
+end
+% Pre-assign output %
+smoothedPos=zeros(size(pos));
+smoothedSpk=zeros(size(pos));
+% Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
+vis=zeros(size(pos));
+vis(pos>0)=1;
+% Pre-assign map which records which bins have passed %
+smoothedCheck=false(size(pos));
+smoothedCheck(pos==0)=true; % Disregard unvisited - mark as already done.
+% Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
+radiiUsedList=nan(1,sum(sum(pos>0)));
+radiiUsedCount=1;
+% These parameters depend on place or dir mode %
+if size(pos,2)>1
+    boundary=0;             % IMFILTER boundary condition
+    rBump=0.5;              % Increase radius in 0.5 bin steps.
+elseif size(pos,2)==1
+    boundary='circular';
+    rBump=1;                % Increase radius in 1 bin steps.
+end
+
+%%% Run increasing radius iterations %%%
+r=1; % Circle radius
+while any(any(~smoothedCheck))
+    % Check radius isn't getting too big (if >map/2, stop running) %
+    if r>max(size(pos))/2
+        smoothedSpk(~smoothedCheck)=nan;
+        smoothedPos(~smoothedCheck)=nan;
+        break
+    end
+    % Construct filter kernel ...
+    if size(pos,2)>1
+        % Place: Flat disk, where r>=distance to bin centre %
+        f=fspecial('disk',r); 
+        f(f>=(max(max(f))/3))=1;
+        f(f~=1)=0;
+    elseif size(pos,2)==1 
+        % Direction: boxcar window, r bins from centre symmetrically %
+        f=ones(1+(r*2),1);
+    end     
+    % Filter maps (get N spikes and pos sum within kernel) %
+    fSpk=imfilter(spk,f,boundary);
+    fPos=imfilter(pos,f,boundary);
+    fVis=imfilter(vis,f,boundary);
+    % Which bins pass criteria at this radius? %
+    warning('off', 'MATLAB:divideByZero');
+    binsPassed=alpha./(sqrt(fSpk).*fPos) <= r;
+    warning('on', 'MATLAB:divideByZero');
+    binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
+    % Add these to list of radii used %
+    nBins=sum(binsPassed(:));
+    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
+    radiiUsedCount=radiiUsedCount+nBins;
+    % Assign values to smoothed maps %
+    smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
+    smoothedPos(binsPassed)=fPos(binsPassed)./fVis(binsPassed);
+    % Record which bins were smoothed this iteration %
+    smoothedCheck(binsPassed)=true;
+    % Increase circle radius (half-bin steps) %
+    r=r+rBump;
+end
+
+% Assign Output %
+warning('off', 'MATLAB:divideByZero');
+smoothedRate=smoothedSpk./smoothedPos;
+warning('on', 'MATLAB:divideByZero');
+smoothedRate(pos==0)=nan;
+smoothedPos(pos==0)=nan;
+smoothedSpk(pos==0)=nan;
+
+% report radii sizes?
