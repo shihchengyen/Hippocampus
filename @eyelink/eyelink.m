@@ -23,7 +23,8 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'Calibrati
 			'ScreenX',1920, 'ScreenY',1080, 'NumMessagesToClear',7, ...
 			'TriggerMessage','Trigger Version 84', 'NumTrialMessages',3, ...
 			'Message1',{'1  0  0  0  0  0  0  0'}, 'Message2',{'0  0  0  0  0  1  1  0'}, ...
-			'Message3',{'0  0  1  0  0  0  0  0'}, 'Message4',{'0  0  0  0  0  1  1  1'});
+			'Message3',{'0  0  1  0  0  0  0  0'}, 'Message4',{'0  0  0  0  0  1  1  1'}, ...
+			'SessionEyeName','sessioneye');
 Args.flags = {'Auto','ArgsOnly', 'Calibration'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -133,6 +134,9 @@ if (Args.Calibration)
 		data.eyePos = eyePos;
 		data.noOfSessions = 1; 
 
+		% change directory to the eye session so the object can be saved there
+		cd(Args.SessionEyeName)
+		
 		% create nptdata so we can inherit from it
 		data.numSets = 1;    %eyelink is a session object = each session has only object 
 		data.Args = Args;
