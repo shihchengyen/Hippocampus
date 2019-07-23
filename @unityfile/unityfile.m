@@ -1,4 +1,3 @@
-
 function [obj, varargout] = unityfile(varargin)
 %@unityfile Constructor function for unityfile class
 %   OBJ = unityfile(varargin)
@@ -13,7 +12,7 @@ function [obj, varargout] = unityfile(varargin)
 %
 %dependencies: 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session', 'FileLineOfffset',15, 'DirName','RawData*', ...
+				'FileLineOfffset',15, 'DirName','RawData*', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
 				'TriggerVal3',30, 'GridSteps',5, 'MaxTimeDiff',0.002);
 Args.flags = {'Auto','ArgsOnly'};
