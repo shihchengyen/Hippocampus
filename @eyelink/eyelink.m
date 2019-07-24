@@ -31,7 +31,7 @@ Args.flags = {'Auto','ArgsOnly', 'Calibration'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'Calibration'};
+Args.DataCheckArgs = {};
 
 %varargin contains the arguments entered into the function. Args is the
 %array in which the parameter-value pairs are stored
