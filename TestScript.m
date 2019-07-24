@@ -1,6 +1,6 @@
-ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'nptLevelCmd',{'Channel','vmlfp(''auto'',''redo'')'});
-ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'nptLevelCmd',{'Channel','vmhighpass(''auto'',''redo'')'});
-ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'nptLevelCmd',{'Session','unitymaze(''auto'',''redo'')'});
+ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'Exclude',{'sessioneye'},'nptLevelCmd',{'Channel','vmlfp(''auto'',''redo'')'});
+ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'Exclude',{'sessioneye'},'nptLevelCmd',{'Channel','vmhighpass(''auto'',''redo'')'});
+ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'Exclude',{'sessioneye'},'nptLevelCmd',{'Session','unitymaze(''auto'',''redo'')'});
 vc = ProcessLevel(vmplacecell,'Levels','Days','Include',{'20181102'});
 ProcessLevel(nptdata,'Levels','Days','Include',{'20181102'},'nptLevelCmd',{'Session','eyelink(''auto'',''redo'')'});
 cd 20181102/session01
