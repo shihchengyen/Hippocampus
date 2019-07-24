@@ -63,7 +63,7 @@ end
 function obj = createObject(Args,varargin)
 
 % move to correct directory
-[pdir,cwd] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
+[pdir,cwd] = getDataOrder('Session','relative','CDNow');
 
 % need to correct timestamps by comparing to the marker timestamps
 % in rplparallel
