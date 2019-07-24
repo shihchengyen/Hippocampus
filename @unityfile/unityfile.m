@@ -61,7 +61,7 @@ end
 function obj = createObject(Args,varargin)
 
 % move to correct directory
-[pdir,cwd] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
+[pdir,cwd] = getDataOrder('Session','relative','CDNow');
 
 % need to correct timestamps by comparing to the marker timestamps
 % in rplparallel
@@ -132,7 +132,7 @@ if(~isempty(rd))
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
-		% need to add one more bin to the end as histcounts counts by doing: edges(k) â‰¤ X(i) < edges(k+1)
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ² X(i) < edges(k+1)
 		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
