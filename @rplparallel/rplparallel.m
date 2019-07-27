@@ -13,7 +13,7 @@ function [obj, varargout] = rplparallel(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'Data',[]);
+				'Data',[], 'ObjectLevel','Session');
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};                            
