@@ -99,8 +99,7 @@ if(dlsize>0)
             %This loop goes through all the messages and extracts all the
             %events in the session - start trial, start of reward, end trial or
             %failed trial.
-            for i = 1:size(eventTimes,1)
-                
+            for i = 1:size(eventTimes,1)                
                 if(ismember(messages(i,1), Args.Message1) == 1) %start of the trial session
                     trialTimestamps (idx,1) = cell2mat(eventTimes(i,1));
                 elseif(ismember(messages(i,1), Args.Message2)==1) %start of reward
@@ -111,7 +110,7 @@ if(dlsize>0)
                 elseif(ismember(messages(i,1), Args.Message4) == 1)%failed trial
                     trialTimestamps(idx,4) = cell2mat(eventTimes(i,1));
                 end
-            end
+            end  % for i = 1:size(eventTimes,1)
             %get rid of the zeros - rows
             trialTimestamps = trialTimestamps(any(trialTimestamps,2),:);
             if (size(any(trialTimestamps(:,4)) == 0))
@@ -195,7 +194,6 @@ if(dlsize>0)
             
             %Trigger Version 84 signals the start of the session, so look for
             %all the Trigger Version 84 msgs in edf file
-            % s = {'Trigger Version 84'};
             s = Args.TriggerMessage;
             sessionIndex = find(strcmp(m, s)); %sessionIndex has the index inside messageEvent where a new session starts
             noOfSessions = size (sessionIndex, 1); %this stores the number of sessions in the day
@@ -221,11 +219,11 @@ if(dlsize>0)
             %(1)Checks if the edf file is complete by calling completeData
             %(2)fills in the trialTimestamps and missingData tables by indexing
             %   using session index (i)
-            for i=1:noOfSessions
-                
-                sessionName = dir('session*');
+			sessionName = dir('session*');
+
+            for i=1:noOfSessions                
                 if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
-                    fprintf(strcat('Session Name: ', sessionName(sessionFolder).name, '\n'));
+                    fprintf('Session Name: %s\n',sessionName(sessionFolder).name);
                     idx = sessionIndex(i,1);
                     
                     if (i==noOfSessions)
@@ -244,10 +242,10 @@ if(dlsize>0)
                         missingData = vertcat(missingData, tempMissing);
                         sessionFolder = sessionFolder+1;
                     else
-                        fprintf (strcat('Dummy Session skipped', ' ', num2str(i), '\n'));
+                        fprintf('Dummy Session skipped %d\n',i);
                     end
-                end
-            end
+                end  % if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
+            end  % for i=1:noOfSessions                
             
             %edit the size of the array and remove all zero rows and extra
             %columns
@@ -282,7 +280,6 @@ if(dlsize>0)
             %(2)Saves the timestamps at which fixation events occured to
             %   facilitate plotting of the raycast object (ref @raycast/plot.m)
             for j=1:noOfSessions
-                
                 if (j==noOfSessions)
                     idx2 = indexSacc(indexSacc > messageEvent(sessionIndex(j)));
                     idx1 = indexFix(indexFix > messageEvent(sessionIndex(j)));
@@ -308,8 +305,7 @@ if(dlsize>0)
                 saccEvents(:,3)  = saccEvents(:,2) - saccEvents(:,1); %get the duration
                 saccEvents (:, 1:2) = [];
                 sacc(1:size(idx2,1),j) = saccEvents;
-                
-            end
+            end  % for j=1:noOfSessions
             
             %remove all the excess 0 row
             fix = fix(any(fix,2),:);
