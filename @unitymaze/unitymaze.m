@@ -360,7 +360,16 @@ if(~isempty(rd))
 				% create corrected version of unityTime, which will also be the
 				% bin limits for the histogram function call
 				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
-				sTi = sTi + ngpc;		
+				sTi = sTi + ngpc;
+				
+				% occasionally we will get a change in grid position in the frame interval
+				% when we get the end of trial message. In that case, we will get an entry
+				% in sessionTime that is the time of the end of the trial. Since the end
+				% of the trial is added later, and because this will be a very brief visit
+				% to the new position, we are going to remove it.
+				if( (~isempty(gpc)) && (gpc(end) == (numUnityFrames-1)) )
+					sTi = sTi - 1;
+				end
 			else
 				unityTrialTime(tindices,a) = tempTrialTime;
 				% leave the 2nd column as 0 to indicate this was a skipped trial
