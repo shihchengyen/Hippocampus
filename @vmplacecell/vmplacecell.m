@@ -99,6 +99,10 @@ if(~isempty(dir(Args.RequiredFile)))
 		% run in Matlab
 		% data = placeselect(pwd);
 		data = placeselect(um,rp,spiketrain,Args);
+<<<<<<< Updated upstream
+=======
+%         data = placeselect_shuffle(um,rp,spiketrain,Args);
+>>>>>>> Stashed changes
 	end
 
 	% create nptdata so we can inherit from it    
@@ -129,6 +133,10 @@ elseif(~isempty(dir(Args.ChannelFile)))
 		spiketrain.timestamps = spikeIdx/rp.data.SampleRate; % get peak times
 		spiketrain.spikeForm = l.spikeForms(si,:);
 		tdata = placeselect(um,rp,spiketrain,Args);
+<<<<<<< Updated upstream
+=======
+%         tdata = placeselect_shuffle(um,rp,spiketrain,Args);
+>>>>>>> Stashed changes
 		data.meanFRs(:,si) = tdata.meanFRs;
 		data.semFRs(:,si) = tdata.semFRs;
         data.SIC(si) = tdata.SIC;
