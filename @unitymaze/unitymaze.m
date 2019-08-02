@@ -134,7 +134,7 @@ if(~isempty(rd))
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
-		% need to add one more bin to the end as histcounts counts by doing: edges(k) ≤ X(i) < edges(k+1)
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ? X(i) < edges(k+1)
 		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
