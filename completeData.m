@@ -12,9 +12,6 @@
 %   skipped)
 function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, sessionName, moreSessionsFlag)
 
-	% set default flag to 0
-	flag = 0;
-
     %Extract the start time of the session in case the start time of the 
     %1st trial is missing (the 1st index of messageEvent is the session
     %index
@@ -110,8 +107,11 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
                elTrials = cell (n,3);
                missingData = cell2table(missingData, 'VariableNames', {'Type', 'Timestamps', 'Messages'});
                return; 
+           else 
+               flag = 0;
            end 
         end 
+        flag = 0; 
         
         %calculate the durations between rplparallel timestamps 
         %rpldurations(1,1) is assumed to be the time difference between the
