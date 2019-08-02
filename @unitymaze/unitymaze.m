@@ -134,7 +134,7 @@ if(~isempty(rd))
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
-		% need to add one more bin to the end as histcounts counts by doing: edges(k) ≤ X(i) < edges(k+1)
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ? X(i) < edges(k+1)
 		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
@@ -354,13 +354,21 @@ if(~isempty(rd))
 
 				% find the timepoints where grid positions changed
 				gpc = find(diff(tgp)~=0);
-				ngpc = size(gpc,1);
+				ngpc = size(gpc,1);     
+%                 if sTi<8538 && sTi>8520
+%                     disp sTi;
+%                 end
 			
 				% add the Unity frame intervals to the starting timestamp to
 				% create corrected version of unityTime, which will also be the
 				% bin limits for the histogram function call
-				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
+				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];
 				sTi = sTi + ngpc;		
+                % If final point is the same as tend, remove
+                if sessionTime(sTi-1,1) == tend
+                    sessionTime(sTi-1,1:2) = [0 0];
+                    sTi = sTi - 1;
+                end
 			else
 				unityTrialTime(tindices,a) = tempTrialTime;
 				% leave the 2nd column as 0 to indicate this was a skipped trial
