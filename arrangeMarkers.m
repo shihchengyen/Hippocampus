@@ -111,6 +111,7 @@ if(rm1(2,1)==0)
 else
 	% Format A, so transpose and assign to data structure
 	data.markers = rm1';
+    data.timeStamps = reshape(data.timeStamps,2,[])';
     % get start time for each trial
     data.trialIndices = floor(reshape(data.timeStamps*data.SampleRate,2,[])');
 end
