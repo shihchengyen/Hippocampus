@@ -37,18 +37,19 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+
 		
 		% object specific fields
-		r.data.meanFRs = [p.data.meanFRs q.data.meanFRs];
-		r.data.semFRs = [p.data.semFRs q.data.semFRs];
-		r.data.SIC = [p.data.SIC; q.data.SIC];
-        r.data.SICsh = [p.data.SICsh q.data.SICsh];
-        r.data.half1stmeanFRs = [p.data.half1stmeanFRs q.data.half1stmeanFRs];
-        r.data.half1stsemFRs = [p.data.half1stsemFRs q.data.half1stsemFRs];
-        r.data.half1stSIC = [p.data.half1stSIC; q.data.half1stSIC];
-        r.data.half2ndmeanFRs = [p.data.half2ndmeanFRs q.data.half2ndmeanFRs];
-        r.data.half2ndsemFRs = [p.data.half2ndsemFRs q.data.half2ndsemFRs];
-        r.data.half2ndSIC = [p.data.half2ndSIC; q.data.half2ndSIC];
+		r.data.unityData = [p.data.unityData; q.data.unityData];
+		r.data.unityTriggers = [p.data.unityTriggers; q.data.unityTriggers];
+		r.data.sumCost = [p.data.sumCost; q.data.sumCost];
+		r.data.sumRoute = concat(p.data.sumRoute,q.data.sumRoute);
+		r.data.sumActualRoute = concat(p.data.sumActualRoute,q.data.sumActualRoute);
+		r.data.perf = [p.data.perf; q.data.perf];
+		r.data.processTrials = [p.data.processTrials; q.data.processTrials];
+		r.data.unityTime = concat(p.data,unityTime,q.data.unityTime,'Columnwise');
+		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
+			+ q.data.setIndex(2:end))];
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);

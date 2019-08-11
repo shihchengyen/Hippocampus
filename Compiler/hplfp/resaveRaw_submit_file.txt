@@ -1,0 +1,17 @@
+universe     = vanilla
+Executable   = $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/run_resave3.sh
+Arguments    = /Applications/MATLAB_R2016b.app
+Log          = $ENV(HOME)/condor/distro.$(Cluster).$(Process).log
+Output       = $ENV(HOME)/condor/distro.$(Cluster).$(Process).out
+Error        = $ENV(HOME)/condor/distro.$(Cluster).$(Process).err
+RunAsOwner	 = FALSE
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_executable = True
+transfer_input_files = rplraw.mat, $ENV(GITHUB_MATLAB)/Hippocampus/Compiler/hplfp/resave3.app
+stream_error = True
+stream_output = True
+request_memory = 32
+environment = "MCR_CACHE_ROOT=/tmp/"
+
+Queue 1

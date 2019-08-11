@@ -36,7 +36,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'MaxTimeDiff',0.002, 'MinTrials',5, 'GridSteps',5, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseAllTrials',0, 'UseMedian',0, ...
-                'NumFRBins',4);
+                'NumFRBins',4,'AdaptiveSmooth',1);
 Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -99,6 +99,7 @@ if(~isempty(dir(Args.RequiredFile)))
 		% run in Matlab
 		% data = placeselect(pwd);
 		data = placeselect(um,rp,spiketrain,Args);
+%         data = placeselect_shuffle(um,rp,spiketrain,Args);
 	end
 
 	% create nptdata so we can inherit from it    
@@ -129,6 +130,7 @@ elseif(~isempty(dir(Args.ChannelFile)))
 		spiketrain.timestamps = spikeIdx/rp.data.SampleRate; % get peak times
 		spiketrain.spikeForm = l.spikeForms(si,:);
 		tdata = placeselect(um,rp,spiketrain,Args);
+%         tdata = placeselect_shuffle(um,rp,spiketrain,Args);
 		data.meanFRs(:,si) = tdata.meanFRs;
 		data.semFRs(:,si) = tdata.semFRs;
         data.SIC(si) = tdata.SIC;

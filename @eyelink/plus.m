@@ -37,19 +37,25 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
-		
+        r.data.noOfTrials = concat(p.data.noOfTrials, q.data.noOfTrials, 'Columnwise');
+        r.data.noOfSessions = p.data.noOfSessions + q.data.noOfSessions;
+
 		% object specific fields
-		r.data.meanFRs = [p.data.meanFRs q.data.meanFRs];
-		r.data.semFRs = [p.data.semFRs q.data.semFRs];
-		r.data.SIC = [p.data.SIC; q.data.SIC];
-        r.data.SICsh = [p.data.SICsh q.data.SICsh];
-        r.data.half1stmeanFRs = [p.data.half1stmeanFRs q.data.half1stmeanFRs];
-        r.data.half1stsemFRs = [p.data.half1stsemFRs q.data.half1stsemFRs];
-        r.data.half1stSIC = [p.data.half1stSIC; q.data.half1stSIC];
-        r.data.half2ndmeanFRs = [p.data.half2ndmeanFRs q.data.half2ndmeanFRs];
-        r.data.half2ndsemFRs = [p.data.half2ndsemFRs q.data.half2ndsemFRs];
-        r.data.half2ndSIC = [p.data.half2ndSIC; q.data.half2ndSIC];
-			
+		r.data.trial_timestamps = concat (p.data.trial_timestamps, q.data.trial_timestamps, 'Columnwise');
+        r.data.sacc_event = concat (p.data.sacc_event, q.data.sacc_event, 'Columnwise');
+        r.data.fix_event = concat (p.data.fix_event, q.data.fix_event, 'Columnwise');
+        %Timestamps takes the max time that the exp were run for  
+        if (size(p.data.timestamps,1) > size (q.data.timestamps))
+            r.data.timestamps = p.data.timestamps;
+        else 
+            r.data.timestamps = q.data.timestamps;
+        end 
+        
+        %contains all the eye positions for all the sessions 
+        r.data.eye_pos = concat(p.data.eye_pos, q.data.eye_pos);  
+        %OOF
+        r.data.timeouts = concat(p.data.timeouts, q.data.timeouts, 'Rowise');
+        
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
 	end

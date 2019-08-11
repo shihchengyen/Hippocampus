@@ -136,7 +136,7 @@ if(~isempty(Args.NumericArguments))
             surf(spec.T,spec.F,spec.Pnorm,'EdgeColor','none');
             axis xy; axis([-Args.TFfftStart/1000 inf 0 Args.TFfftFreq]); colormap(jet); view(0,90); caxis([-10 10]);
             set(gca,'FontSize',6); xticks(-Args.TFfftStart/1000:0.5:spec.T(end)); yticks(0:10:Args.TFfftFreq);
-            title(strcat("Normalised Spectrogram of Trial:",string(n)),'FontSize',10);
+            title(strcat('Normalised Spectrogram of Trial:',string(n)),'FontSize',10);
             colorbar;
             
             % Plot lines to mark the cue presentation period
@@ -209,7 +209,7 @@ if(~isempty(Args.NumericArguments))
                 'XDisplayLabels',(round(spec.F)),'YDisplayLabels',(flipud(round(spec.F))),...
                 'XLabel','Frequency (Hz)','YLabel','Frequency (Hz)','FontSize',6,...
                 'Colormap', jet,'ColorLimits',[-0.2,0.7],'ColorbarVisible','on',...
-                'Title',strcat("Correlation coefficients of Trial:",string(n)));
+                'Title',strcat('Correlation coefficients of Trial:',string(n)));
             
 	elseif(Args.TFWavelets)
 		% not fully completed yet

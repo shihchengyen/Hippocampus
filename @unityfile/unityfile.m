@@ -1,22 +1,21 @@
-function [obj, varargout] = unitymaze(varargin)
-%@unitymaze Constructor function for UNITYMAZE class
-%   OBJ = unitymaze(varargin)
+
+function [obj, varargout] = unityfile(varargin)
+%@unityfile Constructor function for unityfile class
+%   OBJ = unityfile(varargin)
 %
-%   OBJ = unitymaze('auto') attempts to create a DIRFILES object by ...
+%   OBJ = unityfile('auto') attempts to create a DIRFILES object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on unitymaze %
+%   % Instructions on unityfile %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%example [as, Args] = unitymaze('save','redo')
+%example [as, Args] = unityfile('save','redo')
 %
 %dependencies: 
-
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', 'FileLineOfffset',15, 'DirName','RawData*', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
-				'TriggerVal3',30, 'GridSteps',5, 'MaxTimeDiff',0.002, ...
-                'MinObs',5);
+				'TriggerVal3',30, 'GridSteps',5, 'MaxTimeDiff',0.002);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {'GridSteps'};
@@ -28,7 +27,7 @@ Args.DataCheckArgs = {'GridSteps'};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'unitymaze';
+Args.classname = 'unityfile';
 Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'um';
 
@@ -90,7 +89,7 @@ if(~isempty(rd))
 	    length = 0;
 	    for i = 1:dnum % go through all 'session_' files and extract data
 	        temp = dlmread(dlist(i).name,'',Args.FileLineOfffset,0); % start reading at row 15 (skip logged parameters)
-	        unityData(length+1:length+size(temp,1),1:5) = temp;
+            unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
 	    end
 	    
@@ -124,7 +123,7 @@ if(~isempty(rd))
 		unityTriggers(:,2) = uT2(utIndices);
 		unityTriggers(:,3) = uT3;
 		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
-
+        
 		% default grid is 5 x 5 but can be changed 
 		gridSteps = Args.GridSteps;
 		% these should be read from the unity file
@@ -134,7 +133,7 @@ if(~isempty(rd))
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
-		% need to add one more bin to the end as histcounts counts by doing: edges(k) ? X(i) < edges(k+1)
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ² X(i) < edges(k+1)
 		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
@@ -360,16 +359,7 @@ if(~isempty(rd))
 				% create corrected version of unityTime, which will also be the
 				% bin limits for the histogram function call
 				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
-				sTi = sTi + ngpc;
-				
-				% occasionally we will get a change in grid position in the frame interval
-				% when we get the end of trial message. In that case, we will get an entry
-				% in sessionTime that is the time of the end of the trial. Since the end
-				% of the trial is added later, and because this will be a very brief visit
-				% to the new position, we are going to remove it.
-				if( (~isempty(gpc)) && (gpc(end) == (numUnityFrames-1)) )
-					sTi = sTi - 1;
-				end
+				sTi = sTi + ngpc;		
 			else
 				unityTrialTime(tindices,a) = tempTrialTime;
 				% leave the 2nd column as 0 to indicate this was a skipped trial
@@ -419,43 +409,38 @@ if(~isempty(rd))
 		% the indices when position changes. The first change should be from
 		% position 0 to 1st non-zero position. Add 1 to adjust for the change
 		% in index when using diff. These will be the starting indices for 
-		% the unique positions not including 0.
+		% the unique positions.
 		sTPsi = find(diff(sTP)~=0) + 1;
-		sTPin = diff(sTPsi);
 		% find the ending indices by subtracting 1 from sTPsi, and adding
 		% snum at the end
-		sTPind = [sTPsi [ [sTPsi(2:end)-1]; snum]];
-		% find positions (excluding 0) with more than MinReps observations
-        sTPinm = find(sTPin>(Args.MinObs-1));
-        % create temporary variable that will be used for calculations below
-        % this is not a variable that we will save
-        sTPsi2 = sTPsi(sTPinm);
-        % save the number of observations for the positions that exceed the
-        % minimum number of observations
-        sTPin2 = sTPin(sTPinm);
-        % save the position numbers
-		sTPu = sTP(sTPsi2);
-		% find number of positions
-		nsTPu = size(sTPu,1);	
-		% save the subset of starting and ending indices for sTime
-		sTPind2 = sTPind(sTPinm,:);
+		sTPind = [sTPsi [[sTPsi(2:end)-1]; snum]];
+		sTPin = diff(sTPind,1,2);
+		% then we find the differences between consecutive sTPi2
+		% this means that we are counting the number of points from the 1st
+		% non-zero position, so we don't need to drop the 1st value.
+		% But we need to add the last value, which will go to the end of snum.
+		% sTPn = [diff(sTPsi); (snum-sTPsi(end))];
+		% find the largest number of observations, which can be used to 
+		% pre-allocate memory for matrix to store firing rates
+		% sTPnmax = max(sTPn);
+		% find unique positions, which will include 0
+		tempsTPu = unique(sTP);
+		% remove 0
+		sTPu = tempsTPu(2:end);
+		% find number of unique positions
+		nsTPu = size(sTPu,1);
+		% when we need to pre-allocate memory, we can do something like: 
+		% fri = nan(sTPnmax,nsTPu);
 		% compute occupancy proportion
 		ou_i = zeros(nsTPu,1);
 		for pi = 1:nsTPu
-			ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
-		end
-		
-		% sTime snum x 3
-		% sTP sortedSTPosition snum x 1
-		% sTPi stIndexSortedByPosition index into sTime snum x 1
-		% sTPsi stIndexPositionStart nsTPu x 1
-		% sTPind stStartEndIndices4Position index into sTPi nsTPu x 2
-		% sTPin stNumObs4Position nsTPu x 1
-		% sTPinm stMinNumObs4Position index into sTPind nsTPum x 1 
-		% sTPu stUniquePositions nsTPum x 1
-		% nsTPu stNumUniquePositions 
-		% nsTPind2 stStartEndIndicesMinObs index into sTPi nsTPum x 2
-		
+			ou_i(pi) = sum(sTime(sTPi(sTPind(pi,1):sTPind(pi,2)),3));
+        end
+        
+        %After creating unityData, you need to correct the times generated
+        %using the eyelink object.
+        unityData = synchronise(unityData, unityTriggers);
+        
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
 		data.oGS2 = oGS2;
@@ -479,11 +464,10 @@ if(~isempty(rd))
         % placeselect.m to compute histograms for shuffled data
         % add a zero at the beginning to avoid spike from being missed
         data.unityTime = [0; cumsum(unityData(:,2))];
-        data.sessionTime = sTime;
+        data.sTime = sTime;
         data.sTPi = sTPi;
-        data.sTPind = sTPind2;
-        data.sTPin = sTPin2;
-        % data.sTPinm = sTPinm;
+        data.sTPind = sTPind;
+        data.sTPin = sTPin;
         data.sTPu = sTPu;
         data.nsTPu = nsTPu;
         data.ou_i = ou_i;
