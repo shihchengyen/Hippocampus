@@ -98,8 +98,8 @@ if(~isempty(dir(Args.RequiredFile)))
 	else
 		% run in Matlab
 		% data = placeselect(pwd);
-% 		data = placeselect(um,rp,spiketrain,Args);
-        data = placeselect_shuffle(um,rp,spiketrain,Args);
+		data = placeselect(um,rp,spiketrain,Args);
+%         data = placeselect_shuffle(um,rp,spiketrain,Args);
 	end
 
 	% create nptdata so we can inherit from it    
@@ -129,8 +129,8 @@ elseif(~isempty(dir(Args.ChannelFile)))
         spikeIdx = find(l.mlseq(si,:) == wfmidx); 
 		spiketrain.timestamps = spikeIdx/rp.data.SampleRate; % get peak times
 		spiketrain.spikeForm = l.spikeForms(si,:);
-% 		tdata = placeselect(um,rp,spiketrain,Args);
-        tdata = placeselect_shuffle(um,rp,spiketrain,Args);
+		tdata = placeselect(um,rp,spiketrain,Args);
+%         tdata = placeselect_shuffle(um,rp,spiketrain,Args);
 		data.meanFRs(:,si) = tdata.meanFRs;
 		data.semFRs(:,si) = tdata.semFRs;
         data.SIC(si) = tdata.SIC;
