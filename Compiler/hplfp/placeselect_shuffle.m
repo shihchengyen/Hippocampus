@@ -20,13 +20,13 @@ gpDurations = um.data.gpDurations;
 unityTrialTime = um.data.unityTrialTime;
 ntrials = size(unityTriggers,1);
 if(Args.UseAllTrials)
-	nptrials = ntrials;
     processTrials = (1:ntrials)';
+    nptrials = ntrials;
 else
-	nptrials = size(processTrials,1);
     % trial numbers that should be processed, i.e. the animal took the shortest 
     % route to the destination
     processTrials = um.data.processTrials;
+    nptrials = size(processTrials,1);
 end
 
 sampleRate = rp.data.SampleRate;
@@ -133,7 +133,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
         end 
         % if there are any grid positions with less than 5 observations
         % set them to 0 to avoid having outliers caused by a single observation
-        spikeLocTrial( (sum(spikeLocTrial>0,2)<Args.MinTrials) ,:) = 0;
+%         spikeLocTrial( (sum(spikeLocTrial>0,2)<Args.MinTrials) ,:) = 0;
 
         % we divide by gpDurations to get number of spikes per duration
         if(Args.UseAllTrials)
@@ -164,12 +164,12 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 spikeLocGrid(ii,:) = spikeLoc( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
             end
             % Smooth firing rate maps
-            [meanFRsGrid,spikeLocGrid_smoothed,o_iGrid_smoothed] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
+            [meanFRsGrid_smoothed,spikeLocGrid_smoothed,o_iGrid_smoothed] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
             semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2)); %%% CHECK???
             % Restructure bins back into linear array
             meanFRs = nan(Args.GridSteps*Args.GridSteps,1);
             for ii = 1:Args.GridSteps
-                meanFRs((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = meanFRsGrid(ii,:);
+                meanFRs((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = meanFRsGrid_smoothed(ii,:);
                 o_i((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = o_iGrid_smoothed(ii,:);
                 o_i(isnan(o_i)) = 0;
             end
@@ -193,10 +193,12 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
         % divide firing for each position by the overall mean
         FRratio = lambda_i/lambda_bar;
         % compute first term in SIC
-        SIC1 = P_i .* FRratio;
+%         SIC1 = P_i .* FRratio;
+        SIC1 = P_i .* lambda_i; 
+        ind = find(SIC1 > 0);
         SIC2 = log2(FRratio);
-        SIC2(isinf(SIC2)) = 0;
-        SICsh(shi,1) = SIC1' * SIC2;
+%         SIC2(isinf(SIC2)) = 0;
+        SICsh(shi,1) = SIC1(ind)' * SIC2(ind);
         meanFRssh(:,shi) = meanFRs;
         semFRssh(:,shi) = semFRs;
         lambda_ish(:,shi) = lambda_i;
