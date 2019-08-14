@@ -56,22 +56,26 @@ tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.Shuffle
 
 % convert spike times to seconds to make it consistent with Ripple
 % markers and Unity timestamps
-sTimes = zeros(shuffleSize,size(spiketrain.timestamps,2));
-sTimes(1,:) = spiketrain.timestamps/1000;
+sTimesOrig = spiketrain.timestamps/1000;
+% If any spike times exceed maxTime, trim
+indExceed = sTimesOrig > maxTime;
+sTimesOrig(indExceed) = [];
+sTimes = zeros(shuffleSize,size(sTimesOrig,2));
+sTimes(1,:) = sTimesOrig;
 
 for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
     % Set up trial numbers to include depending on extent of session
     switch kk
         case 1 % Full session
-            subset = 1:nptrials;
+            subset = processTrials;
             reps = shuffleSize;
         case 2 % First half of sesson
             x = floor((ntrials-1)/2);
-            subset = ismember(processTrials,1:x);
+            subset = processTrials(ismember(processTrials,1:x));
             reps = 1;
         case 3
             x = floor((ntrials-1)/2);
-            subset = ismember(processTrials,ntrials-x+1:ntrials);
+            subset = processTrials(ismember(processTrials,ntrials-x+1:ntrials));
             reps = 1;
     end
     SICsh = zeros(reps,1);
@@ -81,21 +85,24 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
     for shi = 1:reps
         if shi > 1 % Shift spike train by random amount of time
                 sTimetemp = sTimes(1,:) + tShifts(1,shi);
-                ind = find(sTimetemp > sTimes(1,end),1);
-                sTimes(shi,:) = [sTimetemp(1,ind:end)-sTimes(1,end) sTimetemp(1,1:ind-1)];
+                ind = find(sTimetemp > maxTime,1);
+                if isempty(ind)
+                    sTimes(shi,:) = sTimetemp;
+                else
+                    sTimes(shi,:) = [sTimetemp(1,ind:end)-maxTime-1 sTimetemp(1,1:ind-1)];
+                end
         end
-        fprintf(1,'Processing shuffle %i\n',shi);
+        % Show progress of shuffle
+        if shi == 1 || mod(shi,100) ~= 0 
+            fprintf(1,'Processing shuffle %i\n',shi);
+        end
 
         % create memory
-        spikeLocTrial = zeros(gridBins,nptrials);
+        spikeLocTrial = zeros(gridBins,size(subset,1));
         anovaMatrix = spikeLocTrial;
-        tDiff = nan(nptrials,1);
-        for npi = 1:nptrials
-            if(Args.UseAllTrials)
-                g = npi;
-            else
-                g = processTrials(npi);
-            end
+        tDiff = nan(size(subset,1),1);
+        for npi = 1:size(subset,1)
+            g = subset(npi);
 %             fprintf(1,'Processing Trial %i\n',g);
 
             tstart = rp.data.timeStamps(g,2);
@@ -136,23 +143,23 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
 %         spikeLocTrial( (sum(spikeLocTrial>0,2)<Args.MinTrials) ,:) = 0;
 
         % we divide by gpDurations to get number of spikes per duration
-        if(Args.UseAllTrials)
-            anovaMatrix = spikeLocTrial(:,subset)./gpDurations(:,processTrials(subset));
-        else
-            anovaMatrix = spikeLocTrial(:,subset)./gpDurations(:,processTrials(subset));
-        end
+%         if(Args.UseAllTrials)
+            anovaMatrix = spikeLocTrial./gpDurations(:,subset);
+%         else
+%             anovaMatrix = spikeLocTrial./gpDurations(:,subset);
+%         end
 
 
         % We take the mean firing rates computed above to compute the SIC.
         % compute SIC
         % compute total duration for each position
-        if(Args.UseAllTrials)
-            o_i = sum(gpDurations,2);
-        else
-            o_i = sum(gpDurations(:,processTrials(subset)),2);
-        end
+%         if(Args.UseAllTrials)
+%             o_i = sum(gpDurations,2);
+%         else
+            o_i = sum(gpDurations(:,subset),2);
+%         end
         % Compute spike count per grid position
-        spikeLoc = sum(spikeLocTrial(:,subset),2);
+        spikeLoc = sum(spikeLocTrial,2);
         if Args.AdaptiveSmooth
             % Scaling factor
             alpha = 1e5; 
@@ -193,12 +200,17 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
         % divide firing for each position by the overall mean
         FRratio = lambda_i/lambda_bar;
         % compute first term in SIC
-%         SIC1 = P_i .* FRratio;
         SIC1 = P_i .* lambda_i; 
         ind = find(SIC1 > 0);
-        SIC2 = log2(FRratio);
-%         SIC2(isinf(SIC2)) = 0;
-        SICsh(shi,1) = SIC1(ind)' * SIC2(ind);
+        SIC1 = SIC1(ind);
+        SIC2 = log2(FRratio(ind));
+        bits_per_sec = SIC1' * SIC2;
+        if lambda_bar > 0
+            bits_per_spike = bits_per_sec/lambda_bar;
+        else
+            bits_per_spike = NaN;
+        end
+        SICsh(shi,1) = bits_per_spike;
         meanFRssh(:,shi) = meanFRs;
         semFRssh(:,shi) = semFRs;
         lambda_ish(:,shi) = lambda_i;
@@ -216,7 +228,6 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             end
             data.SIC = SICsh(1,1);
             data.SICsh = SICsh;
-%             data.MI = MI;
         case 2
             if(Args.FRSIC)
                 data.half1stmeanFRs = lambda_i;
@@ -226,8 +237,6 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 data.half1stsemFRs = semFRs;
             end
             data.half1stSIC = SICsh(1,1);
-%             data.half1stSICsh = SICsh';
-%             data.half1stMI = MI;
         case 3
             if(Args.FRSIC)
                 data.half2ndmeanFRs = lambda_i;
@@ -237,125 +246,8 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 data.half2ndsemFRs = semFRs;
             end
             data.half2ndSIC = SICsh(1,1);
-%             data.half2ndSICsh = SICsh';
-%             data.half2ndMI = MI;
     end
 end
-% 
-% % This is the 2nd method for computing place selectivity, which compares
-% % the results we get from the data to shuffled surrogates. This method
-% % attempts to count spikes at 1 go for the entire session, instead of 
-% % looping over trials, to make computing place selectivity for the data and 
-% % the shuffled spikes more efficient.
-% % compare SIC to SIC from shuffled spike trains
-% % remove spikes that occurred after the unity program ended to avoid
-% % problems with the histogram function
-% % get max time, i.e. last marker in the session
-% % maxTime = um.data.unityTime(end);
-% % use rplparallel timestamps instead of unity timestamps
-% maxTime = rp.data.timeStamps(end,3);
-% si = find(sTimes>maxTime);
-% % get number of spikes
-% if(isempty(si))
-%     % no spikes greater than unityTime so we will just use all the spikes
-%     nSpikes = size(sTimes,2);
-% else
-%     % ignore spikes after unityTime
-%     nSpikes = si(1) - 1;
-% end
-% % create shuffled spikes array
-% shuffleSize = Args.NumShuffles + 1;
-% spTimes = repmat(sTimes(1:nSpikes)',1,shuffleSize);
-% 
-% % generate circularly shifted spike trains
-% % first seed the random number generator to make sure we get a different
-% % sequence of numbers
-% % rng('shuffle');
-% % generate 1000 random time shifts between 0.1 and 0.9 of maxTime
-% tShifts = ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime;
-% shuffleInd = 2:shuffleSize;
-% spTimes(:,shuffleInd) = sort(mod(spTimes(:,shuffleInd) + tShifts,maxTime));
-% 
-% % get variables stored in unitymaze
-% sTime = um.data.sessionTime;
-% % get indices to sTime sorted by position
-% sTPi = um.data.sTPi;
-% % get positions with a minimum number of observations
-% sTPu = um.data.sTPu;
-% % get number of positions
-% nsTPu = um.data.nsTPu;
-% % get starting and ending indices to sTPi for each of those positions
-% sTPind = um.data.sTPind;
-% % get number of observations for each of those positions
-% sTPin = um.data.sTPin;
-% % get occupancy for each position
-% ou_s = um.data.ou_i;
-% % divide ou_s by sum of ou_s
-% P_i = um.data.P_i;
-% nFRBins = Args.NumFRBins;
-% 
-% % compute SIC
-% % compute histogram of data and shuffled data
-% % get corrected timeline for entire session
-% n = histcie(spTimes,sTime(:,1));
-% % divide by interval to get firing rates
-% fr = n ./ repmat(sTime(:,3),1,size(n,2));
-% % get maximum firing rate across data and surrogates
-% frmax = max(max(fr));
-% % divide range into nFRbins
-% frbins = 0:frmax/nFRBins:frmax;
-% % compute histogram of fr using frbins
-% [frn,frni] = histcie(fr,frbins,'DropLast');
-% % compute P_j from frn
-% P_j = frn / sum(frn);
-% % create array for storing mean and stderr firing rate
-% lambda_i = zeros(nsTPu,shuffleSize);
-% lambda_ise = lambda_i;
-% 
-% % create array for P_ij
-% P_ij = zeros(nFRBins,nsTPu,shuffleSize);
-% % bin indices should be 1 to nFRBins, so shift the limits by 0.5
-% frnbins = 0.5:1:(nFRBins+0.5);
-% for fri = 1:nsTPu
-%     % get relevant indices
-%     frindices = sTPi(sTPind(fri,1):sTPind(fri,2));
-%     % get firing rates for this position for data and surrogates
-%     frncounts = frni(frindices,:);
-%     % count number of rbins in each category
-%     P_ij(:,fri,:) = histcie(frncounts,frnbins,'DropLast','DataCols');
-%     frvals = fr(frindices,:);
-%     lambda_i(fri,:) = mean(frvals);
-%     lambda_ise(fri,:) = std(frvals)/sqrt(sTPin(fri));
-% end
-% 
-% % compute total duration across all positions
-% % So_i = sum(o_i);
-% % compute proportion of occupied time
-% % P_i = o_i/So_i;
-% 
-% % divide P_ij by its sum to get probability
-% P_ijs = sum(sum(P_ij));
-% P_ij = P_ij ./ P_ijs;
-% 
-% % create matrices for computing denominator in MI calculation
-% P_i_mat = repmat(P_i',[nFRBins,1,shuffleSize]);
-% P_j_mat = repmat(P_j,[1,nsTPu,shuffleSize]);
-% MI = sum(nansum(P_ij .* log2 ( P_ij ./ (P_i_mat .* P_j_mat) )));
-% 
-% % compute mean firing rate over all positions weighed by proportion of
-% % occupied time
-% % replace NaN with 0 in meanFRs;
-% % lambda_i = n2(1:gridBins,:) ./ repmat(o_i,1,shuffleSize);
-% % lambda_i(isnan(lambda_i)) = 0;
-% 
-% lambda_bar = P_i' * lambda_i;
-% % divide firing for each position by the overall mean
-% FRratio = lambda_i ./ repmat(lambda_bar,nsTPu,1);
-% % compute first term in SIC
-% SIC1 = repmat(P_i,1,shuffleSize) .* FRratio;
-% SIC2 = log2(FRratio);
-% SIC2(isinf(SIC2)) = 0;
-% SICsh = sum(SIC1 .* SIC2);
 
 if(isdeployed)
 	% save data into a mat file
