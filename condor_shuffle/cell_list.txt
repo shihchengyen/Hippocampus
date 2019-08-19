@@ -1,0 +1,4 @@
+/Volumes/Hippocampus/Data/picasso-misc/20180824/session01/array01/channel006/cell01
+/Volumes/Hippocampus/Data/picasso-misc/20180824/session01/array01/channel006/cell02
+/Volumes/Hippocampus/Data/picasso-misc/20180824/session01/array01/channel006/cell03
+/Volumes/Hippocampus/Data/picasso-misc/20180824/session01/array01/channel006/cell04
