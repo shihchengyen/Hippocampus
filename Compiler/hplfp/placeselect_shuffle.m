@@ -242,7 +242,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             else
                 data.maps_raw = maps_raw(:,1);
                 data.maps_boxsmooth = maps_boxsmooth(:,1);
-                data.maps_adsmoooth = maps_adsmooth(:,1);
+                data.maps_adsmooth = maps_adsmooth(:,1);
                 data.mapsSEM_raw = mapsSEM_raw(:,1);
             end
             data.SIC = SICsh(1,1);
@@ -254,7 +254,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             else
                 data.maps_raw1sthalf = maps_raw(:,1);
                 data.maps_boxsmooth1sthalf = maps_boxsmooth(:,1);
-                data.maps_adsmoooth1sthalf = maps_adsmooth(:,1);
+                data.maps_adsmooth1sthalf = maps_adsmooth(:,1);
                 data.mapsSEM_raw1sthalf = mapsSEM_raw(:,1);
             end
             data.SIC1sthalf = SICsh(1,1);
@@ -265,7 +265,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             else
                 data.maps_raw2ndhalf = maps_raw(:,1);
                 data.maps_boxsmooth2ndhalf = maps_boxsmooth(:,1);
-                data.maps_adsmoooth2ndhalf = maps_adsmooth(:,1);
+                data.maps_adsmooth2ndhalf = maps_adsmooth(:,1);
                 data.mapsSEM_raw2ndhalf = mapsSEM_raw(:,1);
             end
             data.SIC2ndhalf = SICsh(1,1);
