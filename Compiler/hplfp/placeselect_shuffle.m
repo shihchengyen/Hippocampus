@@ -147,7 +147,8 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
         zero_occ = o_i == 0; % unvisited grid positions
         low_occ = false(size(o_i));
         if Args.FiltLowOcc
-            low_occ = (sum(spikeLocTrial>0,2) < Args.MinTrials); % grid positions with less than 5 observations
+            low_occ = (sum(gpDurations>0,2) < Args.MinTrials); % grid positions with less than 5 observations
+            gpDurations(low_occ,:) = 0;
             spikeLocTrial(low_occ,:) = 0;
             o_i(low_occ,:) = 0;
         end
