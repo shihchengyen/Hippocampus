@@ -9,7 +9,7 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, 'TFfftStart',500,'TFfftFreq',150,...
-		    'TFWavelets',0,  ...
+		    'TFWavelets',0, 'TimeWindow', [], ...
             'Filter',0,'FilterWindow',[],'CorrCoeff',0,   ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
@@ -282,7 +282,7 @@ if(~isempty(Args.NumericArguments))
 		for spi = 1:drows
 			% do subplot if there are multiple rows of data
 			subplot('Position',axesPositions(spi,:));
-			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
+			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'-')
             if(spi>1)
                 set(gca,'XTickLabel',{})
             end
@@ -306,6 +306,10 @@ if(~isempty(Args.NumericArguments))
 					% indicate incorrect trial
 					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
 				end
+			end
+			
+			if(~isempty(Args.TimeWindow))
+				xlim(Args.TimeWindow)
 			end
 		end
 	end
