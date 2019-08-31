@@ -1,4 +1,4 @@
-function data = placeselect(um,rp,spiketrain,Args)
+function data = placeselect_shuffle(um,rp,spiketrain,Args)
 % function data = placeselect(dirstr)
 
 % load arguments
@@ -11,8 +11,6 @@ function data = placeselect(um,rp,spiketrain,Args)
 gridBins = um.data.gridSteps * um.data.gridSteps;
 % triggers that indicate cue onset, offset, and end of trial
 unityTriggers = um.data.unityTriggers;
-% raw Unity data that indicates position of the animal
-unityData = um.data.unityData;
 % get grid position number
 gridPosition = um.data.gridPosition;
 % get duration spent at each grid position
@@ -20,13 +18,13 @@ gpDurations = um.data.gpDurations;
 unityTrialTime = um.data.unityTrialTime;
 ntrials = size(unityTriggers,1);
 if(Args.UseAllTrials)
-	nptrials = ntrials;
     processTrials = (1:ntrials)';
+    nptrials = ntrials;
 else
-	nptrials = size(processTrials,1);
     % trial numbers that should be processed, i.e. the animal took the shortest 
     % route to the destination
     processTrials = um.data.processTrials;
+    nptrials = size(processTrials,1);
 end
 
 sampleRate = rp.data.SampleRate;
@@ -56,48 +54,58 @@ tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.Shuffle
 
 % convert spike times to seconds to make it consistent with Ripple
 % markers and Unity timestamps
-sTimes = zeros(shuffleSize,size(spiketrain.timestamps,2));
-sTimes(1,:) = spiketrain.timestamps/1000;
+sTimesOrig = spiketrain.timestamps/1000;
+% If any spike times exceed maxTime, trim
+indExceed = sTimesOrig > maxTime;
+sTimesOrig(indExceed) = [];
+sTimes = zeros(shuffleSize,size(sTimesOrig,2));
+sTimes(1,:) = sTimesOrig;
 
 for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
     % Set up trial numbers to include depending on extent of session
     switch kk
         case 1 % Full session
-            subset = 1:nptrials;
+            subset = processTrials;
             reps = shuffleSize;
         case 2 % First half of sesson
             x = floor((ntrials-1)/2);
-            subset = ismember(processTrials,1:x);
+            subset = processTrials(ismember(processTrials,1:x));
             reps = 1;
         case 3
             x = floor((ntrials-1)/2);
-            subset = ismember(processTrials,ntrials-x+1:ntrials);
+            subset = processTrials(ismember(processTrials,ntrials-x+1:ntrials));
             reps = 1;
     end
     SICsh = zeros(reps,1);
-    meanFRssh = zeros(gridBins,reps);
-    semFRssh = meanFRssh;
-    lambda_ish = meanFRssh;
+    maps_raw = zeros(gridBins,reps);
+    maps_rawmedian = maps_raw;
+    maps_adsmooth = maps_raw;
+    maps_boxsmooth = maps_raw;
+    mapsSEM_raw = maps_raw;
+    mapsSEM_rawmedian = maps_raw;
+    lambda_ish = maps_raw;
+    % Get spatial data
     for shi = 1:reps
         if shi > 1 % Shift spike train by random amount of time
                 sTimetemp = sTimes(1,:) + tShifts(1,shi);
-                ind = find(sTimetemp > sTimes(1,end),1);
-                sTimes(shi,:) = [sTimetemp(1,ind:end)-sTimes(1,end) sTimetemp(1,1:ind-1)];
+                ind = find(sTimetemp > maxTime,1);
+                if isempty(ind)
+                    sTimes(shi,:) = sTimetemp;
+                else
+                    sTimes(shi,:) = [sTimetemp(1,ind:end)-maxTime-1 sTimetemp(1,1:ind-1)];
+                end
         end
-        fprintf(1,'Processing shuffle %i\n',shi);
+        % Show progress of shuffle
+        if shi == 1 || mod(shi,100) == 0 
+            fprintf(1,'Processing shuffle %i\n',shi);
+        end
 
         % create memory
-        spikeLocTrial = zeros(gridBins,nptrials);
+        spikeLocTrial = zeros(gridBins,size(subset,1));
         anovaMatrix = spikeLocTrial;
-        tDiff = nan(nptrials,1);
-        for npi = 1:nptrials
-            if(Args.UseAllTrials)
-                g = npi;
-            else
-                g = processTrials(npi);
-            end
-%             fprintf(1,'Processing Trial %i\n',g);
-
+        tDiff = nan(size(subset,1),1);
+        for npi = 1:size(subset,1)
+            g = subset(npi);
             tstart = rp.data.timeStamps(g,2);
             tend = rp.data.timeStamps(g,3);
 
@@ -131,55 +139,68 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 spikeLocTrial(:,npi) = histcounts(tgp(bins(bins~=0)),um.data.gpEdges);
             end
         end 
-        % if there are any grid positions with less than 5 observations
-        % set them to 0 to avoid having outliers caused by a single observation
-        spikeLocTrial( (sum(spikeLocTrial>0,2)<Args.MinTrials) ,:) = 0;
-
-        % we divide by gpDurations to get number of spikes per duration
-        if(Args.UseAllTrials)
-            anovaMatrix = spikeLocTrial(:,subset)./gpDurations(:,processTrials(subset));
-        else
-            anovaMatrix = spikeLocTrial(:,subset)./gpDurations(:,processTrials(subset));
+        
+        % compute total duration for each position
+        o_i = sum(gpDurations(:,subset),2);
+        
+        % Filter for low occupancy bins 
+        zero_occ = o_i == 0; % unvisited grid positions
+        low_occ = false(size(o_i));
+        if Args.FiltLowOcc
+            low_occ = (sum(gpDurations>0,2) < Args.MinTrials); % grid positions with less than 5 observations
+            gpDurations(low_occ,:) = 0;
+            spikeLocTrial(low_occ,:) = 0;
+            o_i(low_occ,:) = 0;
         end
-
+        
+        % we divide by gpDurations to get number of spikes per duration
+        anovaMatrix = spikeLocTrial./gpDurations(:,subset);
+        mapTrial = nanmean(anovaMatrix,2);
 
         % We take the mean firing rates computed above to compute the SIC.
         % compute SIC
-        % compute total duration for each position
-        if(Args.UseAllTrials)
-            o_i = sum(gpDurations,2);
-        else
-            o_i = sum(gpDurations(:,processTrials(subset)),2);
-        end
+
         % Compute spike count per grid position
-        spikeLoc = sum(spikeLocTrial(:,subset),2);
-        if Args.AdaptiveSmooth
-            % Scaling factor
-            alpha = 1e5; 
-            % Restructure bins from linear to square grid
-            o_iGrid = nan(Args.GridSteps);
-            spikeLocGrid = nan(Args.GridSteps);
-            for ii = 1:Args.GridSteps
-                o_iGrid(ii,:) = o_i( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
-                spikeLocGrid(ii,:) = spikeLoc( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
-            end
-            % Smooth firing rate maps
-            [meanFRsGrid,spikeLocGrid_smoothed,o_iGrid_smoothed] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
-            semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2)); %%% CHECK???
-            % Restructure bins back into linear array
-            meanFRs = nan(Args.GridSteps*Args.GridSteps,1);
-            for ii = 1:Args.GridSteps
-                meanFRs((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = meanFRsGrid(ii,:);
-                o_i((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = o_iGrid_smoothed(ii,:);
-                o_i(isnan(o_i)) = 0;
-            end
-        elseif (Args.UseMedian)
-            meanFRs = nanmedian(anovaMatrix,2);
-            semFRs = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
-        else
-            meanFRs = nanmean(anovaMatrix,2);
-            semFRs = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2));
+        spikeLoc = sum(spikeLocTrial,2);
+        
+        % Restructure bins from linear to square grid
+        o_iGrid = nan(Args.GridSteps);
+        spikeLocGrid = nan(Args.GridSteps);
+        mapGrid = nan(Args.GridSteps);
+        for ii = 1:Args.GridSteps
+            o_iGrid(ii,:) = o_i( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
+            spikeLocGrid(ii,:) = spikeLoc( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
+            mapGrid(ii,:) = mapTrial( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
         end
+        % Adaptive smooth scaling factor
+        alpha = 1e4; % Scaling factor
+        % Boxcar filter
+        boxfilt = [0.0025 0.0125 0.0200 0.0125 0.0025;...
+               0.0125 0.0625 0.1000 0.0625 0.0125;...
+               0.0200 0.1000 0.1600 0.1000 0.0200;...
+               0.0125 0.0625 0.1000 0.0625 0.0125;...
+               0.0025 0.0125 0.0200 0.0125 0.0025;];
+        
+        % COMPUTE RATE MAPS
+        % Unsmoothed
+        map_raw = mapTrial;
+        mapSEM_raw = nanstd(anovaMatrix,0,2)./sqrt(sum(~isnan(anovaMatrix),2)); 
+%         % Unsmoothed median
+%         map_rawmedian = nanmedian(anovaMatrix,2);
+%         mapSEM_rawmedian = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
+        % Adaptive smoothing
+        [map_adsmoothGrid,spikeLoc_adsmoothGrid,o_i_adsmoothGrid] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
+        % Restructure grid bins back into linear array
+        map_adsmooth = nan(Args.GridSteps*Args.GridSteps,1);
+        for ii = 1:Args.GridSteps
+            map_adsmooth((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = map_adsmoothGrid(ii,:);
+            o_i_adsmooth((ii-1)*Args.GridSteps+1:ii*Args.GridSteps,1) = o_i_adsmoothGrid(ii,:);
+            o_i_adsmooth(isnan(o_i_adsmooth)) = 0;
+        end
+        % Boxcar smoothing
+        map_boxsmooth = boxcarsmooth(mapTrial, boxfilt, low_occ);
+        
+        % COMPUTE SIC
         % compute total duration across all positions
         So_i = sum(o_i);
         % compute proportion of occupied time
@@ -187,18 +208,29 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
         % compute mean firing rate over all positions weighed by proportion of
         % occupied time
         % replace NaN with 0 in meanFRs;
-        lambda_i = meanFRs;
+        lambda_i = map_adsmooth;
         lambda_i(isnan(lambda_i)) = 0;
         lambda_bar = P_i' * lambda_i;
         % divide firing for each position by the overall mean
         FRratio = lambda_i/lambda_bar;
         % compute first term in SIC
-        SIC1 = P_i .* FRratio;
-        SIC2 = log2(FRratio);
-        SIC2(isinf(SIC2)) = 0;
-        SICsh(shi,1) = SIC1' * SIC2;
-        meanFRssh(:,shi) = meanFRs;
-        semFRssh(:,shi) = semFRs;
+        SIC1 = P_i .* lambda_i; 
+        ind = find(SIC1 > 0);
+        SIC1 = SIC1(ind);
+        SIC2 = log2(FRratio(ind));
+        bits_per_sec = SIC1' * SIC2;
+        if lambda_bar > 0
+            bits_per_spike = bits_per_sec/lambda_bar;
+        else
+            bits_per_spike = NaN;
+        end
+        SICsh(shi,1) = bits_per_spike;
+        maps_adsmooth(:,shi) = map_adsmooth;
+        maps_raw(:,shi) = map_raw;
+        maps_boxsmooth(:,shi) = map_boxsmooth;
+        mapsSEM_raw(:,shi) = mapSEM_raw;
+%         maps_rawmedian(:,shi) = map_rawmedian;
+%         mapsSEM_rawmedian(:,shi) = mapSEM_rawmedian;
         lambda_ish(:,shi) = lambda_i;
     end
     % Store data
@@ -206,154 +238,40 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
     switch kk
         case 1
             if(Args.FRSIC)
-                data.meanFRs = lambda_ish(:,1);
-                data.semFRs = [];
+                data.maps_raw = lambda_ish(:,1);
+                data.mapsSEM_raw = [];
             else
-                data.meanFRs = meanFRssh(:,1);
-                data.semFRs = semFRssh(:,1);
+                data.maps_raw = maps_raw(:,1);
+                data.maps_boxsmooth = maps_boxsmooth(:,1);
+                data.maps_adsmooth = maps_adsmooth(:,1);
+                data.mapsSEM_raw = mapsSEM_raw(:,1);
             end
             data.SIC = SICsh(1,1);
             data.SICsh = SICsh;
-%             data.MI = MI;
         case 2
             if(Args.FRSIC)
-                data.half1stmeanFRs = lambda_i;
-                data.half1stsemFRs = [];
+                data.maps_raw = lambda_ish(:,1);
+                data.mapsSEM_raw = [];
             else
-                data.half1stmeanFRs = meanFRs;
-                data.half1stsemFRs = semFRs;
+                data.maps_raw1sthalf = maps_raw(:,1);
+                data.maps_boxsmooth1sthalf = maps_boxsmooth(:,1);
+                data.maps_adsmooth1sthalf = maps_adsmooth(:,1);
+                data.mapsSEM_raw1sthalf = mapsSEM_raw(:,1);
             end
-            data.half1stSIC = SICsh(1,1);
-%             data.half1stSICsh = SICsh';
-%             data.half1stMI = MI;
+            data.SIC1sthalf = SICsh(1,1);
         case 3
             if(Args.FRSIC)
-                data.half2ndmeanFRs = lambda_i;
-                data.half2ndsemFRs = [];
+                data.maps_raw = lambda_ish(:,1);
+                data.mapsSEM_raw = [];
             else
-                data.half2ndmeanFRs = meanFRs;
-                data.half2ndsemFRs = semFRs;
+                data.maps_raw2ndhalf = maps_raw(:,1);
+                data.maps_boxsmooth2ndhalf = maps_boxsmooth(:,1);
+                data.maps_adsmooth2ndhalf = maps_adsmooth(:,1);
+                data.mapsSEM_raw2ndhalf = mapsSEM_raw(:,1);
             end
-            data.half2ndSIC = SICsh(1,1);
-%             data.half2ndSICsh = SICsh';
-%             data.half2ndMI = MI;
+            data.SIC2ndhalf = SICsh(1,1);
     end
 end
-% 
-% % This is the 2nd method for computing place selectivity, which compares
-% % the results we get from the data to shuffled surrogates. This method
-% % attempts to count spikes at 1 go for the entire session, instead of 
-% % looping over trials, to make computing place selectivity for the data and 
-% % the shuffled spikes more efficient.
-% % compare SIC to SIC from shuffled spike trains
-% % remove spikes that occurred after the unity program ended to avoid
-% % problems with the histogram function
-% % get max time, i.e. last marker in the session
-% % maxTime = um.data.unityTime(end);
-% % use rplparallel timestamps instead of unity timestamps
-% maxTime = rp.data.timeStamps(end,3);
-% si = find(sTimes>maxTime);
-% % get number of spikes
-% if(isempty(si))
-%     % no spikes greater than unityTime so we will just use all the spikes
-%     nSpikes = size(sTimes,2);
-% else
-%     % ignore spikes after unityTime
-%     nSpikes = si(1) - 1;
-% end
-% % create shuffled spikes array
-% shuffleSize = Args.NumShuffles + 1;
-% spTimes = repmat(sTimes(1:nSpikes)',1,shuffleSize);
-% 
-% % generate circularly shifted spike trains
-% % first seed the random number generator to make sure we get a different
-% % sequence of numbers
-% % rng('shuffle');
-% % generate 1000 random time shifts between 0.1 and 0.9 of maxTime
-% tShifts = ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime;
-% shuffleInd = 2:shuffleSize;
-% spTimes(:,shuffleInd) = sort(mod(spTimes(:,shuffleInd) + tShifts,maxTime));
-% 
-% % get variables stored in unitymaze
-% sTime = um.data.sessionTime;
-% % get indices to sTime sorted by position
-% sTPi = um.data.sTPi;
-% % get positions with a minimum number of observations
-% sTPu = um.data.sTPu;
-% % get number of positions
-% nsTPu = um.data.nsTPu;
-% % get starting and ending indices to sTPi for each of those positions
-% sTPind = um.data.sTPind;
-% % get number of observations for each of those positions
-% sTPin = um.data.sTPin;
-% % get occupancy for each position
-% ou_s = um.data.ou_i;
-% % divide ou_s by sum of ou_s
-% P_i = um.data.P_i;
-% nFRBins = Args.NumFRBins;
-% 
-% % compute SIC
-% % compute histogram of data and shuffled data
-% % get corrected timeline for entire session
-% n = histcie(spTimes,sTime(:,1));
-% % divide by interval to get firing rates
-% fr = n ./ repmat(sTime(:,3),1,size(n,2));
-% % get maximum firing rate across data and surrogates
-% frmax = max(max(fr));
-% % divide range into nFRbins
-% frbins = 0:frmax/nFRBins:frmax;
-% % compute histogram of fr using frbins
-% [frn,frni] = histcie(fr,frbins,'DropLast');
-% % compute P_j from frn
-% P_j = frn / sum(frn);
-% % create array for storing mean and stderr firing rate
-% lambda_i = zeros(nsTPu,shuffleSize);
-% lambda_ise = lambda_i;
-% 
-% % create array for P_ij
-% P_ij = zeros(nFRBins,nsTPu,shuffleSize);
-% % bin indices should be 1 to nFRBins, so shift the limits by 0.5
-% frnbins = 0.5:1:(nFRBins+0.5);
-% for fri = 1:nsTPu
-%     % get relevant indices
-%     frindices = sTPi(sTPind(fri,1):sTPind(fri,2));
-%     % get firing rates for this position for data and surrogates
-%     frncounts = frni(frindices,:);
-%     % count number of rbins in each category
-%     P_ij(:,fri,:) = histcie(frncounts,frnbins,'DropLast','DataCols');
-%     frvals = fr(frindices,:);
-%     lambda_i(fri,:) = mean(frvals);
-%     lambda_ise(fri,:) = std(frvals)/sqrt(sTPin(fri));
-% end
-% 
-% % compute total duration across all positions
-% % So_i = sum(o_i);
-% % compute proportion of occupied time
-% % P_i = o_i/So_i;
-% 
-% % divide P_ij by its sum to get probability
-% P_ijs = sum(sum(P_ij));
-% P_ij = P_ij ./ P_ijs;
-% 
-% % create matrices for computing denominator in MI calculation
-% P_i_mat = repmat(P_i',[nFRBins,1,shuffleSize]);
-% P_j_mat = repmat(P_j,[1,nsTPu,shuffleSize]);
-% MI = sum(nansum(P_ij .* log2 ( P_ij ./ (P_i_mat .* P_j_mat) )));
-% 
-% % compute mean firing rate over all positions weighed by proportion of
-% % occupied time
-% % replace NaN with 0 in meanFRs;
-% % lambda_i = n2(1:gridBins,:) ./ repmat(o_i,1,shuffleSize);
-% % lambda_i(isnan(lambda_i)) = 0;
-% 
-% lambda_bar = P_i' * lambda_i;
-% % divide firing for each position by the overall mean
-% FRratio = lambda_i ./ repmat(lambda_bar,nsTPu,1);
-% % compute first term in SIC
-% SIC1 = repmat(P_i,1,shuffleSize) .* FRratio;
-% SIC2 = log2(FRratio);
-% SIC2(isinf(SIC2)) = 0;
-% SICsh = sum(SIC1 .* SIC2);
 
 if(isdeployed)
 	% save data into a mat file
@@ -443,5 +361,18 @@ warning('on', 'MATLAB:divideByZero');
 smoothedRate(pos==0)=nan;
 smoothedPos(pos==0)=nan;
 smoothedSpk(pos==0)=nan;
-
 % report radii sizes?
+
+
+function [map_smooth]=boxcarsmooth(map,filt,low_occ)
+% Smooth a place map. map=map, k=boxcar kernel, unvis=index of unvisited bins.
+if max(size(filt))==1;  filt=ones(filt);  end   % Expand single parameter to flat k-by-k square
+map(low_occ)=0;
+visTemplate=ones(size(map));
+visTemplate(low_occ)=0;
+filtMap=imfilter(map,filt);
+filtVis=imfilter(visTemplate,filt);
+warning('off', 'MATLAB:divideByZero');
+map_smooth=filtMap./filtVis;
+warning('on', 'MATLAB:divideByZero');
+map_smooth(low_occ)=nan;
