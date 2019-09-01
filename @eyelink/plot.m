@@ -92,25 +92,15 @@ if(~isempty(Args.NumericArguments))
         y = obj.data.eye_pos(x(n,1):x(n,3), :);
             
         %plot all the data points 
-        plot (y(:,1), y(:,2), 'bo');
-        hold on
-        title (['Eye Movements on the screen for trial' ' ' num2str(n)]);
-        xlabel ('Gaze position X (screen pixels)');
-        ylabel ('Gaze position Y (screen pixels)');
-        hold off
+        plotGazeXY(y(:,1), y(:,2), 'bo');
     
     elseif (Args.Calibration)
         %index into the eyeposition 
         eyePos = obj.data.eyePos;
         indices = uint32(obj.data.indices);
-        y = eyePos(indices(n,1):indices(n,3), :);
         
-        plot(y(:,1), y(:,2), 'bo');
-        hold on
-        title ('Calibration Eye movements from session');
-        xlabel ('Gaze Position X (screen pixels)');
-        ylabel ('Gaze Position Y (screen pixels)');
-        hold off 
+        y = eyePos(indices(n,1):indices(n,3), :);
+        plotGazeXY(y(:,1), y(:,2), 'bo');
     
     else %some other argument - code to plot yet another kind of plot
         
@@ -158,4 +148,22 @@ if(lRR>0)
     varargout = getReturnVal(Args.ReturnVars, RR1);
 else
     varargout = {};
+end
+end
+
+function [] = plotGazeXY(gx, gy, lineType)  
+%@plotGazeXY helper method to plot gaze position. Uses matlab's plot
+%   function
+    plot(gx, gy, lineType);
+    %reverse current y axis because eyelink defines (0, 0) to start at
+    %the top left
+    set(gca, 'YDir','reverse'); 
+    %draw rect to represent the screen
+    rectangle('Position',[0 0 1920 1080]);
+
+    hold on
+    title ('Calibration Eye movements from session');
+    xlabel ('Gaze Position X (screen pixels)');
+    ylabel ('Gaze Position Y (screen pixels)');
+    hold off 
 end
