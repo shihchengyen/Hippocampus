@@ -94,7 +94,6 @@ if(dlsize>0)
             eventTimes = {edfdata.FEVENT(messageEvent(:)).sttime}'; %stores the time the events took place
             sz = ceil(size(eventTimes,1)/Args.NumTrialMessages); %each trial has three events in it
             trialTimestamps = zeros (sz,Args.NumTrialMessages+1);
-            trialRewards = zeros (sz);
             idx = 1;
             
             %This loop goes through all the messages and extracts all the
@@ -107,11 +106,9 @@ if(dlsize>0)
                     trialTimestamps(idx,2) = cell2mat(eventTimes(i,1));
                 elseif(ismember(messages(i,1), Args.Message3)==1) %end of trial session
                     trialTimestamps(idx,3) = cell2mat(eventTimes(i,1));
-                    trialRewards(idx) = cell2mat(messages(i,1));
                     idx = idx+1;
                 elseif(ismember(messages(i,1), Args.Message4) == 1)%failed trial
                     trialTimestamps(idx,4) = cell2mat(eventTimes(i,1));
-                    trialRewards(idx) = cell2mat(messages(i,1));
                 end
             end  % for i = 1:size(eventTimes,1)
             %get rid of the zeros - rows
@@ -138,7 +135,6 @@ if(dlsize>0)
             
             %Assign values to the object data fields
             data.trial_timestamps = trialTimestamps;
-            data.trial_rewards = trialRewards;
             data.indices = indices;
             data.eyePos = eyePos;
             data.noOfSessions = 1;
@@ -364,7 +360,6 @@ function obj = createEmptyEyelink(Args)
 
 % these are object specific fields
 data.trial_timestamps = []; %contains all start, cue and and times for all the trials
-data.trial_rewards = [];
 data.sacc_event = [];
 data.fix_event = [];
 data.timestamps = []; %all the time that the experiments were run for
