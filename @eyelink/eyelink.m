@@ -125,11 +125,11 @@ if(dlsize>0)
             %remove data that is outside the dimensions of the screen
             x = (edfdata.FSAMPLE.gx(1,:))';
             x(x>Args.ScreenX)= NaN;
-            %x(x<=-1)= NaN;
+            x(x<0)= NaN;
             
             y = (edfdata.FSAMPLE.gy(1,:))';
             y(y>Args.ScreenY)= NaN;
-            %y(y<=-1)= NaN;
+            y(y<0)= NaN;
             
             eyePos = horzcat(x,y);
             
