@@ -9,11 +9,11 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, 'TFfftStart',500,'TFfftFreq',150,...
-		    'TFWavelets',0, 'TimeWindow', [], ...
-            'Filter',0,'FilterWindow',[],'CorrCoeff',0,   ...
+		    'TFWavelets',0, 'TimeWindow', [],  ...
+            'Filter',0,'OverlapLFP',0,'FilterWindow',[],'CorrCoeff',0,   ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
-				'LogPlot','TFWavelet','PlotAllData','TitleOff','Filter','CorrCoeff'};
+				'LogPlot','TFWavelet','PlotAllData','TitleOff','Filter','OverlapLFP','CorrCoeff'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -49,7 +49,9 @@ if(~isempty(Args.NumericArguments))
 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
 	else
 		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
-	end
+    end
+    
+    % =====================================================================
 	if(Args.FreqPlot)
 		if(Args.PlotAllData)
 			data = obj.data.analogData;
@@ -65,7 +67,9 @@ if(~isempty(Args.NumericArguments))
 		set(gca,'TickDir','out')
 		if(Args.LogPlot)
 			set(gca,'YScale','log')
-		end
+        end
+        
+    % =====================================================================    
 	elseif(Args.TFfft)
 		if(Args.PlotAllData)
 			% create memory to store overall mean
@@ -154,7 +158,8 @@ if(~isempty(Args.NumericArguments))
 % 				sRate,'yaxis','MinThreshold',-10)
 %             ylim([0,100])
         end
-        
+    
+    % =====================================================================    
     elseif(Args.CorrCoeff)
         % Computes the correlation coefficient plot with the same
         % normalisation period (-1s to -0.5s) but with NO WINDOW OVERLAPS
@@ -211,7 +216,8 @@ if(~isempty(Args.NumericArguments))
                 'Colormap', jet,'ColorLimits',[-0.2,0.7],'ColorbarVisible','on',...
                 'Title',strcat('Correlation coefficients of Trial:',string(n)));
             
-	elseif(Args.TFWavelets)
+	% =====================================================================
+    elseif(Args.TFWavelets)
 		% not fully completed yet
     	cdata = nptRemoveLineNoise(obj.data.analogData',50,1000);
     	cdata1 = cdata(idx);
@@ -232,6 +238,8 @@ if(~isempty(Args.NumericArguments))
         cfg.pad = 'nextpow2';
         
         TFRwave = ft_freqanalysis(cfg,data);
+        
+    % =====================================================================
     elseif (Args.Filter) 
         % Filter is a flag that plots the time-domain signal with a
         % bandpass filter defined by 'FilterWindow'
@@ -271,8 +279,73 @@ if(~isempty(Args.NumericArguments))
 					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
 				end
 			end
+        end
+    
+    % ===================================================================== 
+    elseif (Args.OverlapLFP) 
+        % Filter is a flag that plots the time-domain signal with a
+        % bandpass filter defined by 'FilterWindow'
+        
+        % ==================================================
+        % Look at only the first 1s of the navigation period
+        idx = (tIdx(1)+(1000/1000*sRate)):(tIdx(1)+(1999/1000*sRate));
+        % ==================================================
+        
+        data = obj.data.analogData(idx,:);
+        drows = size(data,2);
+		if(~isempty(Args.RemoveLineNoise))
+			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
 		end
-	else
+		axesPositions = separateAxis('Vertical',drows);
+        for spi = 1:drows
+            % do subplot if there are multiple rows of data
+            subplot('Position',axesPositions(spi,:));
+            
+        % ==================================================
+        % Look at only the first 1s of the navigation period
+            plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
+            hold on
+            plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,...
+                bandpass(data(:,spi),Args.FilterWindow,sRate),'.-','Color','r')
+            hold off
+        % ==================================================
+        
+%             plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
+%             hold on
+%             plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,...
+%                 bandpass(data(:,spi),Args.FilterWindow,sRate),'.-','Color','r')
+%             hold off
+           
+            % bandpass function used to filter the time domain signal
+            
+            if(spi>1)
+                set(gca,'XTickLabel',{})
+            end
+            % indicate trial start
+%             line([0 0],ylim,'Color','g')
+%             if(OldMarkerFormat)
+%                 if(obj.data.markers(n,2)==Args.RewardMarker)
+%                     % indicate correct trial
+%                     line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+%                 else
+%                     % indicate incorrect trial
+%                     line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+%                 end
+%             else
+%                 % indicate cue offset
+%                 line(repmat((obj.data.analogTime(tIdx(2))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','m')
+%                 if( (obj.data.markers(n,3)==Args.RewardMarker) || (floor(obj.data.markers(n,3)/10)==Args.RewardMarker) )
+%                     % indicate correct trial
+%                     line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','b')
+%                 else
+%                     % indicate incorrect trial
+%                     line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
+%                 end
+%             end
+        end
+        
+    % =====================================================================    
+    else
 		data = obj.data.analogData(idx,:);
         drows = size(data,2);
 		if(~isempty(Args.RemoveLineNoise))
@@ -312,7 +385,9 @@ if(~isempty(Args.NumericArguments))
 				xlim(Args.TimeWindow)
 			end
 		end
-	end
+    end
+
+% ========================================================================    
 else
 	% plot all data
 	if(Args.FreqPlot)
