@@ -9,7 +9,7 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
             'FreqPlot',0, 'RemoveLineNoise',[], 'LogPlot',0, ...
 		    'FreqLims',[], 'TFfft',0, 'TFfftWindow',200, 'TFfftOverlap',150, ...
 		    'TFfftPoints',256, 'TFfftStart',500,'TFfftFreq',150,...
-		    'TFWavelets',0,  ...
+		    'TFWavelets',0, 'TimeWindow', [],  ...
             'Filter',0,'OverlapLFP',0,'FilterWindow',[],'CorrCoeff',0,   ...
 		    'ReturnVars',{''}, 'ArgsOnly',0);
 Args.flags = {'LabelsOff','ArgsOnly','NormalizeTrial','FreqPlot','TFfft', ...
@@ -21,6 +21,17 @@ if Args.ArgsOnly
     Args = rmfield (Args, 'ArgsOnly');
     varargout{1} = {'Args',Args};
     return;
+end
+
+% analogTime needs to be in double-precision in order to avoid rounding
+% error, but we don't really want to save it on disk as it takes up too
+% much space and makes loading the object slower. So we will create it the
+% first time we need it
+% check if the field analogTime exists OR if the analogTime field exists
+% and is not a double precision variable
+% we will create the variable here.
+if( ~isfield(obj.data,'analogTime') || ~isa(obj.data.analogTime,'double') )
+	obj.data.analogTime = (0:(obj.data.analogInfo.NumberSamples-1))' ./ obj.data.analogInfo.SampleRate;
 end
 
 if(~isempty(Args.NumericArguments))
@@ -129,7 +140,7 @@ if(~isempty(Args.NumericArguments))
             surf(spec.T,spec.F,spec.Pnorm,'EdgeColor','none');
             axis xy; axis([-Args.TFfftStart/1000 inf 0 Args.TFfftFreq]); colormap(jet); view(0,90); caxis([-10 10]);
             set(gca,'FontSize',6); xticks(-Args.TFfftStart/1000:0.5:spec.T(end)); yticks(0:10:Args.TFfftFreq);
-            title(strcat("Normalised Spectrogram of Trial:",string(n)),'FontSize',10);
+            title(strcat('Normalised Spectrogram of Trial:',string(n)),'FontSize',10);
             colorbar;
             
             % Plot lines to mark the cue presentation period
@@ -203,7 +214,7 @@ if(~isempty(Args.NumericArguments))
                 'XDisplayLabels',(round(spec.F)),'YDisplayLabels',(flipud(round(spec.F))),...
                 'XLabel','Frequency (Hz)','YLabel','Frequency (Hz)','FontSize',6,...
                 'Colormap', jet,'ColorLimits',[-0.2,0.7],'ColorbarVisible','on',...
-                'Title',strcat("Correlation coefficients of Trial:",string(n)));
+                'Title',strcat('Correlation coefficients of Trial:',string(n)));
             
 	% =====================================================================
     elseif(Args.TFWavelets)
@@ -344,7 +355,7 @@ if(~isempty(Args.NumericArguments))
 		for spi = 1:drows
 			% do subplot if there are multiple rows of data
 			subplot('Position',axesPositions(spi,:));
-			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'.-')
+			plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1)) )*1000,data(:,spi),'-')
             if(spi>1)
                 set(gca,'XTickLabel',{})
             end
@@ -368,6 +379,10 @@ if(~isempty(Args.NumericArguments))
 					% indicate incorrect trial
 					line(repmat((obj.data.analogTime(idx(end))-obj.data.analogTime(tIdx(1)))*1000,2,1),ylim,'Color','r')
 				end
+			end
+			
+			if(~isempty(Args.TimeWindow))
+				xlim(Args.TimeWindow)
 			end
 		end
     end

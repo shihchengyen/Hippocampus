@@ -1,0 +1,14 @@
+universe     = vanilla
+Executable   = /Users/shihcheng/cbin/run_resave2.sh
+Arguments    = "/Applications/MATLAB_R2016b.app"
+Log          = /Users/shihcheng/condor/distro.$(Cluster).$(Process).log
+Output       = /Users/shihcheng/condor/distro.$(Cluster).$(Process).out
+Error        = /Users/shihcheng/condor/distro.$(Cluster).$(Process).err
+should_transfer_files = IF_NEEDED
+when_to_transfer_output = ON_EXIT
+transfer_executable = False
+stream_error = True
+stream_output = True
+request_memory = 4 GB
+
+Queue 1

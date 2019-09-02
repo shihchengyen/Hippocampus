@@ -33,12 +33,16 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ChannelFile','hmmsort.mat', ...
 				'HPC',0, 'HPCInputFilename','vpData.mat', ...
 				'HPCCmd','condor_submit placeselect_submit.txt', ...
-				'MaxTimeDiff',0.002, 'MinTrials',5, 'GridSteps',5);
-Args.flags = {'Auto','ArgsOnly','HPC'};
+				'MaxTimeDiff',0.002, 'MinTrials',5, 'GridSteps',5, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
+                'FRSIC',0, 'UseAllTrials',0, 'UseMedian',0, ...
+                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',0);
+Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'MaxTimeDiff','MinTrials','GridSteps'};                            
+Args.DataCheckArgs = {'MaxTimeDiff','MinTrials','GridSteps','ShuffleLimits', ...
+	'NumShuffles','UseAllTrials'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -78,7 +82,7 @@ if(~isempty(dir(Args.RequiredFile)))
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
 	% load spike train file
-	spiketrain = load(Args.RequiredFile)
+	spiketrain = load(Args.RequiredFile);
 	% save(Args.HPCInputFilename,'Args','um','rp','varargin');
 
 	if(Args.HPC)
@@ -94,7 +98,8 @@ if(~isempty(dir(Args.RequiredFile)))
 	else
 		% run in Matlab
 		% data = placeselect(pwd);
-		data = placeselect(um,rp,spiketrain,Args);
+% 		data = placeselect(um,rp,spiketrain,Args);
+        data = placeselect_shuffle(um,rp,spiketrain,Args);
 	end
 
 	% create nptdata so we can inherit from it    
@@ -124,9 +129,11 @@ elseif(~isempty(dir(Args.ChannelFile)))
         spikeIdx = find(l.mlseq(si,:) == wfmidx); 
 		spiketrain.timestamps = spikeIdx/rp.data.SampleRate; % get peak times
 		spiketrain.spikeForm = l.spikeForms(si,:);
-		tdata = placeselect(um,rp,spiketrain,Args);
+% 		tdata = placeselect(um,rp,spiketrain,Args);
+        tdata = placeselect_shuffle(um,rp,spiketrain,Args);
 		data.meanFRs(:,si) = tdata.meanFRs;
 		data.semFRs(:,si) = tdata.semFRs;
+        data.SIC(si) = tdata.SIC;
 	end
 	
 	data.numSets = ncells;
@@ -146,6 +153,8 @@ data.numSets = 0;
 data.gridSteps = [];
 data.meanFRs = [];
 data.semFRs = [];
+data.SIC = [];
+data.SICsh = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;

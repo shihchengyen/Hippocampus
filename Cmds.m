@@ -3,14 +3,35 @@
 % rplraw and rplparallel objects. We will skip the LFP files
 % as we will perform our own low-pass filtering on the raw data
 ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+% If the HPC is out of space, we may want to split the Ripple file, and
+% create the highpass and lfp files, but skip the spike sorting
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','SkipSort','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+% split the files locally before sending them back to the Synology
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','SkipSort')
+% If we have to split some of the channels because rplsplit died halfway
+% through, we can use the Channels argument
+rs = rplsplit('auto','SaveLevels',3,'SkipParallel','SkipLFP','SkipSort','SkipAnalog','Channels',27)
+% For longer sessions, splitting the file might take longer 
+% than the 24 hour limit on the HPC, so we can
+% split by arrays instead
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','Channels',1:32,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+% need to pause to make sure job starts before 
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','SkipParallel','SkipAnalog','Channels',33:64,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','SkipParallel','SkipAnalog','Channels',65:96,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
+ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'SkipLFP','SkipParallel','SkipAnalog','Channels',97:124,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
 % This will create the highpass and lfp files, but not run the spike
 % sorting. Useful when debugging noise
 ProcessLevel(rplsplit,'Levels','Day','Exclude',{'session01','session02','session03','session04','sessioneye'},'SaveLevels',3,'SkipLFP','SkipSort','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
 % This will generate frequency plots for highpass and lfp data
 ProcessLevel(nptdata,'Levels','Day','nptLevelCmd',{'Session','checkRecording'});
 % Generate unitymaze objects
-um = ProcessLevel(unitymaze,'Levels','Day','save');
+um = ProcessLevel(unitymaze,'Levels','Days','redo','Include',{'20180816','20180817','2018082','201809'});
 InspectGUI(um)
+figure
+for i = 1:9
+	plot(um,i)
+    saveas(gcf,['um' num2str(i) '.png'])
+end
 
 ProcessLevel(rplsplit,'Levels','Day','SaveLevels',3,'Test','SkipLFP','SkipRaw','SkipAnalog','SkipParallel','HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
 ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipSort','SkipLFP','SkipParallel','Channels',91:124,'HPCCmd','source ~/.bash_profile; condor_submit ~/cbin/rs_submit_file.txt')
@@ -42,7 +63,26 @@ ProcessLevel(rplsplit,'Levels','Session','SaveLevels',3,'SkipLFP')
 checkRecording
 
 % check spike sorting
+vs = ProcessLevel(viewsort,'Levels','Session');
 
+% You can plot the waveforms by channel:
+InspectGUI(vs)
+
+% You can also plot the waveforms by array:
+InspectGUI(vs,'Array')
+
+% To plot the waveforms by array using the GMR geometry, you can do:
+hd = ProcessLevel(hidata,'Levels','Session','FileName','hmmsort.mat');
+InspectGUI(hd,'Array','UseGMR','Objects',{'viewsort',{},{}})
+
+% You can plot waveforms, see highpass data and save spiketrains by channel:
+InspectGUI(vs,'Cmds','InspectGUI(vmhighpass(''auto''),''LoadSort''); pause; system(''source ~/.bash_profile; /opt/data2/anaconda2/bin/python ~/Dropbox/Work/Matlab/hmmsort/hmmsort/create_spiketrains.py'')')
+% Add vmplacecell plot into the above
+InspectGUI(vs,'Cmds','InspectGUI(vmhighpass(''auto''),''LoadSort''); vpc=vmplacecell(''auto'',''GridSteps'',10,''SaveLevels'',2,''MinTrials'',0);InspectGUI(vpc,''addObjs'',{vpc},''optArgs'',{{},{''Errorbar''}},''SP'',[2 1]); pause; system(''source ~/.bash_profile; /opt/data2/anaconda2/bin/python ~/Dropbox/Work/Matlab/hmmsort/hmmsort/create_spiketrains.py'')')
+
+% To create the viewsort object using saved spiketrains, then plot as before:
+vss = ProcessLevel(viewsort, 'Levels', 'Session', 'Saved')
+InspectGUI(vss,'Array')
 
 % This will use rplraw to first create rplhighpass, then use rplparallel
 % to create vmhighpass
@@ -188,3 +228,10 @@ InspectGUI(vp,'addObjs',{vp},'optArgs',{{'RemoveLineNoise',50}, ...
 	{'TFfft','RemoveLineNoise',50}},'SP',[2 1])
 % plot averaged time-frequency results
 InspectGUI(vp,'TFfft','RemoveLineNoise',50,'PlotAllData')
+
+[nptThesisCells,vpc20] = ProcessDirs(nptThesisCells,'Object','vmplacecell','save','redo','GridSteps',20);
+ProcessDirs(nptThesisSessions,'Object','unitymaze','redo','save','GridSteps',10)
+[nptThesisCells,vpc10] = ProcessDirs(nptThesisCells,'Object','vmplacecell','save','redo','GridSteps',10);
+ProcessDirs(nptThesisSessions,'Object','unitymaze','redo','save','GridSteps',5)
+[nptThesisCells,vpc5] = ProcessDirs(nptThesisCells,'Object','vmplacecell','save','redo','GridSteps',5);
+

@@ -47,6 +47,7 @@ else
 		r.data.sumActualRoute = concat(p.data.sumActualRoute,q.data.sumActualRoute);
 		r.data.perf = [p.data.perf; q.data.perf];
 		r.data.processTrials = [p.data.processTrials; q.data.processTrials];
+		% r.data.unityTime = concat(p.data,unityTime,q.data.unityTime,'Columnwise');
 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
 			+ q.data.setIndex(2:end))];
 			

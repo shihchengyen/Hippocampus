@@ -15,7 +15,8 @@ function [obj, varargout] = unitymaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', 'FileLineOfffset',15, 'DirName','RawData*', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
-				'TriggerVal3',30, 'GridSteps',5);
+				'TriggerVal3',30, 'GridSteps',5, 'MaxTimeDiff',0.002, ...
+                'MinObs',5);
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {'GridSteps'};
@@ -62,7 +63,13 @@ end
 function obj = createObject(Args,varargin)
 
 % move to correct directory
-[pdir,cwd] = getDataOrder(Args.ObjectLevel,'relative','CDNow');
+[pdir,cwd] = getDataOrder('Session','relative','CDNow');
+
+% need to correct timestamps by comparing to the marker timestamps
+% in rplparallel
+rp = rplparallel('auto',varargin{:});
+% compute trial durations from the timestamps in rplparallel
+rplTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
 
 % look for session_1_*.txt in RawData_T*
 rd = dir(Args.DirName);
@@ -86,6 +93,11 @@ if(~isempty(rd))
 	        unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
 	    end
+	    
+		% move back to session directory from RawData directory to make
+		% the object is created and saved in the correct directory
+		cd ..
+
         % in case of an aborted session we might have to toss out the markers in the last
         % trial. So check the number of rows in each column before creating an array
 		% with the smallest number of rows, which means we throw out the incomplete
@@ -113,15 +125,16 @@ if(~isempty(rd))
 		unityTriggers(:,3) = uT3;
 		totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
 
+		% default grid is 5 x 5 but can be changed 
+		gridSteps = Args.GridSteps;
 		% these should be read from the unity file
-		gridSteps = Args.GridSteps; % 5 x 5 grid resolution
         gridBins = gridSteps * gridSteps;
 		overallGridSize = 25;
 		oGS2 = overallGridSize/2;
 		gridSize = overallGridSize/gridSteps;
 		horGridBound = -oGS2:gridSize:oGS2;
 		vertGridBound = horGridBound;
-		% need to add one more bin to the end as histcounts counts by doing: edges(k) ≤ X(i) < edges(k+1)
+		% need to add one more bin to the end as histcounts counts by doing: edges(k) ? X(i) < edges(k+1)
 		gpEdges = 1:(gridBins+1);
 
 		% get gridpositions
@@ -129,7 +142,7 @@ if(~isempty(rd))
 
 		% compute grid position number
 		gridPosition = binH + ((binV - 1) * gridSteps);
-
+		
 		% create memory for arrays
 		gpDurations = zeros(gridBins,totTrials);
 		% add 1 to have the correct number of rows because of the subtraction
@@ -181,6 +194,47 @@ if(~isempty(rd))
 		z4Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
 
 		trialCounter = 0; % set up trial counter
+        % initialize index for setting non-navigating gridPositions to 0
+        gpreseti = 1;
+
+		% create memory for array for histogram time bins, grid position,
+		% and interval
+		sessionTime = zeros(size(gridPosition,1),3);	
+		% sessionTime will have the start and end timestamps of each trial
+		% along with when the grid position changed in the 1st column and 
+		% the grid positions in the 2nd column. The 3rd column will be
+		% filled in later with the interval between successive timestamps
+		% in the 1st column. 
+		% e.g.
+		% 0			0
+		% 7.9724	181
+		% 8.1395	221
+		% ...
+		% 10.6116	826
+		% 10.7876	0
+		% 13.8438	826
+		% ...
+		% 22.7543	693
+		% 23.5624	0
+		% 27.2817	0
+		% 36.2458	0
+		% 39.4584	701
+		% The 1st trial started at 7.9724 s, with the animal at grid position
+		% 181. The animal then moved to position 221 at 8.1395 s. Near
+		% the end of the trial, the animal moved to position 826 at 10.6116 s,
+		% and stayed there until the end of the 1st trial at 10.7876 s, which 
+		% was marked by a 0 in the 2nd column. The 2nd trial started at 
+		% 13.8438 s at position 826, and ended at 23.5624 s at position 693.
+		% The next 2 lines illustrates what happens if the mismatch in the 
+		% duration between Unity and Ripple is too large. The start of the
+		% trial at 27.2817 s is marked with position 0, and is immediately
+		% followed by the end of the trial at 36.2458 s, marked as before
+		% with a 0 in the 2nd column.
+		% 
+		% start the array with 0 to make sure any spike times before the 
+		% first trigger	are captured 
+		% increment the index for sessionTime
+		sTi = 2;
 
 		for a = 1:totTrials
 			trialCounter = trialCounter + 1;
@@ -256,20 +310,77 @@ if(~isempty(rd))
 		        clear mpath pathdiff 
 		    end % if sumCost(a,3) <= 0,
 
+			% check how much of a discrepancy there is between Unity and Ripple
 	        % get indices for this trial
 	        % unityTriggers(a,2) will be the index where the 2nd marker was found
 	        % and the time recorded on that line should be time since the last update
 	        % so we really want the time for the next update instead
 			uDidx = (unityTriggers(a,2)+1):unityTriggers(a,3);
+			% get number of frames in this trial
+			numUnityFrames = size(uDidx,2);
 			
 			% get cumulative time from cue offset to end of trial for this specific trial
 			% this will make it easier to correlate to spike times
 			% add zero so that the edges for histcount will include 0 at the beginning
-			unityTrialTime(1:(size(uDidx,2)+1),a) = [0; cumsum(unityData(uDidx,2))]; 
+			% get indices for this trial
+			tindices = 1:(numUnityFrames+1);
+			tempTrialTime = [0; cumsum(unityData(uDidx,2))]; 
+			% unityTrialTime(tindices,a) = [0; cumsum(unityData(uDidx,2))]; 
+			
+			% get Unity end time for this trial
+			uet = tempTrialTime(end);
+			% get Ripple end time for this trial
+			ret = rplTrialDur(a);
+			% compute the difference
+			tdiff = uet - ret;
 	
 			% get grid positions for this trial
 			tgp = gridPosition(uDidx);
 	
+			% get the starting Ripple timestamp
+			tstart = rp.data.timeStamps(a,2);
+			tend = rp.data.timeStamps(a,3);
+			
+			% compare trial durations
+			% if the difference is acceptable, we will add the timestamps
+			% to the histogram bin limits. Otherwise, we will skip to the
+			% end of the trial
+			if(abs(tdiff) < Args.MaxTimeDiff)
+				sessionTime(sTi,:) = [tstart tgp(1) 0];
+				sTi = sTi + 1;
+				% shift the Unity timestamps to match the Ripple timestamps
+				% by distributing the difference over all the frames
+				unityTrialTime(tindices,a) = tempTrialTime - [0; cumsum(repmat(tdiff/numUnityFrames,numUnityFrames,1))];
+
+				% find the timepoints where grid positions changed
+				gpc = find(diff(tgp)~=0);
+				ngpc = size(gpc,1);
+			
+				% add the Unity frame intervals to the starting timestamp to
+				% create corrected version of unityTime, which will also be the
+				% bin limits for the histogram function call
+				sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
+				sTi = sTi + ngpc;
+				
+				% occasionally we will get a change in grid position in the frame interval
+				% when we get the end of trial message. In that case, we will get an entry
+				% in sessionTime that is the time of the end of the trial. Since the end
+				% of the trial is added later, and because this will be a very brief visit
+				% to the new position, we are going to remove it.
+				if( (~isempty(gpc)) && (gpc(end) == (numUnityFrames-1)) )
+					sTi = sTi - 1;
+				end
+			else
+				unityTrialTime(tindices,a) = tempTrialTime;
+				% leave the 2nd column as 0 to indicate this was a skipped trial
+				sessionTime(sTi,1) = tstart;
+				sTi = sTi + 1;			
+			end			
+				
+			% add an entry for the end of the trial
+			sessionTime(sTi,1:2) = [tend 0];
+			sTi = sTi + 1;
+
 			% get unique positions
 			utgp = unique(tgp);
 	
@@ -278,7 +389,13 @@ if(~isempty(rd))
 				% find indices that have this grid position
 				utgpidx = find(tgp==tempgp);
 				gpDurations(tempgp,a) = sum(unityData(utgpidx,2));
-			end  % for pidx = 1:size(utgp,1)
+			end  %                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             for pidx = 1:size(utgp,1)
+			
+			% set gridPositions when not navigating to 0
+			% subtract 1 from uDidx(1) as we set the start of uDidx to 1
+			% row after unityTrigger(a,2)
+			gridPosition(gpreseti:(uDidx(1)-1)) = 0;
+            gpreseti = unityTriggers(a,3)+1;
 		end % for a = 1:totTrials
 
 		% Calculate performance
@@ -289,6 +406,56 @@ if(~isempty(rd))
 		disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
 		processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
 
+		% get number of rows in sessionTime
+		snum = sTi - 1;
+		% reduce memory for sessionTime
+		sTime = sessionTime(1:snum,:);
+		% fill in 3rd column with time interval so it will be easier to compute
+		% firing rate
+		sTime(1:(snum-1),3) = diff(sTime(:,1));
+		% sort the 2nd column so we can extract the firing rates by position
+		[sTP,sTPi] = sort(sTime(:,2));
+		% find the number of observations per position by looking for 
+		% the indices when position changes. The first change should be from
+		% position 0 to 1st non-zero position. Add 1 to adjust for the change
+		% in index when using diff. These will be the starting indices for 
+		% the unique positions not including 0.
+		sTPsi = find(diff(sTP)~=0) + 1;
+		sTPin = diff(sTPsi);
+		% find the ending indices by subtracting 1 from sTPsi, and adding
+		% snum at the end
+		sTPind = [sTPsi [ [sTPsi(2:end)-1]; snum]];
+		% find positions (excluding 0) with more than MinReps observations
+        sTPinm = find(sTPin>(Args.MinObs-1));
+        % create temporary variable that will be used for calculations below
+        % this is not a variable that we will save
+        sTPsi2 = sTPsi(sTPinm);
+        % save the number of observations for the positions that exceed the
+        % minimum number of observations
+        sTPin2 = sTPin(sTPinm);
+        % save the position numbers
+		sTPu = sTP(sTPsi2);
+		% find number of positions
+		nsTPu = size(sTPu,1);	
+		% save the subset of starting and ending indices for sTime
+		sTPind2 = sTPind(sTPinm,:);
+		% compute occupancy proportion
+		ou_i = zeros(nsTPu,1);
+		for pi = 1:nsTPu
+			ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
+		end
+		
+		% sTime snum x 3
+		% sTP sortedSTPosition snum x 1
+		% sTPi stIndexSortedByPosition index into sTime snum x 1
+		% sTPsi stIndexPositionStart nsTPu x 1
+		% sTPind stStartEndIndices4Position index into sTPi nsTPu x 2
+		% sTPin stNumObs4Position nsTPu x 1
+		% sTPinm stMinNumObs4Position index into sTPind nsTPum x 1 
+		% sTPu stUniquePositions nsTPum x 1
+		% nsTPu stNumUniquePositions 
+		% nsTPind2 stStartEndIndicesMinObs index into sTPi nsTPum x 2
+		
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
 		data.oGS2 = oGS2;
@@ -307,9 +474,20 @@ if(~isempty(rd))
 		data.gridPosition = gridPosition;
 		data.gpDurations = gpDurations;
 		data.unityTrialTime = unityTrialTime;
-		data.setIndex = [1; totTrials];
-		% move back to session directory from RawData directory
-		cd ..
+		data.setIndex = [0; totTrials];
+        % compute cumulative sum of unity time to make it easy for
+        % placeselect.m to compute histograms for shuffled data
+        % add a zero at the beginning to avoid spike from being missed
+        data.unityTime = [0; cumsum(unityData(:,2))];
+        data.sessionTime = sTime;
+        data.sTPi = sTPi;
+        data.sTPind = sTPind2;
+        data.sTPin = sTPin2;
+        % data.sTPinm = sTPinm;
+        data.sTPu = sTPu;
+        data.nsTPu = nsTPu;
+        data.ou_i = ou_i;
+        data.P_i = ou_i / sum(ou_i);
 
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
@@ -318,6 +496,8 @@ if(~isempty(rd))
 		obj = class(d,Args.classname,n);
 		saveObject(obj,'ArgsC',Args);
 	else % if(dnum>0)
+		% move back to session directory from RawData directory
+		cd ..
 		% create empty object
 		obj = createEmptyObject(Args);
 	end % if(dnum>0)
@@ -356,6 +536,7 @@ data.gridPosition = [];
 data.gpDurations = [];
 data.unityTrialTime = [];
 data.setIndex = [];
+data.unityTime = [];
 
 % create nptdata so we can inherit from it
 data.Args = Args;

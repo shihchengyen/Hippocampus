@@ -12,8 +12,8 @@ function [obj, varargout] = rplparallel(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'Channel',1, ...
-				'StartMarker',1, 'Data',[], 'ObjectLevel','Session');
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+				'Data',[], 'ObjectLevel','Session');
 Args.flags = {'Auto','ArgsOnly'};
 % The arguments which can be neglected during arguments checking
 Args.DataCheckArgs = {};                            
@@ -62,8 +62,12 @@ if(~isempty(Args.Data))
 	data = Args.Data;
 	% call function to figure out the data indices for different trials,
 	% which will create the markers, timeStamps, and trialIndices fields
-	data = arrangeMarkers(data);
-	data.numSets = 1;		
+    try 
+        data = arrangeMarkers(data);
+    catch
+        fprintf('Problem with ArrangeMarkers\n');
+    end
+    data.numSets = 1;		
 	% create nptdata so we can inherit from it    
     data.Args = Args;
 	n = nptdata(data.numSets,0,pwd);

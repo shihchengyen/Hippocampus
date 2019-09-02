@@ -12,12 +12,20 @@ if(~Args.SkipSplit)
     % open the file, and read the information
     [ns_status, hFile] = ns_OpenFile(rawfname);
     [ns_RESULT, nsFileInfo] = ns_GetFileInfo(hFile);
-    % get number of EntityCount
-    nec = nsFileInfo.EntityCount;
+    % run through only the specifc channel, only printing segment files
+    if ~isempty(Args.Channels)
+        ns_entity_table = struct2table(hFile.Entity);
+        nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels));
+%         nec = find(ismember(ns_entity_table.ElectrodeID,Args.Channels) & ...
+%             strcmp(ns_entity_table.EntityType,'Analog'));
+    else
+        % get number of EntityCount
+        nec = 1:nsFileInfo.EntityCount;
+    end
     % go through and create the appropriate subdirectory for entity
-    for ni = 1:nec
+    for ni = 1:length(nec)
         % get info on the type of entity
-        [ns_status, nsEI] = ns_GetEntityInfo(hFile, ni);
+        [ns_status, nsEI] = ns_GetEntityInfo(hFile, nec(ni));
         numSamples = nsEI.ItemCount;
         switch(nsEI.EntityType)
             case 1
@@ -28,7 +36,7 @@ if(~Args.SkipSplit)
                     tData.markers = NaN(1, numSamples);
                     tData.timeStamps = NaN(1, numSamples);
                     for i = 1:numSamples
-                        [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, ni, i);
+                        [~, tData.timeStamps(i), tData.markers(i)] = ns_GetEventData(hFile, nec(ni), i);
                     end
                     % add sampling rate information
                     for hfi = 1:size(hFile.FileInfo,2)
@@ -52,8 +60,8 @@ if(~Args.SkipSplit)
                     if(~Args.SkipAnalog)
                         chan_num = sscanf(eLabel,'analog %d');
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         % convert to single precision float to save disk space and make
                         % file loading faster
                         tData.analogData = single(analogData);
@@ -93,8 +101,8 @@ if(~Args.SkipSplit)
                     if( (b_raw * ~Args.SkipRaw) | (b_lfp * ~Args.SkipLFP) )
                         % entity is raw data, so create a channel directory
                         % read data
-                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, ni);
-                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, ni, 1, numSamples);
+                        [ns_RESULT, tData.analogInfo] = ns_GetAnalogInfo(hFile, nec(ni));
+                        [ns_RESULT, ~, analogData] = ns_GetAnalogData(hFile, nec(ni), 1, numSamples);
                         % convert to single precision float to save disk space and make
                         % file loading faster
                         tData.analogData = single(analogData);
@@ -122,11 +130,14 @@ if(~Args.SkipSplit)
                             rpllfp('auto','Data',tData,'save',varargin{:});
                         end
                         
-                        if ~Args.UseHPC
-                            submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
+                        if(~Args.SkipSort)
+							if ~Args.UseHPC
+								submitSort('HPC','SkipMarker') % do scp to transfer the files to HPC
+							end					
+	                        submitJob(Args); % submit job onto PBS queue
+                        elseif (~Args.SkipOSort)
+                            submitJob(Args);
                         end
-                        
-                        submitJob(Args); % submit job onto PBS queue
                         
                         cd(cwd);
                         clear tData
@@ -144,13 +155,26 @@ end
 
 function [] = submitJob(Args)
 if ~Args.UseHPC % swap between the HPC and HTCondor
-    cmdPath = ['condor_submit ',fullfile('~','cbin')];
-    cmdScript = '';
+    display('htcondor')
+    if (~Args.SkipSort)
+        cmdPath = ['condor_submit ',fullfile('~','cbin')];
+        cmdScript = '';
+        disp('Launching HTCondor for hmmsort...')
+        cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+    elseif(~Args.SkipOSort)
+        cmdPath = ['condor_submit ',fullfile('$GITHUB_MATLAB','osort-v4-rel')];
+        disp('Launching HTCondor for OSort...')
+        cmdSubmit = [cmdPath, filesep, 'runosort_submit_file.txt'];
+    end
 else
-    cmdPath = ['qsub ',fullfile('$GITHUB_MATLAB','Hippocampus','Compiler','hplfp')];
-    cmdScript = 'HPC';
+    display('HPC')
+    if (~Args.SkipSort || ~Args.SkipOSort)
+        cmdPath = ['qsub ',fullfile('$GITHUB_MATLAB','Hippocampus','Compiler','hplfp')];
+        cmdScript = 'HPC';
+        disp('Launching eyehplfp scripts...')
+        cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+    end
 end
-disp('Launching eyehplfp scripts...')
-cmdSubmit = [cmdPath, filesep, 'eyehplfp', cmdScript, '_submit_file.txt'];
+
 system(['source ',fullfile('~','.bash_profile'),'; source /etc/profile.d/rec_modules.sh; module load pbs; ', cmdSubmit]);
 end

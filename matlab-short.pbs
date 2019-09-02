@@ -1,0 +1,12 @@
+#!/bin/bash 
+  
+#PBS -P matlab
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=10GB 
+#PBS -j oe 
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+# matlab2016b2 -nojvm -nodisplay -nosplash -r "unitymaze('auto','redo','save','GridSteps',40)"
+
+matlab2016b2 -nojvm -nodisplay -nosplash -r "vmplacecell('auto','redo','save','GridSteps',40,'NumShuffles',10000,'UseAllTrials');"

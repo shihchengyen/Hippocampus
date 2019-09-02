@@ -1,0 +1,11 @@
+1. before using to submit, refer to 9b) in Hippocampus Code google docs to set up environment variables etc.
+
+2. copy entire folder to desktop
+
+3. change the path in auto.sh to user specific path
+
+4. change the path under 'transfer input files' for setPath.m to user specific path
+
+5. cd in to condor_shuffle folder and run: sh auto.sh to submit jobs after cell_list has been modified and Hippocampus has been mounted
+
+6. to clear the directories before re-running shuffles, run: sh clear.sh, which will clear directories specified in cell_list
