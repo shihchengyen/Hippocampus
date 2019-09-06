@@ -297,6 +297,7 @@ if sum(sum(spk))==0
     smoothedPos=pos;    smoothedPos(pos==0)=nan;
     smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
     smoothedRate=spk;   smoothedRate(pos==0)=nan;
+    radiiUsedList=nan(1,sum(sum(pos>0)));
     return
 end
 % Pre-assign output %
