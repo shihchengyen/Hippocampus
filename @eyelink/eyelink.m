@@ -168,11 +168,11 @@ if(dlsize>0)
             %%screen, i.e. the eye positions were outside the screen bounds
             x = (edfdata.FSAMPLE.gx(1,:))';
             x(x>Args.ScreenX)= NaN;
-            %x(x<=-1)= NaN;
+            x(x<0)= NaN;
             
             y = (edfdata.FSAMPLE.gy(1,:))';
             y(y>Args.ScreenY)= NaN;
-            %y(y<=-1)= NaN;
+            y(y<0)= NaN;
             
             eyePos = horzcat(x,y);
             
@@ -268,6 +268,29 @@ if(dlsize>0)
             timeouts = {edfdata.FEVENT(messageEvent(find(timeouts))).sttime}';
             timeouts = cell2mat (timeouts); %stores all the timeouts in the session
             
+            %% make a maxtrix with all the trial codes so that 
+            %%post processing knows what reward is used for the trial
+            messages = vertcat({edfdata.FEVENT(messageEvent).sttime},{edfdata.FEVENT(messageEvent).message})';
+            
+            messages = vertcat(messages, missingData(:, [2, 3]));
+            
+            messages = sortrows(messages, 1);
+            
+            messages = table2array(messages(:, 2));
+            
+            trigger_idx = contains(messages, 'Trigger');
+            
+            messages = messages(~trigger_idx); % trim out 'Trigger Version'
+            
+            if(contains(messages{end}, 'end', 'IgnoreCase', false))
+                messages = string(messages(1:end-1)); % trim out 'end'
+            end
+            
+            messages = reshape(messages, 3, []);
+            
+            messages = messages';
+            
+            %%
             %Store the index of the fixation adn saccade events in the edf file
             %into the vectors indexFix and indexSacc.
             events = {edfdata.FEVENT(:).codestring}';
@@ -311,6 +334,8 @@ if(dlsize>0)
             fix = fix(any(fix,2),:);
             sacc = sacc(any(sacc,2), :);
             
+            sessionStart = 0;
+            
             %This for loop splits the created matrices, which contain
             %timestamps from all sessions, into session objects.
             for idx=1:noOfSessions
@@ -322,6 +347,10 @@ if(dlsize>0)
                 u = l+2;
                 data.trial_timestamps = trialTimestamps(:, l:u); %contains all start, cue and and times for all the trials
                 data.trial_timestamps = data.trial_timestamps(any(data.trial_timestamps,2),:);
+                
+                data.trial_codes = messages(sessionStart+1:sessionStart+length(data.trial_timestamps), :);
+                
+                sessionStart = length(data.trial_timestamps);
                 
                 data.sacc_event = sacc;
                 data.fix_event = fix;
