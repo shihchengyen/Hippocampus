@@ -5,9 +5,9 @@ function mountain_batch(target)
         return;
     end
     
-    if ~exist('mountains', 'dir')
-        mkdir('mountains');
-    end
+%     if ~exist('mountains', 'dir')
+    mkdir('mountains');
+%     end
 
     full_cell = comb_channels_ms;
 
@@ -59,14 +59,16 @@ function mountain_channel(full_cell, index)
     cd(full_cell{index,1});
     start_indices = cell(2,full_cell{index,2});
     current = 1;
-    index = 1;
+    index1 = 1;
     mc_path = pwd;
     for i = 3:2+full_cell{index,2}
         cd(full_cell{index,i});
         cd(full_cell{index,1});
-        start_indices{1,index} = current;
+        disp('debugging clones!');
+        disp(pwd);
+        start_indices{1,index1} = current;
         cut = strsplit(full_cell{index,i}, '/');
-        start_indices{2,index} = cut{1,length(cut)-1};
+        start_indices{2,index1} = cut{1,length(cut)-1};
         if i == 3
             data = rplhighpass('auto');
             data = data.data.analogData';
@@ -75,7 +77,7 @@ function mountain_channel(full_cell, index)
             temp = temp.data.analogData';
             data = [data temp];
         end
-        index = index + 1;
+        index1 = index1 + 1;
         current = length(data) + 1;
     end
     
@@ -83,6 +85,10 @@ function mountain_channel(full_cell, index)
     save('start_times.mat','start_indices');
     mkdir('dataset');
     cd('dataset');
+    disp('debugging clones');
+    disp(max(data));
+    disp(min(data));
+    
     writemda(data, 'raw_data.mda', 'float32');
     unix('cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
     cd('..');
