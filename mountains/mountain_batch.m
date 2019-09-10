@@ -90,9 +90,9 @@ function mountain_channel(full_cell, index)
     disp(min(data));
     
     writemda(data, 'raw_data.mda', 'float32');
-    unix('cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
+    unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
     cd('..');
-    unix('cp $GITHUB_MATLAB/Hippocampus/mountains/sort.sh .');
+    unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/sort.sh .');
     unix('source ~/.bash_profile; conda activate mountainlab; sh sort.sh')
     
     disp('finished for this channel');
