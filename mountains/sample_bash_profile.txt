@@ -1,0 +1,21 @@
+export GITHUB_MATLAB=/Volumes/User/ngkianwei/Documents/Github
+export CONDOR_CONFIG=/usr/local/condor/current/etc/condor_config
+export MATLAB_PREFDIR=/Volumes/Drive1
+
+export PATH="/usr/local/condor/bin:/opt/data2/anaconda2/bin:$GITHUB_MATLAB/hmmscripts:$GITHUB_MATLAB/osort-v4-rel:$PATH"
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/opt/data2/runtimes/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/opt/data2/runtimes/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/opt/data2/runtimes/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/opt/data2/runtimes/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
