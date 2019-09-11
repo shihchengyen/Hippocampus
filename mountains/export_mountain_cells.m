@@ -1,6 +1,11 @@
-function export_mountain_cells()
+function export_mountain_cells(pruned)
 
-    original = readmda('prespiketrain.mda');
+    if ~exist('pruned','var')
+        original = readmda('prespiketrain.mda');
+    else
+        original = pruned;
+    end
+        
     cutting = load('start_times.mat');
     cutting = cutting.start_indices;
 
@@ -58,15 +63,17 @@ function split_into_cells_intra_session(channel, two_layer_chunk, start_ind)
     unix('rm -r cell*');
     
     for i = 1:length(unique_cells_here)
-        if unique_cells_here(i) < 10
-            cell_name = ['cell0', num2str(unique_cells_here(i))];
+        if i < 10
+            cell_name = ['cell0', num2str(i)];
         else
-            cell_name = ['cell', num2str(unique_cells_here(i))];
+            cell_name = ['cell', num2str(i)];
         end
         mkdir(cell_name);
         cd(cell_name);
         disp(pwd);
         strain.timestamps = time_chunk(assignment_layer==unique_cells_here(i));
+        strain.components = unique_cells_here(i);
+        strain.reference = 'from firings.curated2.mda';
         disp(length(strain.timestamps));
         save('spiketrain.mat', '-struct', 'strain');
         cd('..');    
