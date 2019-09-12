@@ -20,3 +20,7 @@ To prune and export into cells
 	cells will be generated in individual sessions
 	folder will be curated in mountains/channel___ with both pre and post pruned spikes
 
+To clear space (when error for running low on disk space)
+	cd into /tmp/mountainlab-tmp
+	run 'rm -r *'
+
