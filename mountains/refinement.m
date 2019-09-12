@@ -96,6 +96,9 @@ function [handles] = update_plot(hObject, eventdata, handles)
     handles.link_subset_to_full = link_subset_to_full;
     handles.possible_waves = possible_waves;
     handles.hit = zeros(1,size(handles.possible_waves,2));
+    disp(handles.view_index);
+    disp(handles.cell_list);
+    disp(handles.target);
     disp(size(handles.possible_waves));
     
     handles.line_handles = plot(handles.axes1, 1:150, handles.possible_waves', 'Color', [0 0 0], 'LineWidth', 0.25);
@@ -121,7 +124,7 @@ function [handles] = refresh_after_changes(hObject, eventdata, handles)
     handles.cell_list = NaN(1,100);
     handles.cell_list(1:length(unique_cells_here)) = unique_cells_here;
     
-    handles.view_index = 2;
+    handles.view_index = 1;
     handles.number_selected = 0;
     [handles] = update_plot(hObject, eventdata, handles);
 
