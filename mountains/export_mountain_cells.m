@@ -1,7 +1,7 @@
 function export_mountain_cells(pruned)
 
     if ~exist('pruned','var')
-        original = readmda('prespiketrain.mda');
+        original = readmda('firings.curated.mda');
     else
         original = pruned;
     end
