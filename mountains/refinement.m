@@ -30,8 +30,9 @@ function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
     handles.cell_count = length(unique_cells_here);
     handles.cell_list = NaN(1,100);
     handles.cell_list(1:length(unique_cells_here)) = unique_cells_here;
-    handles.full_data = NaN(152, length(rough(1,:)));
-    handles.full_data(1:2,:) = rough(2:3,:);
+    handles.full_data = NaN(153, length(rough(1,:)));
+    handles.full_data(1:2,:) = rough(2:3,:); % first row sample number for spike occurrence, second row current cluster number
+    handles.full_data(153,:) = handles.full_data(2,:); % last section to keep track of original grouping, for drawing over with dotted
     for col = 1:size(handles.full_data, 2)
         if handles.full_data(1,col)-74 < 1
             short = time_series(1:handles.full_data(1,col)+75);
@@ -155,22 +156,30 @@ function [handles] = update_plot(hObject, eventdata, handles)
     handles.target = handles.cell_list(handles.view_index);
     link_subset_to_full = NaN(1,size(handles.full_data,2));
     possible_waves = NaN(150,size(handles.full_data,2));
+    negative_waves = NaN(150,size(handles.full_data,2));
+    neg_index = 1;
     temp_index = 1;
     for col = 1:size(handles.full_data,2)
         if handles.full_data(2,col) == handles.target
             possible_waves(:,temp_index) = handles.full_data(3:152,col);
             link_subset_to_full(1,temp_index) = col;
             temp_index = temp_index + 1;
+        elseif handles.full_data(153,col) == handles.target 
+            negative_waves(:,neg_index) = handles.full_data(3:152,col);
+            neg_index = neg_index + 1;
         end
     end
     link_subset_to_full = link_subset_to_full(1:temp_index-1);
     possible_waves = possible_waves(:,1:temp_index-1);
+    negative_waves = negative_waves(:,1:neg_index-1);
+       
     cla(handles.axes1, 'reset');
     set(handles.cluster_id, 'String', 'Current Cluster ID');
     set(handles.selection_count, 'String', 'Count');
     
     handles.link_subset_to_full = link_subset_to_full;
     handles.possible_waves = possible_waves;
+    handles.negative_waves = negative_waves;
     handles.hit = zeros(1,size(handles.possible_waves,2));
     disp(handles.view_index);
     disp(handles.target);
@@ -212,6 +221,13 @@ function [handles] = update_plot(hObject, eventdata, handles)
         handles.line_handles = plot(handles.axes1, 1:150, handles.possible_waves', 'Color', [0 0 0], 'LineWidth', 0.25);
     end
     
+    if neg_index > 1
+        hold(handles.axes1, 'on');
+%         handles.neg_handles = plot(handles.axes1, 1:150, handles.negative_waves', 'Color', [1 1 1], 'LineWidth', 1);
+        handles.neg_handles2 = plot(handles.axes1, 1:150, handles.negative_waves', 'Marker', 'x', 'MarkerFaceColor', 'red', 'MarkerSize', 12, 'Color', [1 0 0], 'LineWidth', 1, 'LineStyle', 'none');
+        hold(handles.axes1, 'off');
+    end
+    
     found_for_range = 0;
     for i = 1:length(handles.initial_large_clusters(:,1))
         if handles.initial_large_clusters(i,1) == handles.target
@@ -225,6 +241,8 @@ function [handles] = update_plot(hObject, eventdata, handles)
     end
     xlim(handles.axes1, [1 150]);  
     set(handles.axes1, 'Color', 'None');
+    
+
     
     set(handles.cluster_id, 'String', strcat('Cluster ID: ',num2str(handles.target)));
     set(handles.selection_count, 'String', strcat('0/', num2str(size(handles.possible_waves, 2))));
@@ -347,16 +365,28 @@ function [handles] = pb7_Callback(hObject, eventdata, handles)
         delete(handles.extra_lines);
     end
     
-    for col = 1:size(handles.possible_waves,2)
-        for points = 1:size(handles.possible_waves,1)
+%     for col = 1:size(handles.possible_waves,2)
+%         for points = 1:size(handles.possible_waves,1)
+%             if (min(y) < handles.possible_waves(points,col)) && (handles.possible_waves(points,col) < max(y))
+%                 if (min(x) < points) && (points < max(x))
+%                     handles.hit(1,col) = 1;
+%                     break;
+%                 end
+%             end
+%         end
+%     end 
+
+
+    for col = 1:size(handles.possible_waves,2) % optimized version here, minimize rectangle width for faster searching
+        for points = round(min(x)):round(max(x))
             if (min(y) < handles.possible_waves(points,col)) && (handles.possible_waves(points,col) < max(y))
-                if (min(x) < points) && (points < max(x))
                     handles.hit(1,col) = 1;
                     break;
-                end
             end
         end
     end
+
+
     [~, coli] = find(handles.hit);
     redraw = handles.possible_waves(:,coli);      
     
