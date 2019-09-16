@@ -24,6 +24,11 @@ end
 function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
 
     rough = readmda('firings.curated.mda');
+    if length(rough) == 0
+        disp('no preliminary cells marked out for refinement, exiting.');
+        figure1_CloseRequestFcn(hObject, eventdata, handles);
+        return;
+    end
     time_series = readmda('dataset/raw_data.mda');
 
     unique_cells_here = unique(rough(3,:));
@@ -147,8 +152,11 @@ function varargout = refinement_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
-varargout{1} = handles.output;
-
+try
+    varargout{1} = handles.output;
+catch
+    disp('done.');
+end
 
 function [handles] = update_plot(hObject, eventdata, handles)
 
