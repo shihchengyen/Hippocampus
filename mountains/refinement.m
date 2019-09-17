@@ -23,6 +23,7 @@ end
 % --- Executes just before refinement is made visible.
 function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
 
+    handles.waiting_for_inputs = 0;
     rough = readmda('firings.curated.mda');
     if length(rough) == 0
         disp('no preliminary cells marked out for refinement, exiting.');
@@ -87,30 +88,24 @@ function [handles] = update_plot(hObject, eventdata, handles)
     handles.target = handles.cell_list(handles.view_index);
     link_subset_to_full = NaN(1,size(handles.full_data,2));
     possible_waves = NaN(150,size(handles.full_data,2));
-    negative_waves = NaN(150,size(handles.full_data,2));
-    neg_index = 1;
+
     temp_index = 1;
     for col = 1:size(handles.full_data,2)
         if handles.full_data(2,col) == handles.target
             possible_waves(:,temp_index) = handles.full_data(3:152,col);
             link_subset_to_full(1,temp_index) = col;
             temp_index = temp_index + 1;
-        elseif handles.full_data(153,col) == handles.target 
-            negative_waves(:,neg_index) = handles.full_data(3:152,col);
-            neg_index = neg_index + 1;
         end
     end
     link_subset_to_full = link_subset_to_full(1:temp_index-1);
     possible_waves = possible_waves(:,1:temp_index-1);
-    negative_waves = negative_waves(:,1:neg_index-1);
        
-    cla(handles.axes1, 'reset');
     set(handles.cluster_id, 'String', 'Current Cluster ID');
     set(handles.selection_count, 'String', 'Count');
     
     handles.link_subset_to_full = link_subset_to_full;
     handles.possible_waves = possible_waves;
-    handles.negative_waves = negative_waves;
+    
     handles.hit = zeros(1,size(handles.possible_waves,2));
     disp(handles.view_index);
     disp(handles.target);
@@ -118,45 +113,19 @@ function [handles] = update_plot(hObject, eventdata, handles)
         disp(size(handles.possible_waves));
         cla(handles.axes1, 'reset');
         
-        vals = handles.possible_waves;
-        vals(151,:) = NaN;
+        vals = NaN(151, size(handles.possible_waves, 2));
+        vals(1:150,:) = handles.possible_waves;
         ts = ([1:150 150])'*ones(1,length(handles.possible_waves(1,:)));
         
-        base = gcf;
-        f = figure('visible','off');
-        ax1 = axes('Parent', f); 
-        
-        plot(ts(:), vals(:), 'Color', [0 0 0], 'LineWidth', 0.25);
-    
-                    outerpos = ax1.OuterPosition;
-                    ti = ax1.TightInset; 
-                    left = outerpos(1) + ti(1);
-                    bottom = outerpos(2) + ti(2);
-                    ax_width = outerpos(3) - ti(1) - ti(3);
-                    ax_height = outerpos(4) - ti(2) - ti(4);
-                    ax1.Position = [left bottom ax_width ax_height];
-
-                set(ax1,'XTickLabel',[], 'YTickLabel', []);
-                set(ax1, 'Color', 'None');                    
-                
-                set(ax1, 'XLimSpec', 'Tight');
-                set(ax1, 'YLimSpec', 'Tight'); 
-                export_fig('tmp.png', '-transparent', '-png');
-                cla(ax1, 'reset');
-        figure(base);
-        
-                [png1, png2, png3] = imread('tmp.png');
-                            image(handles.axes2, png1, 'AlphaData', png3);
-            set(handles.axes2,'XTickLabel',[], 'YTickLabel', []);            
-            set(handles.axes2, 'XLimSpec', 'Tight');
-            set(handles.axes2, 'YLimSpec', 'Tight'); 
+        xlim(handles.axes1, [1 150]);
+        ylim(handles.axes1, [min(min(handles.possible_waves)) max(max(handles.possible_waves))]);
+        disp('mass plot start');
+        plot(handles.axes1, ts(:), vals(:), 'Color', [0 0 0], 'LineWidth', 0.25);
+        disp('mass plot end');
+  
                           
             set(handles.axes1, 'XLimSpec', 'Tight');
-            set(handles.axes1, 'YLimSpec', 'Tight');      
-            ylim(handles.axes1, [min(min(handles.possible_waves)) max(max(handles.possible_waves))]);
-            xlim(handles.axes1, [1 150]);
-        
-    set(handles.axes1, 'Color', 'None');
+            set(handles.axes1, 'YLimSpec', 'Tight');     
     
 
     
@@ -249,7 +218,7 @@ function pb4_Callback(hObject, eventdata, handles)
     cd('..');
     base1 = base(:,base(3,:)>0);
     export_mountain_cells(base1);
-   unix('rm tmp.png');
+
     
 delete(hObject);
 
@@ -263,10 +232,76 @@ function [handles] = pb6_Callback(hObject, eventdata, handles)
 
 guidata(hObject, handles);
 
+function [handles] = inputs_ready(hObject, eventdata, handles)
+
+    x = handles.corner_data(:,1);
+    y = handles.corner_data(:,2);
+
+    if sum(handles.hit) > 0
+        delete(handles.extra_lines);
+    end
+    left = round(min(x));
+    right = round(max(x));
+    up = round(max(y));
+    down = round(min(y));
+    
+    for col = 1:size(handles.possible_waves,2) % optimized version here, minimize rectangle width for faster searching
+        if sum(down<handles.possible_waves(left:right,col) & handles.possible_waves(left:right,col)<up) > 0
+            handles.hit(1,col) = 1;
+        end
+%         for points = left:right
+%             if down < handles.possible_waves(points,col)
+%                 if handles.possible_waves(points,col) < up
+%                     handles.hit(1,col) = 1;
+%                     break;
+%                 end
+%             end
+%         end
+    end
+
+    disp(sum(handles.hit));
+    [~, coli] = find(handles.hit);
+    redraw = handles.possible_waves(:,coli);      
+    
+    disp('plotting extra');
+    hold(handles.axes1, 'on');
+    
+        vals = NaN(151, size(redraw, 2));
+        vals(1:150,:) = redraw;
+        ts = ([1:150 150])'*ones(1,length(redraw(1,:)));
+        
+        disp('mass plot start');
+        handles.extra_lines = plot(handles.axes1, ts(:), vals(:), 'Color', [1 0 0], 'LineWidth', 0.25);
+        disp('mass plot end');
+    
+    hold(handles.axes1, 'off');
+    disp('plotted extra');
+    set(handles.selection_count, 'String', strcat(num2str(sum(handles.hit)), '/', num2str(size(handles.possible_waves, 2))));
+    
+%     set(handles.pb7, 'String', 'select');
+    set(handles.pb7,'visible','on');
+    set(handles.pb6,'visible','on');
+    set(handles.pb5,'visible','on');
+    set(handles.pb4,'visible','on');
+    set(handles.pb3,'visible','on');
+    set(handles.pb2,'visible','on');
+    set(handles.pb1,'visible','on');    
+
+
+guidata(hObject, handles);
+
 
 % --- Executes on button press in pb7.
 function [handles] = pb7_Callback(hObject, eventdata, handles)
 
+    tic;
+    handles.waiting_for_inputs = 1;
+    handles.corner_count = 0;
+    handles.corner_data = NaN(2,2);
+    disp(toc);
+    
+    tic;
+%     set(handles.pb7, 'String', 'please select');
     set(handles.pb7,'visible','off');
     set(handles.pb6,'visible','off');
     set(handles.pb5,'visible','off');
@@ -274,48 +309,11 @@ function [handles] = pb7_Callback(hObject, eventdata, handles)
     set(handles.pb3,'visible','off');
     set(handles.pb2,'visible','off');
     set(handles.pb1,'visible','off');
+    disp(toc);
     
-    
-    [x,y] = ginput(2);
-    disp(x);
-    disp(y);
-    
-    if sum(handles.hit) > 0
-        delete(handles.extra_lines);
-    end
-
-    for col = 1:size(handles.possible_waves,2) % optimized version here, minimize rectangle width for faster searching
-        for points = round(min(x)):round(max(x))
-            if (min(y) < handles.possible_waves(points,col)) && (handles.possible_waves(points,col) < max(y))
-                    handles.hit(1,col) = 1;
-                    break;
-            end
-        end
-    end
-
-
-    [~, coli] = find(handles.hit);
-    redraw = handles.possible_waves(:,coli);      
-    
-    hold(handles.axes1, 'on');
-    if sum(handles.hit) > 0
-        handles.extra_lines = plot(handles.axes1, 1:150, redraw', 'Color', [1 0 0], 'LineWidth', 0.25);
-    end
-    hold(handles.axes1, 'off');
-    set(handles.selection_count, 'String', strcat(num2str(sum(handles.hit)), '/', num2str(size(handles.possible_waves, 2))));
-    
-    set(handles.pb7,'visible','on');
-    set(handles.pb6,'visible','on');
-    set(handles.pb5,'visible','on');
-    set(handles.pb4,'visible','on');
-    set(handles.pb3,'visible','on');
-    set(handles.pb2,'visible','on');
-    set(handles.pb1,'visible','on');
-    
-
-
+    tic;
 guidata(hObject, handles);
-
+disp(toc);
 
 
 
@@ -357,7 +355,34 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-unix('rm tmp.png');
-
 % Hint: delete(hObject) closes the figure
 delete(hObject);
+
+
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function [handles] = figure1_WindowButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+    if handles.waiting_for_inputs == 1
+        
+        disp('getting point');
+        out = get(gca,'CurrentPoint');
+        disp('point received');
+        
+        handles.corner_count = handles.corner_count + 1;
+        handles.corner_data(handles.corner_count,:) = out(1,1:2);
+        
+        if handles.corner_count == 2
+        
+            [handles] = inputs_ready(hObject, eventdata, handles);
+            handles.waiting_for_inputs = 0;
+            handles.corner_count = 0;
+        
+        end
+        
+    end
+
+guidata(hObject, handles);
