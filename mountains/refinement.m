@@ -23,6 +23,7 @@ end
 % --- Executes just before refinement is made visible.
 function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
 
+    set(handles.axes4, 'Color', 'None');
     handles.waiting_for_inputs = 0;
     rough = readmda('firings.curated.mda');
     if length(rough) == 0
@@ -52,9 +53,10 @@ function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
             handles.full_data(3:152,col) = time_series(handles.full_data(1,col)-74:handles.full_data(1,col)+75)';
         end
     end
-
+    
     handles.view_index = 1;
     handles.number_selected = 0;
+    handles.last_index = length(time_series);
     
     [handles] = update_plot(hObject, eventdata, handles);
 
@@ -85,15 +87,19 @@ end
 function [handles] = update_plot(hObject, eventdata, handles)
 
     disp('called');
+    
     handles.target = handles.cell_list(handles.view_index);
     link_subset_to_full = NaN(1,size(handles.full_data,2));
     possible_waves = NaN(150,size(handles.full_data,2));
+    amp_with_indices = NaN(2,size(handles.full_data,2));
 
     temp_index = 1;
     for col = 1:size(handles.full_data,2)
         if handles.full_data(2,col) == handles.target
             possible_waves(:,temp_index) = handles.full_data(3:152,col);
             link_subset_to_full(1,temp_index) = col;
+            amp_with_indices(1,temp_index) = handles.full_data(1,col);
+            amp_with_indices(2,temp_index) = handles.full_data(77,col);
             temp_index = temp_index + 1;
         end
     end
@@ -105,29 +111,39 @@ function [handles] = update_plot(hObject, eventdata, handles)
     
     handles.link_subset_to_full = link_subset_to_full;
     handles.possible_waves = possible_waves;
+    handles.amp_with_indices = amp_with_indices;
     
     handles.hit = zeros(1,size(handles.possible_waves,2));
     disp(handles.view_index);
     disp(handles.target);
 
         disp(size(handles.possible_waves));
-        cla(handles.axes1, 'reset');
+%         cla(handles.axes1, 'reset');
+        
         
         vals = NaN(151, size(handles.possible_waves, 2));
         vals(1:150,:) = handles.possible_waves;
         ts = ([1:150 150])'*ones(1,length(handles.possible_waves(1,:)));
+        
         
         xlim(handles.axes1, [1 150]);
         ylim(handles.axes1, [min(min(handles.possible_waves)) max(max(handles.possible_waves))]);
         disp('mass plot start');
         plot(handles.axes1, ts(:), vals(:), 'Color', [0 0 0], 'LineWidth', 0.25);
         disp('mass plot end');
-  
+        
                           
             set(handles.axes1, 'XLimSpec', 'Tight');
             set(handles.axes1, 'YLimSpec', 'Tight');     
-    
 
+%         cla(handles.axes3, 'reset');
+        
+        plot(handles.axes3, handles.amp_with_indices(1,:), handles.amp_with_indices(2,:), 'LineStyle', 'none', 'Marker', 'x', 'MarkerFaceColor', 'k', 'MarkerEdgeColor', 'k');
+        xlim(handles.axes3, [1 handles.last_index]);
+        ylim(handles.axes3, [min(handles.amp_with_indices(2,:))-5 max(handles.amp_with_indices(2,:))+5]);
+            
+            set(handles.axes3, 'XLimSpec', 'Tight');
+            set(handles.axes3, 'YLimSpec', 'Tight');              
     
     set(handles.cluster_id, 'String', strcat('Cluster ID: ',num2str(handles.target)));
     set(handles.selection_count, 'String', strcat('0/', num2str(size(handles.possible_waves, 2))));
@@ -228,6 +244,8 @@ function [handles] = pb6_Callback(hObject, eventdata, handles)
 
     handles.hit = zeros(size(handles.hit));
     delete(handles.extra_lines);
+        delete(handles.extra_dots);
+        delete(handles.extra_dots2);    
     set(handles.selection_count, 'String', strcat(num2str(sum(handles.hit)), '/', num2str(size(handles.possible_waves, 2))));
 
 guidata(hObject, handles);
@@ -239,26 +257,32 @@ function [handles] = inputs_ready(hObject, eventdata, handles)
 
     if sum(handles.hit) > 0
         delete(handles.extra_lines);
+        delete(handles.extra_dots);
+        delete(handles.extra_dots2);
     end
     left = round(min(x));
     right = round(max(x));
     up = round(max(y));
     down = round(min(y));
     
-    for col = 1:size(handles.possible_waves,2) % optimized version here, minimize rectangle width for faster searching
-        if sum(down<handles.possible_waves(left:right,col) & handles.possible_waves(left:right,col)<up) > 0
-            handles.hit(1,col) = 1;
-        end
-%         for points = left:right
-%             if down < handles.possible_waves(points,col)
-%                 if handles.possible_waves(points,col) < up
-%                     handles.hit(1,col) = 1;
-%                     break;
-%                 end
-%             end
-%         end
-    end
+    if strcmp(handles.selected_axes, 'axes1')
 
+        for col = 1:size(handles.possible_waves,2) % optimized version here, minimize rectangle width for faster searching
+            if sum(down<handles.possible_waves(left:right,col) & handles.possible_waves(left:right,col)<up) > 0
+                handles.hit(1,col) = 1;
+            end
+        end
+
+    else
+        
+        logic_array1 = (handles.amp_with_indices(1,:) < right) & (handles.amp_with_indices(1,:) > left);
+        logic_array2 = (handles.amp_with_indices(2,:) < up) & (handles.amp_with_indices(2,:) > down);
+        
+        handles.hit(1,logic_array1 & logic_array2) = 1;
+        
+    end
+        
+        
     disp(sum(handles.hit));
     [~, coli] = find(handles.hit);
     redraw = handles.possible_waves(:,coli);      
@@ -276,9 +300,16 @@ function [handles] = inputs_ready(hObject, eventdata, handles)
     
     hold(handles.axes1, 'off');
     disp('plotted extra');
+    
+    hold(handles.axes3, 'on');
+    rescatter = handles.amp_with_indices(:,coli);
+    handles.extra_dots = plot(handles.axes3, rescatter(1,:), rescatter(2,:), 'LineStyle', 'none', 'Marker', 'x', 'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'r');
+    handles.extra_dots2 = plot(handles.axes3, rescatter(1,:), rescatter(2,:), 'LineStyle', 'none', 'Marker', 'o', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', 'r');
+    hold(handles.axes3, 'off');
+    
     set(handles.selection_count, 'String', strcat(num2str(sum(handles.hit)), '/', num2str(size(handles.possible_waves, 2))));
     
-%     set(handles.pb7, 'String', 'select');
+
     set(handles.pb7,'visible','on');
     set(handles.pb6,'visible','on');
     set(handles.pb5,'visible','on');
@@ -365,24 +396,47 @@ function [handles] = figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-    if handles.waiting_for_inputs == 1
-        
-        disp('getting point');
-        out = get(gca,'CurrentPoint');
-        disp('point received');
-        
-        handles.corner_count = handles.corner_count + 1;
-        handles.corner_data(handles.corner_count,:) = out(1,1:2);
-        
-        if handles.corner_count == 2
-        
-            [handles] = inputs_ready(hObject, eventdata, handles);
-            handles.waiting_for_inputs = 0;
-            handles.corner_count = 0;
-        
-        end
-        
+    
+    disp('click');
+    if handles.waiting_for_inputs ~= 1
+        disp('kicked');
+        return;
     end
+    disp('passed');
+
+    set(handles.axes1, 'Tag', 'axes1');
+    set(handles.axes3, 'Tag', 'axes3');
+    check1 = gca;
+    
+    if strcmp(check1.Tag, 'axes1') || strcmp(check1.Tag, 'axes3')
+        disp('selected axes');
+        if handles.corner_count == 0
+            handles.selected_axes = check1.Tag;
+        elseif strcmp(handles.selected_axes, check1.Tag) ~= 1
+            return;
+        end
+    else
+        return;
+    end
+
+    
+
+            disp('getting point');
+            out = get(gca,'CurrentPoint');
+            disp('point received');
+
+            handles.corner_count = handles.corner_count + 1;
+            handles.corner_data(handles.corner_count,:) = out(1,1:2);
+
+            if handles.corner_count == 2
+
+                [handles] = inputs_ready(hObject, eventdata, handles);
+                handles.waiting_for_inputs = 0;
+                handles.corner_count = 0;
+                handles.selected_axes = 'none';
+
+            end
+
+
 
 guidata(hObject, handles);
