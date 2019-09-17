@@ -22,8 +22,14 @@ end
 
 % --- Executes just before refinement is made visible.
 function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
-
+    
+    set(gcf, 'WindowButtonMotionFcn', '')
+    set(handles.axes4, 'XTick', []);
+    set(handles.axes4, 'YTick', []);
+    handles.start_patch = 0;
+    handles.corner_count = 0;
     set(handles.axes4, 'Color', 'None');
+    
     handles.waiting_for_inputs = 0;
     rough = readmda('firings.curated.mda');
     if length(rough) == 0
@@ -132,9 +138,10 @@ function [handles] = update_plot(hObject, eventdata, handles)
         plot(handles.axes1, ts(:), vals(:), 'Color', [0 0 0], 'LineWidth', 0.25);
         disp('mass plot end');
         
-                          
+                          set(handles.axes1, 'XTick', []);
             set(handles.axes1, 'XLimSpec', 'Tight');
-            set(handles.axes1, 'YLimSpec', 'Tight');     
+            set(handles.axes1, 'YLimSpec', 'Tight');   
+
 
 %         cla(handles.axes3, 'reset');
         
@@ -143,8 +150,12 @@ function [handles] = update_plot(hObject, eventdata, handles)
         ylim(handles.axes3, [min(handles.amp_with_indices(2,:))-5 max(handles.amp_with_indices(2,:))+5]);
             
             set(handles.axes3, 'XLimSpec', 'Tight');
-            set(handles.axes3, 'YLimSpec', 'Tight');              
-    
+            set(handles.axes3, 'YLimSpec', 'Tight');   
+            space = ' ';
+            title1 = ['cluster', space, num2str(handles.view_index), space, 'of', space, num2str(handles.cell_count)];
+            title(handles.axes3, title1(:)', 'FontSize', 14);
+  
+            
     set(handles.cluster_id, 'String', strcat('Cluster ID: ',num2str(handles.target)));
     set(handles.selection_count, 'String', strcat('0/', num2str(size(handles.possible_waves, 2))));
 
@@ -245,7 +256,8 @@ function [handles] = pb6_Callback(hObject, eventdata, handles)
     handles.hit = zeros(size(handles.hit));
     delete(handles.extra_lines);
         delete(handles.extra_dots);
-        delete(handles.extra_dots2);    
+        delete(handles.extra_dots2);   
+%         delete(handles.anchor_point);
     set(handles.selection_count, 'String', strcat(num2str(sum(handles.hit)), '/', num2str(size(handles.possible_waves, 2))));
 
 guidata(hObject, handles);
@@ -259,6 +271,7 @@ function [handles] = inputs_ready(hObject, eventdata, handles)
         delete(handles.extra_lines);
         delete(handles.extra_dots);
         delete(handles.extra_dots2);
+%         delete(handles.anchor_point);
     end
     left = round(min(x));
     right = round(max(x));
@@ -404,9 +417,29 @@ function [handles] = figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     end
     disp('passed');
 
+    fig1 = gcf;
+%     disp(fig1.SelectionType);
+    if strcmp(fig1.SelectionType, 'alt')
+                handles.waiting_for_inputs = 0;
+                handles.corner_count = 0;
+                handles.selected_axes = 'none';
+%                 delete(handles.anchor_point);
+                set(handles.pb7,'visible','on');
+                set(handles.pb6,'visible','on');
+                set(handles.pb5,'visible','on');
+                set(handles.pb4,'visible','on');
+                set(handles.pb3,'visible','on');
+                set(handles.pb2,'visible','on');
+                set(handles.pb1,'visible','on');   
+                guidata(hObject, handles);
+                return;
+    end
+    
+    
     set(handles.axes1, 'Tag', 'axes1');
     set(handles.axes3, 'Tag', 'axes3');
     check1 = gca;
+    check1.Tag
     
     if strcmp(check1.Tag, 'axes1') || strcmp(check1.Tag, 'axes3')
         disp('selected axes');
@@ -427,7 +460,10 @@ function [handles] = figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 
             handles.corner_count = handles.corner_count + 1;
             handles.corner_data(handles.corner_count,:) = out(1,1:2);
-
+%             hold(check1, 'on');
+%             handles.anchor_point = plot(check1, handles.corner_data(1,1), handles.corner_data(1,2), 'Marker', 'p', 'MarkerFaceColor', 'g', 'MarkerSize', 12);
+%             hold(check1, 'off');
+            
             if handles.corner_count == 2
 
                 [handles] = inputs_ready(hObject, eventdata, handles);
@@ -440,3 +476,21 @@ function [handles] = figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 
 
 guidata(hObject, handles);
+
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on mouse motion over figure - except title and menu.
+function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
