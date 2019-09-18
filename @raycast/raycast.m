@@ -12,7 +12,8 @@ function [obj, varargout] = raycast(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0);
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+				'FileSuffix','*.csv');
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -54,60 +55,68 @@ end
 function obj = createObject(Args,varargin)
 
 % example object
-dlist = nptDir('*.csv');
+dlist = nptDir(Args.FileSuffix);
 % get entries in directory
 dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
 if(dnum>0)
 	% read raycast CSV file
-    file = readtable(dlist(dnum).name);
+	fname = dlist(dnum).name;
+	fprintf('Reading input file %s\n',fname);
+    file = readtable(fname);
     % load eyelink data
-    el = load ('eyelink.mat');
-    %assuming the eel file is completed 
-    trialTimestamps = el.el.data.trial_timestamps + double(el.el.data.expTime);
-    allTimes = file.Var2; %stores all the times in the csv file 
-    
-    %look for all the timestamps for the start, cue and end/timeout 
-    %store the index they appear at in the file in the structure "index"
-    index(:,1) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,1));
-    index(:,2) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,2));
-    index(:,3) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,3));
-    index(2:end, 1) = index(2:end, 1)+1;
-    index(:, 2:3) = index(:, 2:3) + 1;
+    el = eyelink('auto',varargin{:});
+    % check if we were able to successfully instantiate the eyelink object
+    if(isempty(el))
+    	% if we were not able to instantiate the eyelink object, create empty object
+    	obj = createEmptyObject(Args);
+    else
+		% assuming the el file is completed 
+		trialTimestamps = el.data.trial_timestamps + double(el.data.expTime);
+		allTimes = file.Var2; %stores all the times in the csv file 
+	
+		%look for all the timestamps for the start, cue and end/timeout 
+		%store the index they appear at in the file in the structure "index"
+		index(:,1) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,1));
+		index(:,2) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,2));
+		index(:,3) = arrayfun(@(x) find(allTimes==x,1), trialTimestamps(:,3));
+		index(2:end, 1) = index(2:end, 1)+1;
+		index(:, 2:3) = index(:, 2:3) + 1;
 
-    %Stores the indices for fixations as well to be abe to access relevant
-    %information at that event
-    fixTimes = sortrows(vertcat(el.el.data.fix_times(:,1), el.el.data.fix_times(:,2)));
-    fixIndex = find(ismember(allTimes,fixTimes));
-    
-    %Stores the names to check for any missing trials or markers 
-    trialNames(:,1) = file.Var3(index(:,1));
-    trialNames (:,3)= file.Var3(index(:,3));
-    trialNames (:,2)= file.Var3(index(:,2));
-    
-    % create nptdata so we can inherit from it
-	data.numSets = size(trialNames,1); %no of trials in the session    
-    data.Args = Args;
-    
-    rawGazeData(:,1) = file.Var4;
-    rawGazeData(:,2) = file.Var5;
-    
-    data.timestamps = file.Var2;
-    data.trialTimestamps = trialTimestamps;
-    data.fixatedObj = file.Var3;
-    data.index = index;
-    data.fixIndex = fixIndex;
-    data.rawGazeData =  rawGazeData;
-    data.playerLocation = horzcat (file.Var6, file.Var7, file.Var8, file.Var9);  
-    data.playerGazeLocation = horzcat(file.Var10, file.Var11, file.Var12);
-    data.fixatedObjLoc = horzcat(file.Var13, file.Var14, file.Var15);
-    data.RelativeToFixdObjGaze = horzcat(file.Var16, file.Var17);
-    
-	n = nptdata(data.numSets,0,pwd);
-	d.data = data;
-	obj = class(d,Args.classname,n);
-	saveObject(obj,'ArgsC',Args);
+		%Stores the indices for fixations as well to be abe to access relevant
+		%information at that event
+		fixTimes = sortrows(vertcat(el.data.fix_times(:,1), el.data.fix_times(:,2)));
+		fixIndex = find(ismember(allTimes,fixTimes));
+	
+		%Stores the names to check for any missing trials or markers 
+		trialNames(:,1) = file.Var3(index(:,1));
+		trialNames (:,3)= file.Var3(index(:,3));
+		trialNames (:,2)= file.Var3(index(:,2));
+	
+		% create nptdata so we can inherit from it
+		data.numSets = size(trialNames,1); %no of trials in the session    
+		data.Args = Args;
+	
+		rawGazeData(:,1) = file.Var4;
+		rawGazeData(:,2) = file.Var5;
+	
+		data.timestamps = file.Var2;
+		data.trialTimestamps = trialTimestamps;
+		data.fixatedObj = file.Var3;
+		data.index = index;
+		data.fixIndex = fixIndex;
+		data.rawGazeData =  rawGazeData;
+		data.playerLocation = horzcat (file.Var6, file.Var7, file.Var8, file.Var9);  
+		data.playerGazeLocation = horzcat(file.Var10, file.Var11, file.Var12);
+		data.fixatedObjLoc = horzcat(file.Var13, file.Var14, file.Var15);
+		data.RelativeToFixdObjGaze = horzcat(file.Var16, file.Var17);
+	
+		n = nptdata(data.numSets,0,pwd);
+		d.data = data;
+		obj = class(d,Args.classname,n);
+		saveObject(obj,'ArgsC',Args);
+	end
 else
 	% create empty object
 	obj = createEmptyObject(Args);
