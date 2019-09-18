@@ -189,7 +189,11 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
 %         map_rawmedian = nanmedian(anovaMatrix,2);
 %         mapSEM_rawmedian = [prctile(anovaMatrix,25,2) prctile(anovaMatrix,75,2)];
         % Adaptive smoothing
-        [map_adsmoothGrid,spikeLoc_adsmoothGrid,o_i_adsmoothGrid] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
+        [map_adsmoothGrid,spikeLoc_adsmoothGrid,o_i_adsmoothGrid,smooth_r] = adaptivesmooth(o_iGrid,spikeLocGrid,alpha);
+        % Store smoothing radii for posthoc analysis
+        if shi == 1
+            smoothingradii = smooth_r;
+        end
         % Restructure grid bins back into linear array
         map_adsmooth = nan(Args.GridSteps*Args.GridSteps,1);
         for ii = 1:Args.GridSteps
@@ -248,6 +252,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             end
             data.SIC = SICsh(1,1);
             data.SICsh = SICsh;
+            data.smoothingradii = smoothingradii';
         case 2
             if(Args.FRSIC)
                 data.maps_raw = lambda_ish(:,1);
@@ -259,6 +264,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 data.mapsSEM_raw1sthalf = mapsSEM_raw(:,1);
             end
             data.SIC1sthalf = SICsh(1,1);
+            data.smoothingradii1sthalf = smoothingradii';
         case 3
             if(Args.FRSIC)
                 data.maps_raw = lambda_ish(:,1);
@@ -270,6 +276,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
                 data.mapsSEM_raw2ndhalf = mapsSEM_raw(:,1);
             end
             data.SIC2ndhalf = SICsh(1,1);
+            data.smoothingradii2ndhalf = smoothingradii';
     end
 end
 
@@ -279,7 +286,7 @@ if(isdeployed)
 end
 
 
-function [smoothedRate,smoothedSpk,smoothedPos] = adaptivesmooth(pos,spk,alpha)
+function [smoothedRate,smoothedSpk,smoothedPos,radiiUsedList] = adaptivesmooth(pos,spk,alpha)
 % Adapted from rates_adaptivesmooth.m (Wills et al)
 % pos = occupancy map/dwell time in each position bin (in seconds)
 % spk = spike map/spike count in each position bin
@@ -290,6 +297,7 @@ if sum(sum(spk))==0
     smoothedPos=pos;    smoothedPos(pos==0)=nan;
     smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
     smoothedRate=spk;   smoothedRate(pos==0)=nan;
+    radiiUsedList=nan(1,sum(sum(pos>0)));
     return
 end
 % Pre-assign output %
@@ -362,6 +370,7 @@ smoothedRate(pos==0)=nan;
 smoothedPos(pos==0)=nan;
 smoothedSpk(pos==0)=nan;
 % report radii sizes?
+
 
 
 function [map_smooth]=boxcarsmooth(map,filt,low_occ)

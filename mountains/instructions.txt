@@ -1,0 +1,30 @@
+To run MountainSort:
+	go into day directory in MATLAB, run either of the following:
+		mountain_batch('all') - for all possible channels
+		mountain_batch('hippo') - for channels 'in hippocampus'
+		mountain_batch('12 20 43') - for select channels
+
+To use MountainSort GUI (for merging and discarding):
+	go into 20181102/mountains/channel___ directory in terminal
+	run: 'conda activate mountainlab'
+		if fail, check ~/.bash_profile against sample in folder, specifically GITHUB_MATLAB and the last part for conda
+	run: qt-mountainview --raw dataset/raw_data.mda --filt output/filt.mda.prv --pre output/pre.mda.prv --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
+	do necessary modifications (only accepted and rejected tested)
+	* use 'export cv2' to save session for continue modifying in teh future	
+	* use 'export curated' and save as default 'firings.curated', mda prefix automatically added
+	
+To prune and export into cells
+	go into 20181102/mountains/channel___ directory in MATLAB
+	run: refinement
+	once done, press export
+	cells will be generated in individual sessions
+	folder will be curated in mountains/channel___ with both pre and post pruned spikes
+
+To reload previous cut
+	go into 20181102/mountains/channel___ directory in terminal
+	run: 'qt-mountainview ______' with the .mv2 file 
+
+To clear space (when error for running low on disk space)
+	cd into /tmp/mountainlab-tmp
+	run 'rm -r *'
+

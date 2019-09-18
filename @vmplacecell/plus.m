@@ -45,16 +45,19 @@ else
 		r.data.mapsSEM_raw = [p.data.mapsSEM_raw q.data.mapsSEM_raw];
 		r.data.SIC = [p.data.SIC; q.data.SIC];
         r.data.SICsh = [p.data.SICsh q.data.SICsh];
+        r.data.smoothingradii = [p.data.smoothingradii, q.data.smoothingradii];
         r.data.maps_raw1sthalf = [p.data.maps_raw1sthalf q.data.maps_raw1sthalf];
         r.data.maps_boxsmooth1sthalf = [p.data.maps_boxsmooth1sthalf q.data.maps_boxsmooth1sthalf];
         r.data.maps_adsmooth1sthalf = [p.data.maps_adsmooth1sthalf q.data.maps_adsmooth1sthalf];
         r.data.mapsSEM_raw1sthalf = [p.data.mapsSEM_raw1sthalf q.data.mapsSEM_raw1sthalf];
         r.data.SIC1sthalf = [p.data.SIC1sthalf; q.data.SIC1sthalf];
+        r.data.smoothingradii1sthalf = [p.data.smoothingradii1sthalf, q.data.smoothingradii1sthalf];
         r.data.maps_raw2ndhalf = [p.data.maps_raw2ndhalf q.data.maps_raw2ndhalf];
         r.data.maps_boxsmooth2ndhalf = [p.data.maps_boxsmooth2ndhalf q.data.maps_boxsmooth2ndhalf];
         r.data.maps_adsmooth2ndhalf = [p.data.maps_adsmooth2ndhalf q.data.maps_adsmooth2ndhalf];
         r.data.mapsSEM_raw2ndhalf = [p.data.mapsSEM_raw2ndhalf q.data.mapsSEM_raw2ndhalf];
         r.data.SIC2ndhalf = [p.data.SIC2ndhalf; q.data.SIC2ndhalf];
+        r.data.smoothingradii2ndhalf = [p.data.smoothingradii2ndhalf, q.data.smoothingradii2ndhalf];
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
