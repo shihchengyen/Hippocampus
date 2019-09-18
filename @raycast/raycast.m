@@ -54,21 +54,15 @@ end
 function obj = createObject(Args,varargin)
 
 % example object
-dlist = nptDir;
+dlist = nptDir('*.csv');
 % get entries in directory
 dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
 if(dnum>0)
-	% these are object specific fields
-	%data.dlist = dlist;
-	% set index to keep track of which data goes with which directory
-	%data.setIndex = [0; dnum];
-    
-    rd = pwd;
-	cd ~/Documents/CSV 
-    file = readtable('session_1_5112018105323_out.csv');
-    cd (rd);
+	% read raycast CSV file
+    file = readtable(dlist(dnum).name);
+    % load eyelink data
     el = load ('eyelink.mat');
     %assuming the eel file is completed 
     trialTimestamps = el.el.data.trial_timestamps + double(el.el.data.expTime);
