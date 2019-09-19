@@ -296,7 +296,7 @@ if(dlsize>0)
             messages = strtrim(messages);
             messages = extractAfter(messages, strlength(messages)-2);
             messages = str2double(messages);
-            messages = uint8(messages);
+            messages = uint32(messages);
             
             % reshape
             messages = reshape(messages, 3, []);
