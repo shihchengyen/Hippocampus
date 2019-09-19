@@ -294,8 +294,9 @@ if(dlsize>0)
             
             %get the codes
             messages = strtrim(messages);
-            messages = extractAfter(messages, strlength(messages)-2)
-            messages = str2num(messages)
+            messages = extractAfter(messages, strlength(messages)-2);
+            messages = str2double(messages);
+            messages = uint8(messages);
             
             % reshape
             messages = reshape(messages, 3, []);
