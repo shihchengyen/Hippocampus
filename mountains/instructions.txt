@@ -1,3 +1,11 @@
+20190919 update:
+	in the future, output files will be ~.mda instead of ~.mda.prv (command to use GUI needs to be updated)
+	in the future, preprocessing steps will change, from bandpass-whiten to whiten-artifacts (command for GUI and sort.sh.txt to be updated)
+
+New GUI command something like this:
+qt-mountainview --raw dataset/raw_data.mda --filt output/pre2.mda --pre output/pre.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
+
+
 To run MountainSort:
 	go into day directory in MATLAB, run either of the following:
 		mountain_batch('all') - for all possible channels
