@@ -13,7 +13,7 @@ function [obj, varargout] = raycast(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'FileSuffix','*.csv');
+				'FileSuffix','unityfile_eyelink.csv');
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
