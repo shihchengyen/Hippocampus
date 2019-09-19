@@ -134,6 +134,9 @@ if(dlsize>0)
             eyePos = horzcat(x,y);
             
             %Assign values to the object data fields
+            % clear data, which in most cases would have been used to create the data from
+            % the navigation sessions
+            data = [];
             data.trial_timestamps = trialTimestamps;
             data.indices = indices;
             data.eyePos = eyePos;
