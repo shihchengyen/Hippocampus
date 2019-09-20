@@ -10,19 +10,13 @@ ml-run-process ephys.bandpass_filter \
 	--outputs timeseries_out:output/filt.mda \
 	--parameters samplerate:30000 freq_min:300 freq_max:6000
 ml-run-process ephys.whiten \
-	--inputs timeseries:dataset/raw_data.mda \
+	--inputs timeseries:output/filt.mda \
 	--outputs timeseries_out:output/pre.mda
-ml-run-process ephys.mask_out_artifacts \
-	--inputs timeseries:output/pre.mda \
-	--outputs timeseries_out:output/pre2.mda \
-	--parameters \
-		threshold:25 \
-		chunk_size:30 \
 
 # Spike sorting
 ml-run-process ms4alg.sort \
 	--inputs \
-		timeseries:output/pre2.mda geom:dataset/geom.csv \
+		timeseries:output/pre.mda geom:dataset/geom.csv \
 	--outputs \
 		firings_out:output/firings.mda \
 	--parameters \
