@@ -275,12 +275,15 @@ if(dlsize>0)
             %%post processing knows what reward is used for the trial
             messages = vertcat({edfdata.FEVENT(messageEvent).sttime},{edfdata.FEVENT(messageEvent).message})';
             
+            %add missing messages
             messages = vertcat(messages, missingData(:, [2, 3]));
             
             messages = sortrows(messages, 1);
             
+            % remove the time column
             messages = table2array(messages(:, 2));
             
+            % remove unwanted messages
             trigger_idx = contains(messages, 'Trigger');
             
             messages = messages(~trigger_idx); % trim out 'Trigger Version'
@@ -289,6 +292,13 @@ if(dlsize>0)
                 messages = string(messages(1:end-1)); % trim out 'end'
             end
             
+            %get the codes
+            messages = strtrim(messages);
+            messages = extractAfter(messages, strlength(messages)-2);
+            messages = str2double(messages);
+            messages = uint32(messages);
+            
+            % reshape
             messages = reshape(messages, 3, []);
             
             messages = messages';
