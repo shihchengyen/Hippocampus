@@ -26,9 +26,7 @@ elseif (Args.Number && (Args.Trial || Args.XY))
     %get the number of trials that are in the object
     %add every third column of the matrix 
     
-   n = obj.data.noOfTrials;
-   disp (n);
-   r = sum (n,2);
+   r = size(obj.data.trial_timestamps,1);
 elseif (Args.Number && Args.Calibration) 
     n = size(obj.data.trial_timestamps,1); 
 else 
