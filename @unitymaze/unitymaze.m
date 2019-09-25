@@ -76,6 +76,7 @@ rd = dir(Args.DirName);
 if(~isempty(rd))
 	cd(rd(1).name)
 	dlist = nptDir(Args.FileName);
+    disp(dlist);
 	% get entries in directory
 	dnum = size(dlist,1);
 
@@ -92,7 +93,7 @@ if(~isempty(rd))
 	        temp = dlmread(dlist(i).name,'',Args.FileLineOfffset,0); % start reading at row 15 (skip logged parameters)
 	        unityData(length+1:length+size(temp,1),1:5) = temp;
 	        length = length + size(temp,1);
-	    end
+        end
 	    
 		% move back to session directory from RawData directory to make
 		% the object is created and saved in the correct directory
@@ -326,12 +327,15 @@ if(~isempty(rd))
 			tindices = 1:(numUnityFrames+1);
 			tempTrialTime = [0; cumsum(unityData(uDidx,2))]; 
 			% unityTrialTime(tindices,a) = [0; cumsum(unityData(uDidx,2))]; 
-			
+			            
 			% get Unity end time for this trial
 			uet = tempTrialTime(end);
 			% get Ripple end time for this trial
 			ret = rplTrialDur(a);
 			% compute the difference
+            disp(uet);
+            disp(ret);
+            disp(a);
 			tdiff = uet - ret;
 	
 			% get grid positions for this trial
