@@ -8,8 +8,9 @@ function [obj, varargout] = plot(obj,varargin)
 %
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		  'ReturnVars',{''}, 'ArgsOnly',0, 'Trial',0, 'XY', 0, 'Calibration', 0, 'Cmds', ''); %commands after Tiral 
-Args.flags = {'LabelsOff','ArgsOnly','Trial','XY', 'Calibration'};
+		  'ReturnVars',{''}, 'ArgsOnly',0, 'Trial',0, 'XY', 0, 'Calibration', 0, ...
+		  'CalTrial',0, 'Cmds', ''); %commands after Tiral 
+Args.flags = {'LabelsOff','ArgsOnly','Trial','XY', 'Calibration','CalTrial'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -95,13 +96,19 @@ if(~isempty(Args.NumericArguments))
         plotGazeXY(y(:,1), y(:,2), 'bo');
     
     elseif (Args.Calibration)
-        %index into the eyeposition 
-        eyePos = obj.data.eyePos;
-        indices = uint32(obj.data.indices);
-        
-        y = eyePos(indices(n,1):indices(n,3), :);
-        plotGazeXY(y(:,1), y(:,2), 'bo');
-    
+		%index into the eyeposition 
+		eyePos = obj.data.eyePos;
+		indices = uint32(obj.data.indices);
+	
+		y = eyePos(indices(n,1):indices(n,3), :);
+    	if(Args.CalTrial)
+			plot(y,'o-');
+			hold on
+			line(repmat(eyePos(indices(n,2)),1,2),ylim)
+			hold off
+		else  % if(Args.Trial)
+			plotGazeXY(y(:,1), y(:,2), 'bo');
+		end  % if(Args.Trial)
     else %some other argument - code to plot yet another kind of plot
         
         %Histograms of fixations and saccades per session
