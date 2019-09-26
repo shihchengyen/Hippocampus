@@ -73,7 +73,7 @@ if(~isempty(Args.NumericArguments))
 		
 			% plot current trial trajectory
 			plot(obj.data.unityData( obj.data.unityTriggers(n,2):(obj.data.unityTriggers(n,3)-1) ,3), ...
-				obj.data.unityData( obj.data.unityTriggers(n,2):(obj.data.unityTriggers(n,3)-1) ,4),'b','LineWidth',1); 
+				obj.data.unityData( obj.data.unityTriggers(n,2):(obj.data.unityTriggers(n,3)-1) ,4),'b+','LineWidth',1); 
 			% plot end point identifier
 			plot(obj.data.unityData(obj.data.unityTriggers(n,3),3), ...
 				obj.data.unityData(obj.data.unityTriggers(n,3),4),'k.','MarkerSize',20); 
