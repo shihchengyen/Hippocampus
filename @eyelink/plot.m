@@ -84,6 +84,9 @@ if(~isempty(Args.NumericArguments))
         end 
 
         hold off  
+        xlim([0 trial_end_time]);
+        disp('eyelink duration');
+        disp(trial_end_time);
         
     elseif (Args.XY)
         %Plots the x and y movement of the eye per trial

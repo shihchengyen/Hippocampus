@@ -5,8 +5,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Trial',0, 'FrameIntervals',0, ...
-		  'FrameIntervalTriggers',[2 3], 'DurationDiff',0);
-Args.flags = {'LabelsOff','ArgsOnly','Trial','FrameIntervals','DurationDiff'};
+		  'FrameIntervalTriggers',[2 3], 'DurationDiff',0, 'XYT', 0);
+Args.flags = {'LabelsOff','ArgsOnly','Trial','FrameIntervals','DurationDiff','XYT'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -37,7 +37,23 @@ z4Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	if(Args.Trial)
+    if(Args.XYT)
+        left_time = obj.data.unityTime(obj.data.unityTriggers(n,1)+1);
+        right_time = obj.data.unityTime(obj.data.unityTriggers(n,3)+1);
+        plot((obj.data.unityTime( (obj.data.unityTriggers(n,1)+1):obj.data.unityTriggers(n,3)+1)-left_time)*1000, ...
+            obj.data.unityData( obj.data.unityTriggers(n,1):(obj.data.unityTriggers(n,3)) ,3), 'Marker', 'x');         
+        xlim([0 (right_time-left_time)*1000]);
+        hold on;
+        plot((obj.data.unityTime( (obj.data.unityTriggers(n,1)+1):obj.data.unityTriggers(n,3)+1)-left_time)*1000, ...
+            obj.data.unityData( obj.data.unityTriggers(n,1):(obj.data.unityTriggers(n,3)) ,4), 'Marker', 'o');           
+        mid_time = obj.data.unityTime(obj.data.unityTriggers(n,2)+1);
+        line([(mid_time-left_time)*1000 (mid_time-left_time)*1000], ylim, 'Color', 'm');
+        hold off;
+        disp('unity duration');
+        disp((right_time-left_time)*1000);
+        
+        
+    elseif(Args.Trial)
 		if(Args.FrameIntervals)
 			indices = obj.data.unityTriggers(n,Args.FrameIntervalTriggers);
             uData = obj.data.unityData((indices(1)+1):indices(2),2);

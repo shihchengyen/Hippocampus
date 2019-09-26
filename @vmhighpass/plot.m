@@ -47,10 +47,11 @@ if(~isempty(Args.NumericArguments))
 	end
 	sRate = obj.data.analogInfo.SampleRate;
 	if(OldMarkerFormat)
-		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
+		idx = tIdx(1):tIdx(2); % idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(2);
 	else
-		idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
-	end
+		idx = tIdx(1):tIdx(3); % idx = (tIdx(1)-(Args.PreTrial/1000*sRate)):tIdx(3);
+    end
+    
 	if(Args.FreqPlot)
 		if(Args.PlotAllData)
 			data = obj.data.analogData;
@@ -142,6 +143,9 @@ if(~isempty(Args.NumericArguments))
 			data = nptRemoveLineNoise(data,Args.RemoveLineNoise,sRate);
 		end
 		plot( (obj.data.analogTime(idx)-obj.data.analogTime(tIdx(1))) * 1000,data,'.-')
+        xlim([0 1000*(max(obj.data.analogTime(idx))-obj.data.analogTime(tIdx(1)))]);
+        disp('ripple duration');
+        disp(1000*(max(obj.data.analogTime(idx))-min(obj.data.analogTime(idx))));
 		% indicate trial start
 		line([0 0],ylim,'Color','g')
 		if(OldMarkerFormat)
