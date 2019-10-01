@@ -243,6 +243,7 @@ if(dlsize>0)
                         trialTimestamps (1:row, l:u) = corrected_times;
                         noOfTrials (1,sessionFolder) = size(corrected_times, 1);
                         missingData = vertcat(missingData, tempMissing);
+
                         sessionFolder = sessionFolder+1;
                     else
                         fprintf('Dummy Session skipped %d\n',i);
@@ -291,12 +292,16 @@ if(dlsize>0)
             if(contains(messages{end}, 'end', 'IgnoreCase', false))
                 messages = string(messages(1:end-1)); % trim out 'end'
             end
+            if(contains(messages{end}, 'error', 'IgnoreCase', true)) % kw_edit
+                messages = string(messages(1:end-1)); % trim out 'error'
+            end            
             
             %get the codes
             messages = strtrim(messages);
             messages = extractAfter(messages, strlength(messages)-2);
             messages = str2double(messages);
             messages = uint32(messages);
+             
             
             % reshape
             messages = reshape(messages, 3, []);
@@ -374,7 +379,7 @@ if(dlsize>0)
                 data.timeouts = timeouts;
                 data.noOfTrials= noOfTrials(1, idx);
                 data.expTime =  edfdata.FEVENT(1).sttime;
-
+                
                 data.session_start = edfdata.FEVENT(messageEvent(sessionIndex(idx))).sttime;
                 
                 % create nptdata so we can inherit from it

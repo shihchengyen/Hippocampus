@@ -26,6 +26,8 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
    
     %%Correct the data that has been extracted from edfdata for ONE sessiom
     %create a new matrix that contains all trial messages only
+
+    disp(size(messageEvent));
     messageEvent(contains(m, 'Trigger')) = [];
     m(contains(m, 'Trigger')) = [];
     
@@ -35,6 +37,7 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
     messageEvent(contains(m, 'ERROR')) = [];
     m(contains(m, 'ERROR')) = [];
     messages = m;
+    disp(size(messageEvent));
     
     %stores the starting time of all the events 
     eltimes = {edfdata.FEVENT(messageEvent(1:end)).sttime}'; 
@@ -101,7 +104,7 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         missing = zeros (n, size(markers,2)); %stores the event that is missing
         rpldurations = zeros (n, size(markers,2)); %stores the rpl durations for filling missing eyelink timestamps
         elTrials = zeros (n, size(markers,2)); %stores the eyelink timestamps for the events in a trial
-         
+        
         %To check if there are more sessions than must be
         if(moreSessionsFlag ~= 0)
            if ((n*3) - size(messageEvent,1)-2 >= 100)
@@ -131,46 +134,9 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
         %are deleted
         %(3) creates the missing array that is later addded to the
         %missingData table 
-        for i = 1:n
-            %convert a linear index into a 2D index 
-            r = floor(i/3) + 1; %row 
-            c = rem(i,3); %column
 
-            if (c == 0)
-                r = r-1;
-                c = 3;
-            end
-                
-   
-            if ((idx == size(messages,1) && i~=n) || (contains(messages(idx,1), {num2str(markers(r,c))}) == 0 && markers(r,c)~=0 )) %if the trial is missing
-                missing(r,c) = markers(r,c); %mark what event is missing (start(1), cue(2), or end(3/4)) 
-                if (c==1)
-                     if (r~=1) %if it is not the first trial and start time of the session
-                         elTrials(r,c) = elTrials (r-1, 3) + 1000*rpldurations(r, c);
-                     else %the start time of the first trial in the session is missing 
-                         elTrials(r,c) = sessionStart + 1000*rpldurations(1,1); %the start time of trial + diff bet session and start time
-                     end
-                      newMessages(i,1) = {strcat('Start Trial', {' '}, num2str (markers(r,c)))};
-                 elseif (c==2) %if the cue offset time is missing
-                     elTrials(r,c) = elTrials (r, 1) + 1000*rpldurations (r, c);
-                     newMessages(i,1) = {strcat('Cue Offset', {' '}, num2str (markers(r,c)))};
-                 elseif (c==3) %if the end trial time is missing 
-                     elTrials(r,c) = elTrials (r, 2) + 1000*rpldurations (r, c);
-                     if(floor(markers(r,c)/10) == 3)
-                        newMessages(i,1) = {strcat('End Trial', {' '}, num2str (markers(r,c)))};
-                     elseif(floor(markers(r,c)/10)==4)
-                        newMessages(i,1) = {strcat('Timeout', {' '}, num2str (markers(r,c)))}; 
-                     end
-                end
-            elseif (markers(r,c) == 0)
-                continue; 
-            else %if the trial is found 
-                missing (r,c) = 0;     
-                elTrials (r,c) = eltimes(idx,1);
-                idx = idx+1;
-            end
-            
-        end 
+        [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl);
+%         save('should_be_correct.mat', 'elTrials', 'missing', 'newMessages');
         
         %Get rid of extra zeros 
         [row ~] = find(~elTrials);
