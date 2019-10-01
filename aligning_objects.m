@@ -12,7 +12,7 @@
 
 function aligning_objects(threshold)
 
-    if isempty(threshold)
+    if ~exist('threshold','var')
         threshold = 0.02;
     end
     
