@@ -7,6 +7,13 @@
 % rplparallel will result in all individual timestamps between the markers
 % being set to the first timestamp (flattened).
 %
+% for comparing time between trial start and end (rpl third column - first
+% column), take indices from unityTrigger (eg. 50 261). This refers to data
+% indices in unityData, which records time since previous sample. Hence, 
+% duration for trial can be found by summing 51st to 262nd items in
+% unityData. It also corresponds to subtracting 51st row from 263rd row in
+% unityTime.
+%
 % To be run from the session directory, specifying discrepency threshold in
 % seconds (defaults to 0.02s or 20ms).
 
@@ -28,9 +35,6 @@ function aligning_objects(threshold)
 
     uf_unityTriggers_flat = uf.data.unityTriggers';
     uf_unityTriggers_flat = uf_unityTriggers_flat(:);
-
-    % when unityTriggers looks for [2 5], diff the [3 6] indices from unityTime
-    % for duration between cue off and end trial.
 
     dubious_counter = 0;
     dubious_collector = [];
@@ -66,17 +70,32 @@ function aligning_objects(threshold)
 
         true_diff = true_diff/1000; % diff from rpl in seconds, for comparison with unityfile timings
 
-        current_start = uf_unityTriggers_flat(i)+1;
-        current_end = uf_unityTriggers_flat(i+1)+1;
+        current_start = uf_unityTriggers_flat(i)+1; % + 1
+        current_end = uf_unityTriggers_flat(i+1)+2; % + 1
         current_chunk = uf.data.unityTime(current_start:current_end);
         current_diff = current_chunk(length(current_chunk)) - current_chunk(1);
         current_start_time = current_chunk(1);
         current_end_time = current_chunk(length(current_chunk));
 
+%         dubious = 0;
+%         if abs(current_diff - true_diff) > threshold
+%             dubious = 1;
+%         end
+
         dubious = 0;
-        if abs(current_diff - true_diff) > threshold
-            dubious = 1;
+        if rem(i,3)==1
+            discrep = current_diff - true_diff;
+            disp((i-1)/3);
+            disp(discrep);
+        elseif rem(i,3)==2
+            discrep = discrep + current_diff - true_diff;
+            disp(discrep);
+        else
+            if abs(discrep) > threshold
+                dubious = 1;
+            end
         end
+        
 
         current_chunk = (current_chunk - current_start_time)* true_diff/current_diff; % now scaled to rpl timing  
         current_chunk = current_chunk + current_start_time; % shifted back to original start
@@ -88,14 +107,15 @@ function aligning_objects(threshold)
     %     disp('timestamps for unityfile were shifted back by (s):');
     %     disp(shifting_needed);
         if dubious == 1
-
-            chunk_size = length(uf.data.unityTime(current_start:current_end));
-            uf.data.unityTime(current_start:current_end-1) = repmat(uf.data.unityTime(current_start),1,chunk_size-1); % because the trial duration in uf differs too much from that of rpl, we mark this trial as unusable by setting all but the last value to the initial value (last value not changed, so that next trial can be evaluated).
+            
+            prev_prev_start = uf_unityTriggers_flat(i-2)+1;
+            chunk_size = length(uf.data.unityTime(prev_prev_start:current_start));
+            uf.data.unityTime(prev_prev_start:current_start) = repmat(uf.data.unityTime(prev_prev_start),1,chunk_size); % because the trial duration in uf differs too much from that of rpl, we mark this trial as unusable by setting all but the last value to the initial value (last value not changed, so that next trial can be evaluated).
 
             dubious_counter = dubious_counter + 1;
             dubious_collector = [dubious_collector i];
-            disp('but disparity between rpl and unity was quite large >2 ms duration');
-            disp(abs(current_diff - true_diff));
+            disp('but disparity between rpl and unity was quite large');
+            disp(discrep);
 
         end
 
