@@ -161,7 +161,7 @@ function aligning_objects(threshold)
 
         uf.data.unityTime(uf.data.unityTriggers(1,1)+1:end) = uf.data.unityTime(uf.data.unityTriggers(1,1)+1:end) + shifting_needed;
         uf.data.unityTime(1:uf.data.unityTriggers(1,1)) = scaled_chunk;
-
+        
         uf.data.unityTime = uf.data.unityTime + true_session_start;
 
     else
