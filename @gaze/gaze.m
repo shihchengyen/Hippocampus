@@ -1,4 +1,4 @@
-function [] = spatialview(varargin)
+function [] = gaze(varargin)
 
 % Generate spatial view object for each session. 
 
@@ -35,9 +35,9 @@ Args.DataCheckArgs = {};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'spatialview';
+Args.classname = 'gaze';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'sv';
+Args.matvarname = 'gz';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
