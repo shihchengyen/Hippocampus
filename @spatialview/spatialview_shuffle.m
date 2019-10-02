@@ -15,7 +15,7 @@ unityTriggers = um.data.unityTriggers;
 gridPosition = sv.data.binnedGaze;
 % get duration spent at each grid position
 gpDurations = um.data.gpDurations;
-unityTrialTime = um.data.unityTrialTime;
+rcTrialTime = sv.data.trialTimestamps;
 ntrials = size(unityTriggers,1);
 if(Args.UseAllTrials)
     processTrials = (1:ntrials)';
@@ -119,8 +119,8 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
 %             fprintf(1,'Found %i spikes between %f and %f\n',size(temp,2),tstart,tend);
             % get spike times aligned to cue offset time
             trialSpkTimes = sTimes(shi,temp) - tstart; % 
-            valIndices = ~isnan(unityTrialTime(:,g));
-            uTrialTime = unityTrialTime(valIndices,g);
+            valIndices = ~isnan(rcTrialTime(:,g));
+            uTrialTime = rcTrialTime(valIndices,g);
             tDiff(npi) = uTrialTime(end) - rpTrialDur(g);
 
             % only process trials with trigger discrepancies < 2 ms
