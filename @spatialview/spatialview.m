@@ -72,30 +72,38 @@ if(~isempty(dir(Args.RequiredFile)))
 
     %  Group gaze data into object types and get raw gaze position data
     %  relative to top left corner of fixated object type
-    [fixatedObjNum,RelativeToFixdObjGazeAdj] = groupgazesections(rcdata.fixatedObj,rcdata.RelativeToFixdObjGaze);
+    [fixatedObjNum,RelativeToFixdObjGazeAdj,gazeSections] = groupgazesections(rcdata.fixatedObj,rcdata.RelativeToFixdObjGaze);
 
-    % Bin gaze position data 
-    [binnedGaze] = bingazedata(fixatedObjNum, RelativeToFixdObjGazeAdj, gridSize);
+    % Bin relative gaze position data into linear array for session
+    [binnedRelGaze,binDepths] = bingazedata(fixatedObjNum, RelativeToFixdObjGazeAdj, gridSize);
+    
+    % Split binnedRelGaze into trials
+    [binnedRelGazeTrial] = splittrial(binnedRelGaze,rcdata.trialTimestamps,rcdata.timestamps,binDepths);
 
     % Output data
-    data.binnedGaze = binnedGaze;
+    % New variables
+    data.binnedRelGaze = binnedRelGaze;
+    data.binnedRelGazeTrial = binnedRelGazeTrial;
     data.fixatedObjNum = fixatedObjNum;
     data.RelativeToFixdObjGazeAdj = RelativeToFixdObjGazeAdj;
     data.gridSize = gridSize;
     data.gridSteps = gridSteps;
-    data.fixatedObj = rcdata.fixatedObj;
-    data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
+    data.binDepths = binDepths;
+    data.gazeSections = gazeSections;
+    % Original raycast-object variables
     data.numTrials = rcdata.numSets;
     data.timestamps = rcdata.timestamps;
     data.trialTimestamps = rcdata.trialTimestamps;
-    data.index = rcdata.index;
-    data.fixIndex = rcdata.fixIndex;
-    data.rawGazeData = rcdata.rawGazeData;
-    data.playerLocation = rcdata.playerLocation;
-    data.playerGazeLocation = rcdata.playerGazeLocation;
-    data.fixatedObjLoc = rcdata.fixatedObjLoc;
-    data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
-
+%     data.fixatedObjLoc = rcdata.fixatedObjLoc;
+%     data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
+%     data.fixatedObj = rcdata.fixatedObj;
+%     data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
+%     data.index = rcdata.index;
+%     data.fixIndex = rcdata.fixIndex;
+%     data.rawGazeData = rcdata.rawGazeData;
+%     data.playerLocation = rcdata.playerLocation;
+%     data.playerGazeLocation = rcdata.playerGazeLocation;
+    
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
 	data.Args = Args;
@@ -112,7 +120,7 @@ end
 
 
 
-function [fixatedObjNum,RelativeToFixdObjGazeNew] = groupgazesections(fixatedObj,RelativeToFixdObjGaze)
+function [fixatedObjNum,RelativeToFixdObjGazeNew,gazeSections] = groupgazesections(fixatedObj,RelativeToFixdObjGaze)
 % Groups object of gaze into sections 1-9 below, and adjust gaze
 % coordinates relative to top left corner instead of center of object
 % 1. Cue
@@ -303,17 +311,17 @@ end
 
 
 
-function [binnedGaze] = bingazedata(fixatedObjNum, RelativeToFixdObjGazeNew, gridSize)
+function [binnedGaze,binDepths] = bingazedata(fixatedObjNum, RelativeToFixdObjGazeNew, gridSize)
 % Linear bin format, if 40x40 grid on floor
 % CueImage: bin 1
 % HintImage: bin 2
-% Ground: bin 3 - 1602 (40x40) top to bottom, left to right
-% Ceiling: bin 1603 - 3202 bins
-% Walls: bin 3203 - 4482 (8Hx160W)
-% Pillar1: bin 4483 - 4642 (5Hx32W) 
-% Pillar2: bin 4643 - 4802
-% Pillar3: bin 4803 - 4962
-% Pillar4: bin 4963 - 5122
+% Ground: bin 3 - 1602 (25Wx25L in Unity units) left to right, top to bottom
+% Ceiling: bin 1603 - 3202 bins (25Wx25L)
+% Walls: bin 3203 - 5250 (5Hx100W) 
+% Pillar1: bin 5251 - 5313 (3.11Hx20W) 
+% Pillar2: bin 5314 - 5376 (3.11Hx20W) 
+% Pillar3: bin 5377 - 5439 (3.11Hx20W) 
+% Pillar4: bin 5440 - 5502 (3.11Hx20W) 
 
 binDepths = [   1;  % CueImage
                 1;  % HintImage
@@ -343,6 +351,22 @@ for ii = 1:size(fixatedObjNum,1)
     end
     
 end
+
+
+function [binnedRelGazeTrial] = splittrial(binnedRelGaze,trialTimestamps,gazetimestamps,binDepths)
+
+binnedRelGazeTrial = nan(sum(binDepths,1),1);
+for ii = 1:size(trialTimestamps,1)
+    
+    indTrial = ismember(gazetimestamps,trialTimestamps(ii,2):trialTimestamps(ii,3));
+    trialbins = binnedRelGaze(indTrial);
+    uniquebins = unique(trialbins(~isnan(trialbins)));
+    for jj = 1:size(uniquebins,1)
+        binnedRelGazeTrial(uniquebins(jj),ii) = sum(binnedRelGaze == uniquebins(jj));
+    end
+    
+end
+
 
 
 function obj = createEmptyObject(Args)
