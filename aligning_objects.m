@@ -70,8 +70,8 @@ function aligning_objects(threshold)
 
         true_diff = true_diff/1000; % diff from rpl in seconds, for comparison with unityfile timings
 
-        current_start = uf_unityTriggers_flat(i)+1; % + 1
-        current_end = uf_unityTriggers_flat(i+1)+2; % + 1
+        current_start = uf_unityTriggers_flat(i)+1;
+        current_end = uf_unityTriggers_flat(i+1)+1;
         current_chunk = uf.data.unityTime(current_start:current_end);
         current_diff = current_chunk(length(current_chunk)) - current_chunk(1);
         current_start_time = current_chunk(1);
@@ -93,6 +93,7 @@ function aligning_objects(threshold)
         else
             if abs(discrep) > threshold
                 dubious = 1;
+                discrep = 0;
             end
         end
         
@@ -125,8 +126,9 @@ function aligning_objects(threshold)
     disp(dubious_counter);
     disp('dubious location(s):');
     disp(dubious_collector);
-
-
+    
+%     save('unityfile_int.mat', 'uf');
+    
     %%%%% shifting all to reference 0 as ripple start time %%%%%
 
     if rp.data.Args.Data.markers(1) == 84
