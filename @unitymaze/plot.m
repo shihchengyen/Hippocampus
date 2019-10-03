@@ -94,18 +94,18 @@ if(~isempty(Args.NumericArguments))
 		uTime = obj.data.unityTime(:,n);
 		% add 1 to start index since we want the duration between triggers
 		startind = uTrigs(:,1)+1;
-		endind = uTrigs(:,3);
+		endind = uTrigs(:,3)+1;
 		starttime = uTime(startind);
 		endtime = uTime(endind);
-		trialDurations = diff([starttime endtime],1,2)
+		trialDurations = diff([starttime endtime],1,2);
 		% in order to display the duration difference, we will need to
 		% load the rplparallel object to get the Ripple timestamps
 		% first save the current directory
 		cwd = pwd;
 		% use n and setIndex to find which session this trial belongs to
-		sessionnum = find(obj.data.setIndex<=n);
+% 		sessionnum = find(obj.data.setIndex<=n);
 		sdstr = get(obj,'SessionDirs');
-		sessionDir = sdstr{sessionnum(end)};
+		sessionDir = sdstr{n};
 		% change directory to find the appropriate rplparallel object
 		cd(sessionDir)
 		rp = rplparallel('auto',varargin2{:});
@@ -113,7 +113,7 @@ if(~isempty(Args.NumericArguments))
 		cd(cwd)
 		rpTrialDur = diff(rp.data.timeStamps(:,[1 3]),1,2);
 		% multiply by 1000 to convert to ms
-		histogram((trialDurations - rpTrialDur)*1000);
+		histogram((trialDurations - rpTrialDur)*1000, 'BinWidth', 10);
 		xlabel('Time (ms)')
 		ylabel('Frequency')
 		sessionstr = getDataOrder('ShortName','DirString',sessionDir);

@@ -185,7 +185,7 @@ if(~isempty(rd))
         
         %After creating unityData, you need to correct the times generated
         %using the eyelink object.
-        unityData = synchronise(unityData, unityTriggers);
+%         unityData = synchronise(unityData, unityTriggers);
         
 		data.unityData = unityData;
 		data.unityTriggers = unityTriggers;
