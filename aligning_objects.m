@@ -10,8 +10,8 @@
 % for comparing time between trial start and end (rpl third column - first
 % column), take indices from unityTrigger (eg. 50 261). This refers to data
 % indices in unityData, which records time since previous sample. Hence, 
-% duration for trial can be found by summing 51st to 262nd items in
-% unityData. It also corresponds to subtracting 51st row from 263rd row in
+% duration for trial can be found by summing 51st to 261st items in
+% unityData. It also corresponds to subtracting 51st row from 262nd row in
 % unityTime.
 %
 % To be run from the session directory, specifying discrepency threshold in
