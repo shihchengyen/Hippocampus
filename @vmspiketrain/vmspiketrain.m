@@ -63,11 +63,12 @@ dlist = nptDir(Args.DataFile);
 % get entries in directory
 dnum = size(dlist,1);
 
-% try to create unitymaze object
-um = unitymaze('auto',varargin{:});
+% try to create umaze and unityfile objects
+ufile = unityfile('auto',varargin{:});
+um = umaze('auto',varargin{:});
 
 % check if the right conditions were met to create object
-if(dnum>0 && ~isempty(um))	
+if( dnum>0 && ~isempty(um) && ~isempty(ufile) )	
 	data.horGridBound = um.data.horGridBound;
 	data.vertGridBound = um.data.vertGridBound;
 
@@ -75,12 +76,30 @@ if(dnum>0 && ~isempty(um))
 	st = load(Args.DataFile);
 	ts = (st.timestamps/1000)';
 
-	% perform histogram on spike times using unity time bins in order to get the closest xy
-	% position
-	[~,~,ubin] = histcounts(ts,um.data.unityTime);
+	% find spikes that occurred during navigation
+	% e.g.
+%	row		sessionTime			ts		bins	zero_indices
+%	1	0		0		7.8217	6.7649	1	1
+%	2	7.8217	3.0000	3.6656	6.7917	1	6
+%	3	11.4873	4.0000	1.5644	8.1015	2	14
+%	4	13.0517	5.0000	0.3790	9.3976	2	20
+%	5	13.4307	10.0000	1.1994	16.4411	6	26
+%	6	14.6301	0		3.1062	16.4855	6	34
+%	7	17.7363	10.0000	2.4343	16.5127	6	40
+%	8	20.1706	15.0000	0.4862	16.5400	6	46
+%	9	20.6568	14.0000	1.7571	16.8922	6	54
+%	10	22.4139	13.0000	0.8260	16.9383	6	61
+	% value in bins match up with the values in zero_indices, so we can just find the values
+	% in bins that are not members of zero_indices
+	[n,e,bins] = histcounts(ts,um.data.sessionTime(:,1));
+	% get indices that correspond to non-zero grid positions
+	n0bins = ~ismember(bins,um.data.zero_indices);
+	% perform histogram on spike times that don't correspond to zero bins using unity time 
+	% bins in order to get the closest xy position
+	[~,~,ubin] = histcounts(ts(n0bins),ufile.data.unityTime);
 	% since ts may contain spike times after the unity program has ended, we need to look only
 	% at the non-zero values in ubin
-	spike_xy = um.data.unityData(ubin(ubin>0),3:4);
+	spike_xy = ufile.data.unityData(ubin(ubin>0),3:4);
 
 	% perform histogram on spike times to see which grid position the above information should
 	% go to
