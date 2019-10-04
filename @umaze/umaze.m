@@ -418,7 +418,8 @@ if(dnum>0)
         data.sTPu = sTPu;
         data.nsTPu = nsTPu;
         data.ou_i = ou_i;
-        data.P_i = ou_i / sum(ou_i);    
+        data.P_i = ou_i / sum(ou_i); 
+        
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

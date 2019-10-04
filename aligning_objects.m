@@ -23,10 +23,10 @@ function aligning_objects(threshold)
         threshold = 0.02;
     end
     
-    uf = unityfile('auto');
-    el = eyelink('auto');
     rp = rplparallel('auto');
-
+    el = eyelink('auto');
+    uf = unityfile('auto');
+    
     true_timestamps = rp.data.timeStamps';
     true_timestamps = true_timestamps(:) * 1000; % in ms
 
@@ -93,7 +93,6 @@ function aligning_objects(threshold)
         else
             if abs(discrep) > threshold
                 dubious = 1;
-                discrep = 0;
             end
         end
         
@@ -156,13 +155,13 @@ function aligning_objects(threshold)
         el.data.session_start_index = finding_index;
 
         session_trial_duration = rp.data.timeStamps(1,1) - true_session_start;
-        uf_session_trial_chunk = uf.data.unityTime(1:uf.data.unityTriggers(1,1));
+        uf_session_trial_chunk = uf.data.unityTime(1:uf.data.unityTriggers(1,1)+1);
         last_point = uf_session_trial_chunk(end);
         scaled_chunk = (uf_session_trial_chunk/last_point) * session_trial_duration;
         shifting_needed = scaled_chunk(end) - last_point;
 
-        uf.data.unityTime(uf.data.unityTriggers(1,1)+1:end) = uf.data.unityTime(uf.data.unityTriggers(1,1)+1:end) + shifting_needed;
-        uf.data.unityTime(1:uf.data.unityTriggers(1,1)) = scaled_chunk;
+        uf.data.unityTime(uf.data.unityTriggers(1,1)+2:end) = uf.data.unityTime(uf.data.unityTriggers(1,1)+2:end) + shifting_needed;
+        uf.data.unityTime(1:uf.data.unityTriggers(1,1)+1) = scaled_chunk;
         
         uf.data.unityTime = uf.data.unityTime + true_session_start;
 
@@ -178,13 +177,9 @@ function aligning_objects(threshold)
 
     for col = 1:size(uf.data.unityTrialTime, 2)
 
-        duration = uf.data.unityTime(uf.data.unityTriggers(col,3)+1) - uf.data.unityTime(uf.data.unityTriggers(col,2)+1);
-        neg_count = sum(isnan(uf.data.unityTrialTime(:,col)));
-        valued_length = size(uf.data.unityTrialTime, 1) - neg_count;
-        arr = uf.data.unityTrialTime(1:valued_length,col);
-        arr_max = arr(end);
-        arr = arr*duration/arr_max;
-
+        arr = uf.data.unityTime(uf.data.unityTriggers(col,2)+1:uf.data.unityTriggers(col,3)+1);
+        arr = arr - arr(1);
+        uf.data.unityTrialTime(:,col) = NaN(size(uf.data.unityTrialTime,1),1);
         uf.data.unityTrialTime(1:length(arr),col) = arr;
 
     end
