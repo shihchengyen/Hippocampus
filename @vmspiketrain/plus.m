@@ -37,6 +37,11 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+		
+		% add fields for this object
+		r.data.spike_xy = {p.data.spike_xy{:} q.data.spike_xy{:}};
+		r.data.sorted_sgpi = {p.data.sorted_sgpi{:} q.data.sorted_sgpi{:}};
+		r.data.change_ssgpindex = {p.data.change_ssgpindex{:} q.data.change_ssgpindex{:}};
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);

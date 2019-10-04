@@ -5,7 +5,7 @@ function [obj, varargout] = plot(obj,varargin)
 %
 %   example InspectGUI(vs,'GridSteps',5) 
 %
-%   Dependencies: unitymaze.m, 
+%   Dependencies: unitymaze.m
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'DataFile','spiketrain.mat');
@@ -23,48 +23,12 @@ if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
 
-	sdstr = get(obj,'SessionDirs');
-	cwd = pwd;
-	cd(sdstr{n})
-
-	um = unitymaze('auto',varargin2{:});
-	% load file
-	st = load(Args.DataFile);
-
-	cd(cwd)
-
-	% these are object specific fields
-	ts = (st.timestamps/1000)';
-	% perform histogram on spike times using unity time bins in order to get the closest xy
-	% position
-	[~,~,ubin] = histcounts(ts,um.data.unityTime);
-	% since ts may contain spike times after the unity program has ended, we need to look only
-	% at the non-zero values in ubin
-	spike_xy = um.data.unityData(ubin(ubin>0),3:4);
-
-	% perform histogram on spike times to see which grid position the above information should
-	% go to
-	% [n,tsbin] = histc(ts,sTime(:,1));
-	[~,~,~,binH,binV] = histcounts2(spike_xy(:,1),spike_xy(:,2),um.data.horGridBound,um.data.vertGridBound);
-	% compute grid position number
-	spike_gridposition = binH + ((binV - 1) * um.data.gridSteps);
-
-	% get the grid position for each spike
-	% spike_gridposition = sTime(tsbin(tsbin>0),2);
-
-	% sort according to grid position
-	[sorted_spike_gridposition,sorted_sgpi] = sort(spike_gridposition);
-
-	% find the points where grid position changes
-	% first set of values in sorted_spike_gridposition is for 0, which is where there is no 
-	% grid position, e.g. during cue presentation, etc., so the first change is where we want
-	% to start. 
-	change_ssgpindex = find(diff(sorted_spike_gridposition));
-	change_ssgpindex(end+1) = size(spike_xy,1);
-
 	clist = get(gca,'ColorOrder');
 	clistsize = size(clist,1);
 
+	change_ssgpindex = obj.data.change_ssgpindex{n};
+	spike_xy = obj.data.spike_xy{n};
+	sorted_sgpi = obj.data.sorted_sgpi{n};
 	% for-loop over grid positions
 	for i=1:(size(change_ssgpindex,1)-1)
 		% create subplot
@@ -78,11 +42,14 @@ if(~isempty(Args.NumericArguments))
 		end
     end
     
+    horGridBound = obj.data.horGridBound;
+    vertGridBound = obj.data.vertGridBound;
+    
     % plot grid
     % line(repmat(um.data.horGridBound,2,1),ylim,'k:')
     % line(repmat(um.data.vertGridBound,2,1),'k:')
-    line( [repmat(um.data.horGridBound,2,1) repmat(um.data.horGridBound([1 end])',1,6)], ...
-        [repmat(um.data.vertGridBound([1 end])',1,6) repmat(um.data.vertGridBound,2,1)], ...
+    line( [repmat(horGridBound,2,1) repmat(horGridBound([1 end])',1,6)], ...
+        [repmat(vertGridBound([1 end])',1,6) repmat(vertGridBound,2,1)], ...
         'Color','k','LineStyle',':')
 
     hold off
@@ -92,6 +59,7 @@ if(~isempty(Args.NumericArguments))
 	ylabel('Y Dimension')
 
 	% add an appropriate title
+	sdstr = get(obj,'SessionDirs');
 	title(getDataOrder('ShortName','DirString',sdstr{n}))
 else
 	% plot all data

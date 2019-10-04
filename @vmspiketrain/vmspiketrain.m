@@ -65,6 +65,45 @@ dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
 if(dnum>0)	
+	um = unitymaze('auto',varargin{:});
+	data.horGridBound = um.data.horGridBound;
+	data.vertGridBound = um.data.vertGridBound;
+
+	% load spike train
+	st = load(Args.DataFile);
+	ts = (st.timestamps/1000)';
+
+	% perform histogram on spike times using unity time bins in order to get the closest xy
+	% position
+	[~,~,ubin] = histcounts(ts,um.data.unityTime);
+	% since ts may contain spike times after the unity program has ended, we need to look only
+	% at the non-zero values in ubin
+	spike_xy = um.data.unityData(ubin(ubin>0),3:4);
+
+	% perform histogram on spike times to see which grid position the above information should
+	% go to
+	% [n,tsbin] = histc(ts,sTime(:,1));
+	[~,~,~,binH,binV] = histcounts2(spike_xy(:,1),spike_xy(:,2),data.horGridBound,data.vertGridBound);
+	% compute grid position number
+	spike_gridposition = binH + ((binV - 1) * um.data.gridSteps);
+
+	% get the grid position for each spike
+	% spike_gridposition = sTime(tsbin(tsbin>0),2);
+
+	% sort according to grid position
+	[sorted_spike_gridposition,sorted_sgpi] = sort(spike_gridposition);
+
+	% find the points where grid position changes
+	% first set of values in sorted_spike_gridposition is for 0, which is where there is no 
+	% grid position, e.g. during cue presentation, etc., so the first change is where we want
+	% to start. 
+	change_ssgpindex = find(diff(sorted_spike_gridposition));
+	change_ssgpindex(end+1) = size(spike_xy,1);
+
+	data.spike_xy = {spike_xy};
+	data.sorted_sgpi = {sorted_sgpi};
+	data.change_ssgpindex = {change_ssgpindex};
+	
 	% create nptdata so we can inherit from it
 	data.numSets = 1;    
     data.Args = Args;
@@ -81,6 +120,11 @@ function obj = createEmptyObject(Args)
 
 % create nptdata so we can inherit from it
 % useful fields for most objects
+data.horGridBound = [];
+data.vertGridBound = [];
+data.spike_xy = {};
+data.sorted_sgpi = {};
+data.change_sgpindex = {};
 data.numSets = 0;
 data.Args = Args;
 n = nptdata(0,0);
