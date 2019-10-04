@@ -63,9 +63,11 @@ dlist = nptDir(Args.DataFile);
 % get entries in directory
 dnum = size(dlist,1);
 
+% try to create unitymaze object
+um = unitymaze('auto',varargin{:});
+
 % check if the right conditions were met to create object
-if(dnum>0)	
-	um = unitymaze('auto',varargin{:});
+if(dnum>0 && ~isempty(um))	
 	data.horGridBound = um.data.horGridBound;
 	data.vertGridBound = um.data.vertGridBound;
 
