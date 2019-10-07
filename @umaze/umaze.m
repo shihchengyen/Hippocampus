@@ -309,7 +309,7 @@ if(dnum>0)
             % create corrected version of unityTime, which will also be the
             % bin limits for the histogram function call
             sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];
-            sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc+1)-binHt(gpc)];
+            sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc)-binHt(gpc+1)];
             sTi = sTi + ngpc;
 
             % occasionally we will get a change in grid position in the frame interval
