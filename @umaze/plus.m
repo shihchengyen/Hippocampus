@@ -38,11 +38,20 @@ else
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
 
+		
 		% object specific fields
-		r.data.dlist = [p.data.dlist; q.data.dlist];
+
+		r.data.sumCost = [p.data.sumCost; q.data.sumCost];
+		r.data.sumRoute = concat(p.data.sumRoute,q.data.sumRoute);
+		r.data.sumActualRoute = concat(p.data.sumActualRoute,q.data.sumActualRoute);
+		r.data.perf = [p.data.perf; q.data.perf];
+		r.data.processTrials = [p.data.processTrials; q.data.processTrials];
+
 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
 			+ q.data.setIndex(2:end))];
 			
+        r.data.sessionTime = [p.data.sessionTime; q.data.sessionTime];
+        
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
 	end

@@ -186,19 +186,41 @@ if(~isempty(rd))
         %After creating unityData, you need to correct the times generated
         %using the eyelink object.
 %         unityData = synchronise(unityData, unityTriggers);
+
+        % to calculate displacement and direction coming to data point
+        dd1 = zeros(size(unityData, 1), 2);
+        dd1(2:end,1) = diff(unityData(:,3));
+        dd1(2:end,2) = diff(unityData(:,4));
+        dd = zeros(size(unityData, 1), 2);
+        [dd(:,1), dd(:,2)] = cart2pol(dd1(:,1),dd1(:,2));
+        dd(:,1) = rad2deg(dd(:,1));
+        for item = 1:size(dd(:,1))
+            if dd(item,1) < 0
+                dd(item,1) = 360 + dd(item,1);
+            end
+        end
+        dd(:,1) = dd(:,1) - 90;
+        for item = 1:size(dd(:,1))
+            if dd(item,1) < 0
+                dd(item,1) = 360 + dd(item,1);
+            end
+        end
+        dd(:,1) = 360 - dd(:,1);
+        dd(find(dd(:,1)==360),1) = 0;
+        dd(find(dd(:,2)==0),1) = NaN;
         
-		data.unityData = unityData;
+        % sixth column in degrees, north set to 0, clockwise. seventh column
+        % magnitude in unity units.
+
+		data.unityData = [unityData dd];
 		data.unityTriggers = unityTriggers;
 		data.unityTrialTime = unityTrialTime;
 
         % compute cumulative sum of unity time to make it easy for
         % placeselect.m to compute histograms for shuffled data
         % add a zero at the beginning to avoid spike from being missed
-        data.unityTime = [0; cumsum(unityData(:,2))];
-
-        % to calculate direction and magnitude coming to data point
+        data.unityTime = [0; cumsum(unityData(:,2))]; 
         
-
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
 		n = nptdata(data.numSets,0,pwd);
