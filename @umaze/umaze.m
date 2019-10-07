@@ -368,10 +368,13 @@ if(dnum>0)
     % in index when using diff. These will be the starting indices for 
     % the unique positions not including 0.
     sTPsi = find(diff(sTP)~=0) + 1;
-    sTPin = diff(sTPsi);
     % find the ending indices by subtracting 1 from sTPsi, and adding
     % snum at the end
     sTPind = [sTPsi [ [sTPsi(2:end)-1]; snum]];
+    % compute the number of observations per position
+    sTPin = diff(sTPind,1,2) + 1;
+    % arrange the information into a matrix for easier access
+    sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
     % find positions (excluding 0) with more than MinReps observations
     sTPinm = find(sTPin>(Args.MinObs-1));
     % create temporary variable that will be used for calculations below
@@ -463,9 +466,11 @@ if(dnum>0)
 
         data.sessionTime = sTime;
         data.zero_indices = zero_indices;
-        data.sTPi = sTPi;
-        data.sTPind = sTPind2;
-        data.sTPin = sTPin2;
+        data.sortedGPindices = sTPi;
+        data.sortedGPindinfo = sortedGPindinfo;
+        data.sGPi_minobs = sTPinm;
+        % data.sTPind = sTPind2;
+        % data.sTPin = sTPin2;
         % data.sTPinm = sTPinm;
         data.sTPu = sTPu;
         data.nsTPu = nsTPu;
