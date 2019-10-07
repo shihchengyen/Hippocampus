@@ -12,12 +12,19 @@ function [obj, varargout] = vmpc(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0);
-Args.flags = {'Auto','ArgsOnly'};
+Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
+				'MaxTimeDiff',0.002, 'MinTrials',5, 'GridSteps',5, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
+                'FRSIC',0, 'UseMedian',0, ...
+                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',0);
+            
+Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {};                            
+Args.DataCheckArgs = {'MaxTimeDiff','MinTrials','GridSteps','ShuffleLimits', ...
+	'NumShuffles'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -28,7 +35,7 @@ Args.DataCheckArgs = {};
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpc';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'df';
+Args.matvarname = 'vmpc';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -59,16 +66,42 @@ dlist = nptDir;
 dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
-if(dnum>0)
-	% these are object specific fields
-	data.dlist = dlist;
-	% set index to keep track of which data goes with which directory
-	data.setIndex = [0; dnum];
+if(~isempty(dir(Args.RequiredFile)))
 	
-	% create nptdata so we can inherit from it
-	data.numSets = 1;    
-    data.Args = Args;
-	n = nptdata(data.numSets,0,pwd);
+	um = umaze('auto',varargin{:});
+	rp = rplparallel('auto',varargin{:});
+	spiketrain = load(Args.RequiredFile);
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    spiketimes = spiketrain.timestamps/1000; % now in seconds
+    maxTime = rp.data.timeStamps(end,3);
+    tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+    full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
+    full_arr = full_arr + tShifts';
+    keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
+    for row = 1:size(full_arr,1)
+        if keepers(row) < length(spiketimes) 
+            full_arr(row,:) = [full_arr(row,1+keepers:end)-maxTime-1 full_arr(row,1:keepers)];
+        end
+    end
+    
+        
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+	% create nptdata so we can inherit from it    
+	data.numSets = 1;
+	data.Args = Args;
+	n = nptdata(1,0,pwd);
 	d.data = data;
 	obj = class(d,Args.classname,n);
 	saveObject(obj,'ArgsC',Args);

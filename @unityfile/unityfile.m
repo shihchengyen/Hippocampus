@@ -29,7 +29,7 @@ Args.DataCheckArgs = {};
 % passed to createObject and createEmptyObject
 Args.classname = 'unityfile';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'um';
+Args.matvarname = 'uf';
 
 % To decide the method to create or load the object
 % change to proper directory to check for saved object
