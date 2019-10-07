@@ -469,9 +469,6 @@ if(dnum>0)
         data.sortedGPindices = sTPi;
         data.sortedGPindinfo = sortedGPindinfo;
         data.sGPi_minobs = sTPinm;
-        % data.sTPind = sTPind2;
-        % data.sTPin = sTPin2;
-        % data.sTPinm = sTPinm;
         data.sTPu = sTPu;
         data.nsTPu = nsTPu;
         data.ou_i = ou_i;
