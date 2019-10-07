@@ -186,9 +186,9 @@ function aligning_objects(threshold)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    save('unityfile.mat', 'uf');
-    save('eyelink.mat', 'el');
-    save('rplparallel.mat', 'rp');
+    save('unityfile.mat', 'uf', '-v7.3');
+    save('eyelink.mat', 'el', '-v7.3');
+    save('rplparallel.mat', 'rp', '-v7.3');
 
 
 end
