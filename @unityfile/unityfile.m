@@ -196,6 +196,9 @@ if(~isempty(rd))
         % add a zero at the beginning to avoid spike from being missed
         data.unityTime = [0; cumsum(unityData(:,2))];
 
+        % to calculate direction and magnitude coming to data point
+        
+
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
 		n = nptdata(data.numSets,0,pwd);
