@@ -97,7 +97,7 @@ if(dnum>0)
 	% get gridpositions (resolution of unityData lowered and allocated to bins)
 	[h2counts,horGridBound,vertGridBound,binH,binV] = histcounts2(unityData(:,3),unityData(:,4),horGridBound,vertGridBound);
 
-    % binH is the row number, binV is the column
+    % binH is the col number, binV is the row
 	% compute grid position number for each timestamp (something like flattened index)
 	gridPosition = binH + ((binV - 1) * gridSteps); 
 		
@@ -184,7 +184,7 @@ if(dnum>0)
     % trial at 27.2817 s is marked with position 0, and is immediately
     % followed by the end of the trial at 36.2458 s, marked as before
     % with a 0 in the 2nd column.  
-    sessionTime = zeros(size(gridPosition,1),3);	
+    sessionTime = zeros(size(gridPosition,1),5);	
 
     % start the array with 0 to make sure any spike times before the 
     % first trigger	are captured 
@@ -288,6 +288,8 @@ if(dnum>0)
 
         % get grid positions for this trial
         tgp = gridPosition(uDidx);
+        binHt = binH(uDidx);
+        binVt = binV(uDidx);
 
 
         % if tempTrialTime's last-first is 0, it means that the discrepency between
@@ -296,7 +298,7 @@ if(dnum>0)
         % by setting timestamps in the trial to the initial timestamp.
 
         if tempTrialTime(end)-tempTrialTime(1) ~= 0
-            sessionTime(sTi,:) = [tstart tgp(1) 0];
+            sessionTime(sTi,1:3) = [tstart tgp(1) 0];
             sTi = sTi + 1;
 
             % find the timepoints where grid positions changed
@@ -306,7 +308,8 @@ if(dnum>0)
             % add the Unity frame intervals to the starting timestamp to
             % create corrected version of unityTime, which will also be the
             % bin limits for the histogram function call
-            sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];	
+            sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];
+            sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc+1)-binHt(gpc)];
             sTi = sTi + ngpc;
 
             % occasionally we will get a change in grid position in the frame interval
@@ -396,56 +399,6 @@ if(dnum>0)
     end    
     
     zero_indices = find(sTime(:,2)==0);
-    
-    % below adds an additional column to sessionTime, to mark out the
-    % subject's direction. 
-    % up, down, left, right = 1,2,3,4
-    % see below to see what other numbers mean
-    % 
-    % 5 1 6
-    % 3   4
-    % 7 2 8
-    %
-    % NaN refers to not moving (for rows that mark out end trial or
-    % start trial timings), 5-8 marks out diagonal movements (shouldn't
-    % happen much if at all). 9 catches scenarios where subject jumps two
-    % or more grids within one trial (shouldn't happen).
-    
-    
-    sTime2 = NaN(size(sTime,1), 4);
-    sTime2(:,1:3) = sTime;
-    id0 = 0;
-    for row = 1:size(sTime2,1)
-        if sTime2(row,2) == 0
-            id0 = row;
-        end
-        if row - id0 > 1
-            change = sTime2(row,2) - sTime2(row-1,2);
-            if change == 5 % down
-                sTime2(row,4) = 2;
-            elseif change == -5 % up
-                sTime2(row,4) = 1;
-            elseif change == 1 % right
-                sTime2(row,4) = 4;
-            elseif change == -1 % left
-                sTime2(row,4) = 3;
-            else % shouldn't have to come to this stage, but might be possible (diagonal movements)
-                if change == -6 % up-left
-                    sTime2(row,4) = 5;
-                elseif change == -4 % up-right
-                    sTime2(row,4) = 6;
-                elseif change == 6 % bottom-right
-                    sTime2(row,4) = 8;
-                elseif change == 4 % bottom-left
-                    sTime2(row,4) = 7;
-                else % to denote error
-                    sTime2(row,4) = 9;
-                end
-            end
-        end
-    end
-    
-    sTime = sTime2;
     
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;

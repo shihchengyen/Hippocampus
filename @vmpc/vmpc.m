@@ -14,7 +14,7 @@ function [obj, varargout] = vmpc(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'MaxTimeDiff',0.002, 'MinTrials',5, 'GridSteps',5, ...
+				'MinTrials',5, 'GridSteps',5, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',0);
@@ -87,11 +87,13 @@ if(~isempty(dir(Args.RequiredFile)))
         end
     end
     
-        
+    % calculating proportion of occupied time in each grid position across
+    % entire session.
+    
+    gpsessiondur = sum(um.data.gpDurations, 2);
+    Pi = gpsessiondur/sum(gpsessiondur);
 
-
-
-
+    
 
 
 
