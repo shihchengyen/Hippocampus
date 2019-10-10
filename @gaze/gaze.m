@@ -1,4 +1,4 @@
-function [] = gaze(varargin)
+function [obj,varargout] = gaze(varargin)
 
 % Generate spatial view object for each session. 
 
@@ -18,9 +18,9 @@ function [] = gaze(varargin)
 
 % Use same grid size as in place analysis
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'RequiredFile','raycast.mat', 'GridSteps',40, ...
+				'ObjectLevel','Session', 'RequiredFile','raycast.mat', 'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
-                'FRSIC',0, 'UseAllTrials',0, 'UseMedian',0, ...
+                'FRSIC',0, 'UseAllTrials',1, 'UseMedian',0, ...
                 'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',0);
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -78,12 +78,14 @@ if(~isempty(dir(Args.RequiredFile)))
     [binnedRelGaze,binDepths] = bingazedata(fixatedObjNum, RelativeToFixdObjGazeAdj, gridSize);
     
     % Split binnedRelGaze into trials
-    [binnedRelGazeTrial] = splittrial(binnedRelGaze,rcdata.trialTimestamps,rcdata.timestamps,binDepths);
+    [binnedRelGazeDur,binnedRelGazeTrial,binnedRelGazeTrialInds] = splittrial(binnedRelGaze,rcdata.trialTimestamps,rcdata.timestamps,binDepths);
 
     % Output data
     % New variables
     data.binnedRelGaze = binnedRelGaze;
     data.binnedRelGazeTrial = binnedRelGazeTrial;
+    data.binnedRelGazeTrialInds = binnedRelGazeTrialInds;
+    data.binnedRelGazeDur = binnedRelGazeDur;
     data.fixatedObjNum = fixatedObjNum;
     data.RelativeToFixdObjGazeAdj = RelativeToFixdObjGazeAdj;
     data.gridSize = gridSize;
@@ -95,9 +97,8 @@ if(~isempty(dir(Args.RequiredFile)))
     data.timestamps = rcdata.timestamps;
     data.trialTimestamps = rcdata.trialTimestamps;
 %     data.fixatedObjLoc = rcdata.fixatedObjLoc;
-%     data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
+    data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
 %     data.fixatedObj = rcdata.fixatedObj;
-%     data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
 %     data.index = rcdata.index;
 %     data.fixIndex = rcdata.fixIndex;
 %     data.rawGazeData = rcdata.rawGazeData;
@@ -143,12 +144,50 @@ for ii = 1:size(gazeSections,2)
             
         case 'Ground'
             match = ~cellfun(@isempty,regexpi(fixatedObj,'Ground'));
-            RelativeToFixdObjGazeNew(match,:) = RelativeToFixdObjGaze(match,:) + 12.5;
+            RelativeToFixdObjGazeNew(match,1) = RelativeToFixdObjGaze(match,1) + 12.5;
+            RelativeToFixdObjGazeNew(match,2) = RelativeToFixdObjGaze(match,2) - 12.5;
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>25 & match),1) = 25;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-25 & match),2) = -25;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
         case 'Ceiling'
-            match = ~cellfun(@isempty,regexpi(fixatedObj,'Ceiling'));
-            RelativeToFixdObjGazeNew(match,:) = RelativeToFixdObjGaze(match,:) + 12.5;
-            %%%%%%% SORT CEILING LAMPS
+            match1 = ~cellfun(@isempty,regexpi(fixatedObj,'Ceiling'));
+            match2 = ~cellfun(@isempty,regexpi(fixatedObj,'ceil_'));
+            match = match1 | match2;
+            % Fix Ceiling
+            RelativeToFixdObjGazeNew(match1,1) = RelativeToFixdObjGaze(match1,1) + 12.5;
+            RelativeToFixdObjGazeNew(match1,2) = RelativeToFixdObjGaze(match1,2) - 12.5;
+            % Fix ceiling lights
+            adjustments = { '01'    9.28    9.47
+                            '02'    9.28    5.34
+                            '03'    9.28    0.34
+                            '04'    9.28    -5.01
+                            '05'    9.28    -8.94
+                            '06'    0.06    -8.94
+                            '07'    0.06    -5.01
+                            '08'    0.06    0.34
+                            '09'    0.06    5.34
+                            '10'    0.06    9.47
+                            '11'    -10.93  9.47
+                            '12'    -10.93  5.34
+                            '13'    -10.93  0.34
+                            '14'    -10.93  -5.01
+                            '15'    -10.93  -8.94
+                            };
+            for ll = 1:size(adjustments,1)
+                str = horzcat('ceil_lamp',adjustments{ll,1});
+                inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
+                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{ll,2} + 12.5;
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + adjustments{ll,3} - 12.5;
+            end
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>25 & match),1) = 25;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-25 & match),2) = -25;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
+            
         case 'Walls'
             match = ~cellfun(@isempty,regexpi(fixatedObj,'^wall'));
             
@@ -181,8 +220,13 @@ for ii = 1:size(gazeSections,2)
                 str = horzcat('^wall_',adjustments{jj,1});
                 inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                 RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{jj,2};
-                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 2.5;
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 2.5;
             end
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>100 & match),1) = 100;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-5 & match),2) = -5;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
         case 'Pillar1'
             match1 = ~cellfun(@isempty,regexpi(fixatedObj,'m_wall_1'));
@@ -201,14 +245,19 @@ for ii = 1:size(gazeSections,2)
                 str = horzcat('m_wall_',adjustments{jj,1});
                 inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                 RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{jj,2};
-                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 if str2double(adjustments{jj,1}) == 25 % RabitPoster
                     str = 'RabitPoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5 - 0.0387;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 end
             end 
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>20 & match),1) = 20;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-3.11 & match),2) = -3.11;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
         case 'Pillar2'
             match1 = ~cellfun(@isempty,regexpi(fixatedObj,'m_wall_10'));
@@ -227,20 +276,25 @@ for ii = 1:size(gazeSections,2)
             for jj = 1:size(adjustments,1)
                 str = horzcat('m_wall_',adjustments{jj,1});
                 inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
-                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGazeNew(inds,1) + adjustments{jj,2};
-                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{jj,2};
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 if str2double(adjustments{jj,1}) == 10 % CatPoster
                     str = 'CatPoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 elseif str2double(adjustments{jj,1}) == 29 % PigPoster
                     str = 'PigPoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5 - 0.01;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 end
             end
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>20 & match),1) = 20;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-3.11 & match),2) = -3.11;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
         case 'Pillar3'
             match1 = ~cellfun(@isempty,regexpi(fixatedObj,'m_wall_4'));
@@ -259,20 +313,25 @@ for ii = 1:size(gazeSections,2)
             for jj = 1:size(adjustments,1)
                 str = horzcat('m_wall_',adjustments{jj,1});
                 inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
-                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGazeNew(inds,1) + adjustments{jj,2};
-                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{jj,2};
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 if str2double(adjustments{jj,1}) == 15 % DonkeyPoster
                     str = 'DonkeyPoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5 - 0.168;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 elseif str2double(adjustments{jj,1}) == 4 % PigPoster
                     str = 'CrocodilePoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5 + 0.021;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 end
             end
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>20 & match),1) = 20;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-3.11 & match),2) = -3.11;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
         case 'Pillar4'
             match1 = ~cellfun(@isempty,regexpi(fixatedObj,'m_wall_7'));
@@ -290,15 +349,20 @@ for ii = 1:size(gazeSections,2)
             for jj = 1:size(adjustments,1)
                 str = horzcat('m_wall_',adjustments{jj,1});
                 inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
-                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGazeNew(inds,1) + adjustments{jj,2};
-                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + adjustments{jj,2};
+                RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 if str2double(adjustments{jj,1}) == 20 % DonkeyPoster
                     str = 'CamelPoster';
                     inds = ~cellfun(@isempty,regexpi(fixatedObj,str));
                     RelativeToFixdObjGazeNew(inds,1) = RelativeToFixdObjGaze(inds,1) + 2.5 + 0.025;
-                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) + 1.555;
+                    RelativeToFixdObjGazeNew(inds,2) = RelativeToFixdObjGaze(inds,2) - 1.555;
                 end
             end
+            % Safeguard for any points exceeding the bounds of object
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)>20 & match),1) = 20;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,1)<0 & match),1) = 0;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)<-3.11 & match),2) = -3.11;
+            RelativeToFixdObjGazeNew((RelativeToFixdObjGazeNew(:,2)>0 & match),2) = 0;
             
     end
     % Check that there are no overlapping matches
@@ -317,21 +381,21 @@ function [binnedGaze,binDepths] = bingazedata(fixatedObjNum, RelativeToFixdObjGa
 % HintImage: bin 2
 % Ground: bin 3 - 1602 (25Wx25L in Unity units) left to right, top to bottom
 % Ceiling: bin 1603 - 3202 bins (25Wx25L)
-% Walls: bin 3203 - 5250 (5Hx100W) 
-% Pillar1: bin 5251 - 5313 (3.11Hx20W) 
-% Pillar2: bin 5314 - 5376 (3.11Hx20W) 
-% Pillar3: bin 5377 - 5439 (3.11Hx20W) 
-% Pillar4: bin 5440 - 5502 (3.11Hx20W) 
+% Walls: bin 3203 - 4482 (5Hx100W) 
+% Pillar1: bin 4483 - 4642 (3.11Hx20W) 
+% Pillar2: bin 4643 - 4802 (3.11Hx20W) 
+% Pillar3: bin 4803 - 4962 (3.11Hx20W) 
+% Pillar4: bin 4963 - 5122 (3.11Hx20W) 
 
-binDepths = [   1;  % CueImage
-                1;  % HintImage
-            	(25/gridSize)*(25/gridSize);  % Ground
-            	(25/gridSize)*(25/gridSize);  % Ceiling
-            	(100/gridSize)*(8/gridSize); % Walls
-            	ceil((20/gridSize)*(3.11*gridSize)); % Pillar1
-            	ceil((20/gridSize)*(3.11*gridSize)); % Pillar2
-            	ceil((20/gridSize)*(3.11*gridSize)); % Pillar3
-            	ceil((20/gridSize)*(3.11*gridSize)); % Pillar4
+binDepths = [   1                       1       ;  % CueImage
+                1                       1       ;  % HintImage
+            	ceil(25/gridSize)       ceil(25/gridSize);  % Ground
+            	ceil(25/gridSize)       ceil(25/gridSize);  % Ceiling
+            	ceil(100/gridSize)      ceil(5/gridSize); % Walls
+            	ceil(20/gridSize)       ceil(3.11/gridSize); % Pillar1
+            	ceil(20/gridSize)       ceil(3.11/gridSize); % Pillar2
+            	ceil(20/gridSize)       ceil(3.11/gridSize); % Pillar3
+            	ceil(20/gridSize)       ceil(3.11/gridSize); % Pillar4
             ];
 
 
@@ -343,9 +407,15 @@ for ii = 1:size(fixatedObjNum,1)
         if fixatedObjNum(ii) == 1 % CueImage
             binnedGaze(ii) = 1;
         elseif fixatedObjNum(ii) == 2 % HintImage
-            binnedGaze(ii) = sum(binDepths(1:fixatedObjNum(ii)-1)) + 1;
+            binnedGaze(ii) = sum(binDepths(1:fixatedObjNum(ii)-1,1).*binDepths(1:fixatedObjNum(ii)-1,2)) + 1;
         else
-            binnedGaze(ii) = sum(binDepths(1:fixatedObjNum(ii)-1)) + ceil(RelativeToFixdObjGazeNew(ii,1)/gridSize) + floor(RelativeToFixdObjGazeNew(ii,2)/gridSize)*40;
+            binnedGaze(ii) = sum(binDepths(1:fixatedObjNum(ii)-1,1).*binDepths(1:fixatedObjNum(ii)-1,2)) + ...
+                ceil(RelativeToFixdObjGazeNew(ii,1)/gridSize) + ...
+                floor(abs(RelativeToFixdObjGazeNew(ii,2))/gridSize)*binDepths(fixatedObjNum(ii),1);
+            % Sanity check to make sure binning is correct
+            if floor(abs(RelativeToFixdObjGazeNew(ii,2))/gridSize)*binDepths(fixatedObjNum(ii),1) < 0
+                disp(ii);
+            end
         end
         
     end
@@ -353,18 +423,26 @@ for ii = 1:size(fixatedObjNum,1)
 end
 
 
-function [binnedRelGazeTrial] = splittrial(binnedRelGaze,trialTimestamps,gazetimestamps,binDepths)
+function [binnedRelGazeDur,binnedRelGazeTrial,binnedRelGazeTrialInds] = splittrial(binnedRelGaze,trialTimestamps,gazetimestamps,binDepths)
 
-binnedRelGazeTrial = nan(sum(binDepths,1),1);
-for ii = 1:size(trialTimestamps,1)
+ntrial = size(trialTimestamps,1);
+binnedRelGazeDur = nan(sum(binDepths(:,1).*(binDepths(:,2))),ntrial);
+longestDur = max(trialTimestamps(:,3) - trialTimestamps(:,2));
+binnedRelGazeTrial = nan(longestDur+1,ntrial);
+binnedRelGazeTrialInds = nan(1,ntrial);
+for ii = 1:ntrial
     
     indTrial = ismember(gazetimestamps,trialTimestamps(ii,2):trialTimestamps(ii,3));
     trialbins = binnedRelGaze(indTrial);
     uniquebins = unique(trialbins(~isnan(trialbins)));
-    for jj = 1:size(uniquebins,1)
-        binnedRelGazeTrial(uniquebins(jj),ii) = sum(binnedRelGaze == uniquebins(jj));
+    if uniquebins(end) > sum(binDepths(:,1).*(binDepths(:,2)))
+        disp(ii)
     end
-    
+    for jj = 1:size(uniquebins,1)
+        binnedRelGazeDur(uniquebins(jj),ii) = sum(trialbins == uniquebins(jj));
+    end
+    binnedRelGazeTrial(1:size(trialbins,1),ii) = trialbins;
+    binnedRelGazeTrialInds(1,ii) = size(trialbins,1);
 end
 
 
