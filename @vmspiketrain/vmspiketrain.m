@@ -97,11 +97,11 @@ if( dnum>0 && ~isempty(um) && ~isempty(ufile) )
 %	10	22.4139	13.0000	0.8260	16.9383	6	61
 	% value in bins match up with the values in zero_indices, so we can just find the values
 	% in bins that are not members of zero_indices
-	[n,e,bins] = histcounts(ts,sTime(:,1));
+	[~,~,bins] = histcounts(ts,sTime(:,1));
 	% compute the repetition number within each grid position each spike occurs in
 	% first find the row in sortedGPindices that corresponds to the occurence of the grid
 	% position that the spike occurred in
-	[membership, spike_index] = ismember(bins,um.data.sortedGPindices);
+	[~, spike_index] = ismember(bins,um.data.sortedGPindices);
 	% get indices that correspond to non-zero grid positions
 	n0bins = spike_index>sortedGPindinfo(1,2);
 	% get the grid position for each spike in non-zero grid positions
@@ -116,17 +116,11 @@ if( dnum>0 && ~isempty(um) && ~isempty(ufile) )
 	spike_xy = ufile.data.unityData(ubin,3:4);
 
 	% sort according to grid position and compute number of spikes at each position
-	[sorted_spike_gridposition,sorted_sgpi] = sort(spike_gridposition);
-	% find the points where grid position changes
-	% first set of values in sorted_spike_gridposition is for 0, which is where there is no 
-	% grid position, e.g. during cue presentation, etc., so the first change is where we want
-	% to start. 
-	change_ssgpindex = find(diff(sorted_spike_gridposition));
-	change_ssgpindex(end+1) = size(spike_xy,1);
+    [sorted_sgpi,sorted_sgpi_info] = groupdata(spike_gridposition);
 
 	data.spike_xy = {spike_xy};
 	data.sorted_sgpi = {sorted_sgpi};
-	data.sorted_sgpi_info = {[sorted_spike_gridposition(change_ssgpindex) change_ssgpindex]};
+	data.sorted_sgpi_info = {sorted_sgpi_info};
 	data.rep_num = rep_num;
 	
 	% create nptdata so we can inherit from it
