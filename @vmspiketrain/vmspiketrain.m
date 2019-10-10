@@ -117,10 +117,16 @@ if( dnum>0 && ~isempty(um) && ~isempty(ufile) )
 
 	% sort according to grid position and compute number of spikes at each position
     [sorted_sgpi,sorted_sgpi_info] = groupdata(spike_gridposition);
+    % in order to extract the number of observations for the grid positions
+    % that have spikes, we find the indices for the grid positions that
+    % have spikes
+    lia = ismember(sortedGPindinfo(:,1),sorted_sgpi_info);
 
 	data.spike_xy = {spike_xy};
 	data.sorted_sgpi = {sorted_sgpi};
-	data.sorted_sgpi_info = {sorted_sgpi_info};
+    % we add a 5th column that stores the number of observations for that
+    % grid position
+	data.sorted_sgpi_info = {[sorted_sgpi_info sortedGPindinfo(lia,4)]};
 	data.rep_num = rep_num;
 	
 	% create nptdata so we can inherit from it
