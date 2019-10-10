@@ -378,6 +378,9 @@ if(dnum>0)
     sTPin = diff(sTPind,1,2) + 1;
     % arrange the information into a matrix for easier access
     sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
+    % set up the conversion from grid position to index to make accessing the information
+    % easier
+    [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
     % find positions (excluding 0) with more than MinReps observations
     sTPinm = find(sTPin>(Args.MinObs-1));
     % create temporary variable that will be used for calculations below
@@ -426,7 +429,7 @@ if(dnum>0)
         data.nsTPu = nsTPu;
         data.ou_i = ou_i;
         data.P_i = ou_i / sum(ou_i); 
-        
+        data.gp2ind = gp2ind;
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
