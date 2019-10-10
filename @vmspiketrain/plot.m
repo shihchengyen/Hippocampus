@@ -29,19 +29,21 @@ if(~isempty(Args.NumericArguments))
 
 	spike_xy = obj.data.spike_xy{n};
 	sorted_sgpi = obj.data.sorted_sgpi{n};
-	change_ssgpindex = obj.data.sorted_sgpi_info{n};
+	sorted_sgpi_info = obj.data.sorted_sgpi_info{n};
 
-	if(Args.Linear)
-		
-	else
-		% for-loop over grid positions
-		for i=1:size(change_ssgpindex,1)
-			% create subplot
-			% index into spike_xy to get xy position
-			indices = change_ssgpindex(i,2):change_ssgpindex(i,3);
-			% get xy positions for this grid position
-			sxy = spike_xy(sorted_sgpi(indices),:);
-			plot(sxy(:,1),sxy(:,2),'.','Color',clist(mod(i-1,clistsize)+1,:))
+    % for-loop over grid positions
+    for i=1:size(sorted_sgpi_info,1)
+        % create subplot
+        % index into spike_xy to get xy position
+        indices = sorted_sgpi_info(i,2):sorted_sgpi_info(i,3);
+        % get xy positions for this grid position
+        sxy = spike_xy(sorted_sgpi(indices),:);
+        if(Args.Linear)
+            reps = sorted_sgpi_info(i,5);
+            repi = obj.data.rep_num(sorted_sgpi(indices));
+            
+        else
+        	plot(sxy(:,1),sxy(:,2),'.','Color',clist(mod(i-1,clistsize)+1,:))
 			if(i==1)
 				hold on
 			end
