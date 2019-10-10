@@ -27,18 +27,18 @@ if(~isempty(Args.NumericArguments))
 	clist = get(gca,'ColorOrder');
 	clistsize = size(clist,1);
 
-	change_ssgpindex = obj.data.change_ssgpindex{n};
 	spike_xy = obj.data.spike_xy{n};
 	sorted_sgpi = obj.data.sorted_sgpi{n};
+	change_ssgpindex = obj.data.sorted_sgpi_info{n};
 
 	if(Args.Linear)
 		
 	else
 		% for-loop over grid positions
-		for i=1:(size(change_ssgpindex,1)-1)
+		for i=1:size(change_ssgpindex,1)
 			% create subplot
 			% index into spike_xy to get xy position
-			indices = change_ssgpindex(i):(change_ssgpindex(i+1)-1);
+			indices = change_ssgpindex(i,2):change_ssgpindex(i,3);
 			% get xy positions for this grid position
 			sxy = spike_xy(sorted_sgpi(indices),:);
 			plot(sxy(:,1),sxy(:,2),'.','Color',clist(mod(i-1,clistsize)+1,:))
