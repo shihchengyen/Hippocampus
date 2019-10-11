@@ -10,8 +10,9 @@ function [obj, varargout] = vmspiketrain(varargin)
 %   % Instructions on vmspiketrain %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%   Example [as, Args] = vmspiketrain('save','redo')
-%           vs = ProcessLevel(vmspiketrain,'Levels','Days', ...
+%   Example: [as, Args] = vmspiketrain('save','redo');
+%
+%   Example: vs = ProcessLevel(vmspiketrain,'Levels','Days', ...
 %              'Include',{'20180810','20180823','20180824','20181101','20181102','20181105'}, ...
 %              'Exclude',{'sessioneye'})
 %   Dependencies: 
@@ -71,10 +72,15 @@ um = umaze('auto',varargin{:});
 if( dnum>0 && ~isempty(um) && ~isempty(ufile) )	
 	data.horGridBound = um.data.horGridBound;
 	data.vertGridBound = um.data.vertGridBound;
+	sTime = um.data.sessionTime;
+	sortedGPindinfo = um.data.sortedGPindinfo;
+	unityTime = ufile.data.unityTime;
 
 	% load spike train
 	st = load(Args.DataFile);
-	ts = (st.timestamps/1000)';
+	ts1 = (st.timestamps/1000)';
+	% remove any spike times before Unity started and after Unity ended
+	ts = ts1(ts1<sTime(end,1) & ts1>unityTime(1));
 
 	% find spikes that occurred during navigation
 	% e.g.
@@ -91,39 +97,37 @@ if( dnum>0 && ~isempty(um) && ~isempty(ufile) )
 %	10	22.4139	13.0000	0.8260	16.9383	6	61
 	% value in bins match up with the values in zero_indices, so we can just find the values
 	% in bins that are not members of zero_indices
-	[n,e,bins] = histcounts(ts,um.data.sessionTime(:,1));
+	[~,~,bins] = histcounts(ts,sTime(:,1));
+	% compute the repetition number within each grid position each spike occurs in
+	% first find the row in sortedGPindices that corresponds to the occurence of the grid
+	% position that the spike occurred in
+	[~, spike_index] = ismember(bins,um.data.sortedGPindices);
 	% get indices that correspond to non-zero grid positions
-	n0bins = ~ismember(bins,um.data.zero_indices);
+	n0bins = spike_index>sortedGPindinfo(1,2);
+	% get the grid position for each spike in non-zero grid positions
+	spike_gridposition = sTime(bins(n0bins),2);
+	% compute the repetition number for each spike by finding the row that corresponds to
+	% the start of the appropriate grid position
+	rep_num = mod(spike_index(n0bins),sortedGPindinfo(um.data.gp2ind(spike_gridposition),2)) + 1;
+	
 	% perform histogram on spike times that don't correspond to zero bins using unity time 
 	% bins in order to get the closest xy position
 	[~,~,ubin] = histcounts(ts(n0bins),ufile.data.unityTime);
-	% since ts may contain spike times after the unity program has ended, we need to look only
-	% at the non-zero values in ubin
-	spike_xy = ufile.data.unityData(ubin(ubin>0),3:4);
+	spike_xy = ufile.data.unityData(ubin,3:4);
 
-	% perform histogram on spike times to see which grid position the above information should
-	% go to
-	% [n,tsbin] = histc(ts,sTime(:,1));
-	[~,~,~,binH,binV] = histcounts2(spike_xy(:,1),spike_xy(:,2),data.horGridBound,data.vertGridBound);
-	% compute grid position number
-	spike_gridposition = binH + ((binV - 1) * um.data.gridSteps);
-
-	% get the grid position for each spike
-	% spike_gridposition = sTime(tsbin(tsbin>0),2);
-
-	% sort according to grid position
-	[sorted_spike_gridposition,sorted_sgpi] = sort(spike_gridposition);
-
-	% find the points where grid position changes
-	% first set of values in sorted_spike_gridposition is for 0, which is where there is no 
-	% grid position, e.g. during cue presentation, etc., so the first change is where we want
-	% to start. 
-	change_ssgpindex = find(diff(sorted_spike_gridposition));
-	change_ssgpindex(end+1) = size(spike_xy,1);
+	% sort according to grid position and compute number of spikes at each position
+    [sorted_sgpi,sorted_sgpi_info] = groupdata(spike_gridposition);
+    % in order to extract the number of observations for the grid positions
+    % that have spikes, we find the indices for the grid positions that
+    % have spikes
+    lia = ismember(sortedGPindinfo(:,1),sorted_sgpi_info);
 
 	data.spike_xy = {spike_xy};
 	data.sorted_sgpi = {sorted_sgpi};
-	data.change_ssgpindex = {change_ssgpindex};
+    % we add a 5th column that stores the number of observations for that
+    % grid position
+	data.sorted_sgpi_info = {[sorted_sgpi_info sortedGPindinfo(lia,4)]};
+	data.rep_num = rep_num;
 	
 	% create nptdata so we can inherit from it
 	data.numSets = 1;    
