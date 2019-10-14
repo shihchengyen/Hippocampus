@@ -73,7 +73,8 @@ if(dnum>0)
     	obj = createEmptyObject(Args);
     else
 		% assuming the el file is completed 
-		trialTimestamps = el.data.trial_timestamps + double(el.data.expTime);
+        firstTrialIndex = file.Var2(1) - el.data.trial_timestamps(1, 1);
+		trialTimestamps = el.data.trial_timestamps + double(firstTrialIndex);
 		allTimes = file.Var2; %stores all the times in the csv file 
 	
 		%look for all the timestamps for the start, cue and end/timeout 
@@ -116,7 +117,7 @@ if(dnum>0)
 		d.data = data;
 		obj = class(d,Args.classname,n);
 		saveObject(obj,'ArgsC',Args);
-	end
+    end
 else
 	% create empty object
 	obj = createEmptyObject(Args);
