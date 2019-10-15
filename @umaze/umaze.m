@@ -430,6 +430,10 @@ if(dnum>0)
         data.ou_i = ou_i;
         data.P_i = ou_i / sum(ou_i); 
         data.gp2ind = gp2ind;
+        
+        %%% temporary, for sfn generation %%%
+        data.unityTriggers = ufdata.data.unityTriggers;
+        data.unityTrialTime = ufdata.data.unityTrialTime;
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

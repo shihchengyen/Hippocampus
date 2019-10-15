@@ -34,7 +34,7 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltLowOcc','AdaptiveSmooth'};
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpc';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'vmpc';
+Args.matvarname = 'vmp';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -73,8 +73,8 @@ if(~isempty(dir(Args.RequiredFile)))
 %     uma.data.zero_indices = find(uma.data.sessionTime(:,2)==0);
     
 	rp = rplparallel('auto',varargin{:});
-	spiketrain = load(Args.RequiredFile);
-
+    spiketrain = load(Args.RequiredFile);
+    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -117,6 +117,8 @@ if(~isempty(dir(Args.RequiredFile)))
 
     location = uma.data.sessionTime(:,2)';
     location(uma.data.zero_indices) = [];
+    duration1 = uma.data.sessionTime(:,3)';
+    duration1(uma.data.zero_indices) = [];
     
     grid_numbers = bins_sieved;
     firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
@@ -127,9 +129,12 @@ if(~isempty(dir(Args.RequiredFile)))
     
     for grid_ind = 1:length(grid_numbers)
         tmp = N(:,location==grid_numbers(grid_ind));
-        var_stats(grid_numbers(grid_ind)) = var(tmp(1,:));
-        median_stats(grid_numbers(grid_ind)) = median(tmp(1,:));
-        perc_stats(grid_numbers(grid_ind),:) = prctile(tmp(1,:), [2.5 25 50 75 97.5]);
+        tmp1 = N(1,location==grid_numbers(grid_ind));
+        tmp2 = duration1(location==grid_numbers(grid_ind));
+        tmp3 = tmp1./tmp2;
+        var_stats(grid_numbers(grid_ind)) = var(tmp3);
+        median_stats(grid_numbers(grid_ind)) = median(tmp3);
+        perc_stats(grid_numbers(grid_ind),:) = prctile(tmp3, [2.5 25 50 75 97.5]);
         firing_counts_full(:,grid_ind) = sum(tmp,2);
     end   
     
@@ -271,6 +276,7 @@ if(~isempty(dir(Args.RequiredFile)))
     data.median_occ_firings = median_stats';
     data.variance_occ_firings = var_stats';
     data.perc_occ_firings = perc_stats';
+    data.gridSteps = Args.GridSteps;
     
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
