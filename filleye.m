@@ -183,7 +183,6 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
 %     arranged_array
 
     for row = 1:missing_rows % this segment attempts to identify where entire trials may have gone missing, by comparing with rpl timings
-
         error = nansum(truth - arranged_array,2);
         error_index = min(find(error~=0)); % insert before this
         if sum(abs(error)) == 0
@@ -204,9 +203,9 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
                 if error_index-1-count == 0
                     break;
                 end
-                for col = 1:3
-                    if ~isnan(arranged_array(error_index-1-count,col))
-                        pre_id_check = rem(arranged_array(error_index-1-count,col),10);
+                for col2 = 1:3
+                    if ~isnan(arranged_array(error_index-1-count,col2))
+                        pre_id_check = rem(arranged_array(error_index-1-count,col2),10);
                         break;
                     end
                 end
@@ -241,7 +240,7 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
                                 eye_start_trials(eye_start_count,1) = eye_timestamps(esi+1)-2000;
                             else
                                 disp('taking end trial and cutting 10seconds to estimate start trial timing');
-                                eye_start_trials(eye_start_count,1) = eye_timestamps(esi+2)-10000;
+                                eye_start_trials(eye_start_count,1) = eye_timestamps(esi+1)-10000;
                             end
                             eye_start_count = eye_start_count + 1;
                         end
@@ -260,6 +259,11 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
         end
     end
 
+    if nansum(abs(double(arranged_array) - double(truth))) > 0
+        clear error;
+        error('eyelink was not properly arranged. current arrangement still clashes with ripple')
+    end
+    
     missing = truth.*double(isnan(arranged_array)); %%%%% ready for output
     newMessages = cell(3*size(truth,1),1);
     flat_truth = truth';
