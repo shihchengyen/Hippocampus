@@ -78,7 +78,7 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(dir(Args.RequiredFile)))
 	% load unitymaze object
-	um = unitymaze('auto',varargin{:});
+	um = umaze('auto',varargin{:});
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
 	% load spike train file
