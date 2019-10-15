@@ -289,12 +289,20 @@ if(dlsize>0)
             
             messages = messages(~trigger_idx); % trim out 'Trigger Version'
             
-            if(contains(messages{end}, 'end', 'IgnoreCase', false))
-                messages = string(messages(1:end-1)); % trim out 'end'
+            while 1==1
+                temp_count = 0;
+                if(contains(messages{end}, 'end', 'IgnoreCase', false))
+                    messages = string(messages(1:end-1)); % trim out 'end'
+                    temp_count = temp_count + 1;
+                end
+                if(contains(messages{end}, 'error', 'IgnoreCase', true)) % kw_edit
+                    messages = string(messages(1:end-1)); % trim out 'error'
+                    temp_count = temp_count + 1;
+                end       
+                if temp_count == 0
+                    break;
+                end
             end
-            if(contains(messages{end}, 'error', 'IgnoreCase', true)) % kw_edit
-                messages = string(messages(1:end-1)); % trim out 'error'
-            end            
             
             %get the codes
             messages = strtrim(messages);
