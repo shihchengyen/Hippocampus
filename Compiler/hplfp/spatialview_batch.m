@@ -21,7 +21,7 @@ for ii = 1:size(cellList,1)
 %     if exist('spatialview.mat','file') == 2
 %         delete('spatialview.mat');
 %     end
-    spatialview('auto','RedoLevels',1,'SaveLevels',1,'NumShuffles',10);
+    spatialview('auto','RedoLevels',1,'SaveLevels',1,'NumShuffles',10,'GridSteps',40,'UseAllTrials',1,'FiltLowOcc',0);
     
 end
 
