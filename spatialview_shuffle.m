@@ -1,11 +1,23 @@
 function data = spatialview_shuffle(gz,rp,um,spiketrain,Args)
 
-binDepths = [gz.data.binDepths(:,2) gz.data.binDepths(:,1)]; % x and y are flipped in Unity coordinates
-ngridBins = sum(binDepths(:,1).*binDepths(:,2));
+% Gaze
+binDepths = gz.data.binDepths; 
+binNumGaze = sum(binDepths(:,1).*binDepths(:,2));
+binGazeLin = gz.data.binGazeLin;
+binGazeGrid = gz.data.binGazeGrid;
+gridSteps = gz.data.gridSteps;
+binNumLoc = gridSteps * gridSteps;
+binLocLin = gz.data.binLocLin;
+binLocGrid = gz.data.binLocGrid;
+trialInds = gz.data.trialInds;
 
 % get duration spent at each grid position per trial
-trial_dur = gz.data.binnedRelGazeDur/1000;
-trialTime = gz.data.trialTimestamps;
+gpDurGaze = gz.data.gpDurGaze;
+gpDurLoc = gz.data.gpDurLoc;
+timestampsTrial = gz.data.timestampsTrial;
+timestamps = gz.data.timestamps;
+T = (timestamps-timestamps(1));
+tTrial = gz.data.tTrial;
 ntrials = gz.data.numTrials;
 if(Args.UseAllTrials)
     processTrials = (1:ntrials)';
@@ -16,9 +28,9 @@ else
     processTrials = um.data.processTrials;
     nptrials = size(processTrials,1);
 end
-
-% compute trial durations from the timestamps in rplparallel
-rpTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
+% 
+% % compute trial durations from the timestamps in rplparallel
+% rpTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
 
 % create shuffled spikes array
 shuffleSize = Args.NumShuffles + 1;
@@ -29,8 +41,6 @@ shuffleSize = Args.NumShuffles + 1;
 % generate 1000 random time shifts between 0.1 and 0.9 of maxTime
 maxTime = rp.data.timeStamps(end,3);
 tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-% shuffleInd = 2:shuffleSize;
-% spikeLocTrialsh(shuffleInd,:,:) = sort(mod(spTimes(:,shuffleInd) + tShifts,maxTime));
 
 % convert spike times to seconds to make it consistent with Ripple
 % markers and Unity timestamps
@@ -60,7 +70,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
     end
     % Initialise output variables
     linsh_SIC = zeros(reps,1);
-    linsh_map_raw = zeros(ngridBins,reps);
+    linsh_map_raw = zeros(binNumGaze,reps);
     linsh_map_adsmooth = linsh_map_raw;
     linsh_map_boxsmooth = linsh_map_raw;
     linsh_lambda_i = linsh_map_raw;
@@ -80,73 +90,77 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             fprintf(1,'Processing shuffle %i\n',shi);
         end
 
-        % Bin spikes according to where gaze bins
-        trial_spikeLoc = zeros(ngridBins,size(subset,1));
-        tDiff = nan(size(subset,1),1);
+        % Bin spikes according to where gaze lands
+        trial_spikeBinGaze = zeros(binNumGaze,size(subset,1));
+        trial_spikeBinLoc = zeros(binNumLoc,size(subset,1));
+        spikepersample = zeros(size(binGazeLin,1),1);
+        emptyspikepersample = zeros(size(binGazeLin,1),1);
         for npi = 1:size(subset,1)
-            g = subset(npi);
-            tstart = rp.data.timeStamps(g,2);
-            tend = rp.data.timeStamps(g,3);
-
-            % get indices for this trial
-            uDidx = 1:gz.data.binnedRelGazeTrialInds(g);
-            % get grid positions for this trial
-            tgp = gz.data.binnedRelGazeTrial(uDidx,g);
+            
+            inds = trialInds(npi,1):trialInds(npi,2);
+            t = tTrial(1:size(inds,2),npi);
+            tstart = timestampsTrial(1,npi);
+            tend = timestampsTrial(size(inds,2),npi);
             
             % get spike times aligned to cue offset time
             temp = find(sTimes(shi,:) > tstart & sTimes(shi,:) < tend);
             trialSpkTimes = sTimes(shi,temp) - tstart; 
             
-            % get difference in timing between unity and ripple
-            uTrialTime = (1:(trialTime(g,3)-trialTime(g,2)))'/1000; % Convert ms to s to match ripple time
-            tDiff(npi) = uTrialTime(end) - rpTrialDur(g);
-
-            % only process trials with trigger discrepancies < 2 ms
-            if (abs(tDiff(npi)) < Args.MaxTimeDiff)
-                % compute number of spikes at each grid position
-                % e.g. trialSpikeTimes is 0.3885    0.4156    6.1729    6.1768    6.1810    6.3559    6.3575    6.4199    8.6585    8.6661    8.9505
-                % bins will be 9     9   150   150   150   156   156   158   240   240   248
-                % get non-nan values
-                [hcounts,uTT,bins] = histcounts(trialSpkTimes,uTrialTime);
-                % now we use bins to get grid position
-                % e.g. tgp(bins) will be  3     3    18    18    18    18    18    23    24    24    24
-                % we then call histcounts again to count number of times each grid position appears
-                % to get spikeLocTrial to be 0     0     2     0     0     0     0     0     0     0     0     0     0     0     0     0     0     5     0     0     0     0     1     3
-                % need to remove 0?s from bins in case there were any spikes that were just outside the edges of the histcounts
-                % compute histogram in parallel, and then extract the 1st column for data and the rest for shuffle
-                trial_spikeLoc(:,npi) = histcounts(tgp(bins(bins~=0)),1:sum(binDepths(:,1).*binDepths(:,2))+1);
+            tgpGaze = binGazeLin(inds);
+            tgpLoc = binLocLin(inds);
+     
+            % compute number of spikes at each grid position
+            % e.g. trialSpikeTimes is 0.3885    0.4156    6.1729    6.1768    6.1810    6.3559    6.3575    6.4199    8.6585    8.6661    8.9505
+            % bins will be 9     9   150   150   150   156   156   158   240   240   248
+            % get non-nan values
+            [hcounts,uTT,bins] = histcounts(trialSpkTimes,t);
+            [hcounts,uTT,Bin] = histcounts(sTimes(shi,temp),T);
+            uBin = unique(Bin);
+            for bb = 1:size(uBin,2)
+                spikepersample(uBin(bb),1) = spikepersample(uBin(bb),1) + sum(Bin == uBin(bb));
             end
+            % now we use bins to get grid position
+            % e.g. tgp(bins) will be  3     3    18    18    18    18    18    23    24    24    24
+            % we then call histcounts again to count number of times each grid position appears
+            % to get spikeLocTrial to be 0     0     2     0     0     0     0     0     0     0     0     0     0     0     0     0     0     5     0     0     0     0     1     3
+            % need to remove 0?s from bins in case there were any spikes that were just outside the edges of the histcounts
+            % compute histogram in parallel, and then extract the 1st column for data and the rest for shuffle
+            trial_spikeBinGaze(:,npi) = histcounts(tgpGaze(bins(bins~=0)),1:binNumGaze+1);
+            trial_spikeBinLoc(:,npi) = histcounts(tgpLoc(bins(bins~=0)),1:binNumLoc+1);
+
         end 
         
+        
+
         % compute total duration for each position
-        lin_o_i = nansum(trial_dur(:,subset),2);
+        lin_o_i_Gaze = nansum(gpDurGaze(:,subset),2);
         
         % Filter for low occupancy bins 
-        lin_zero_occ = lin_o_i == 0; % unvisited grid positions
-        lin_low_occ = false(size(lin_o_i));
+        lin_zero_occ_Gaze = lin_o_i_Gaze == 0; % unvisited grid positions
+        lin_low_occ_Gaze = false(size(lin_o_i_Gaze));
         if Args.FiltLowOcc
-            lin_low_occ = (sum(trial_dur>0,2) < Args.MinTrials); % grid positions with less than 5 observations
-            trial_dur(lin_low_occ,:) = 0;
-            trial_spikeLoc(lin_low_occ,:) = 0;
-            lin_o_i(lin_low_occ,:) = 0;
+            lin_low_occ_Gaze = (sum(gpDurGaze>0,2) < Args.MinTrials); % grid positions with less than 5 observations
+            gpDurGaze(lin_low_occ_Gaze,:) = 0;
+            trial_spikeBinGaze(lin_low_occ_Gaze,:) = 0;
+            lin_o_i_Gaze(lin_low_occ_Gaze,:) = 0;
         end
         
         % we divide by durTrial to get number of spikes per duration
-        trial_anovaMatrix = trial_spikeLoc./trial_dur(:,subset);
-        lin_map = nanmean(trial_anovaMatrix,2);
+        trial_anovaMatrix_Gaze = trial_spikeBinGaze./gpDurGaze(:,subset);
+        lin_map_Gaze = nanmean(trial_anovaMatrix_Gaze,2);
 
         % Compute spike count per grid position
-        lin_spikeLoc = sum(trial_spikeLoc,2);
+        lin_spikeLoc_Gaze = sum(trial_spikeBinGaze,2);
         
         % Restructure bins from linear to separate grids
-        grid_o_i = cell(size(binDepths,1),1);
-        grid_spikeLoc = grid_o_i;
-        grid_map = grid_o_i;
-        grid_low_occ = grid_o_i;
+        grid_o_i_Gaze = cell(size(binDepths,1),1);
+        grid_spikeBin_Gaze = grid_o_i_Gaze;
+        grid_map_Gaze = grid_o_i_Gaze;
+        grid_low_occ_Gaze = grid_o_i_Gaze;
         for jj = 1:size(binDepths,1) % for each grid
             % Initialise empty matrices
             o_i = nan(binDepths(jj,1),binDepths(jj,2));
-            spikeLoc = o_i;
+            spikeBin = o_i;
             map = o_i;
             low_occ = o_i;
             % Assign linear bin to grid bin
@@ -159,16 +173,16 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
                 x = ceil(mm/binDepths(jj,2));
                 indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
                 % Assign
-                o_i(x,y) = lin_o_i(indbins_lin);
-                spikeLoc(x,y) = lin_spikeLoc(indbins_lin);
-                map(x,y) = lin_map(indbins_lin);
-                low_occ(x,y) = lin_low_occ(indbins_lin);
+                o_i(x,y) = lin_o_i_Gaze(indbins_lin);
+                spikeBin(x,y) = lin_spikeLoc_Gaze(indbins_lin);
+                map(x,y) = lin_map_Gaze(indbins_lin);
+                low_occ(x,y) = lin_low_occ_Gaze(indbins_lin);
             end
             % Collect output 
-            grid_o_i{jj} = o_i;
-            grid_spikeLoc{jj} = spikeLoc;
-            grid_map{jj} = map;
-            grid_low_occ{jj} = logical(low_occ);
+            grid_o_i_Gaze{jj} = o_i;
+            grid_spikeBin_Gaze{jj} = spikeBin;
+            grid_map_Gaze{jj} = map;
+            grid_low_occ_Gaze{jj} = logical(low_occ);
         end
         
         % SMOOTH MAPS
@@ -181,32 +195,32 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
                0.0125 0.0625 0.1000 0.0625 0.0125;...
                0.0025 0.0125 0.0200 0.0125 0.0025;];
        % Initialise output matrices
-        grid_map_adsm = cell(size(grid_map));
-        grid_map_boxsm = grid_map_adsm;
+        grid_map_adsm_Gaze = cell(size(grid_map_Gaze));
+        grid_map_boxsm_Gaze = grid_map_adsm_Gaze;
         if shi == 1
-            grid_sm_radii = grid_map_adsm;
+            grid_sm_radii_Gaze = grid_map_adsm_Gaze;
         end
         % Smooth
-        for jj = 1:size(grid_map,1) % For each separate grid
+        for jj = 1:size(grid_map_Gaze,1) % For each separate grid
             
             if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
-                o_i = grid_o_i{jj};
-                spikeLoc = grid_spikeLoc{jj};
-                map = grid_map{jj};
+                o_i = grid_o_i_Gaze{jj};
+                spikeBin = grid_spikeBin_Gaze{jj};
+                map = grid_map_Gaze{jj};
                 % Pad each grid map with adjoining bins from other grids
                 % Pad with <<5>> extra bin rows
                 n = 5;
-                [retrievemap,o_i,spikeLoc,map] = padgrids(n,o_i,spikeLoc,map,grid_o_i,grid_spikeLoc,grid_map,gz.data.gazeSections,jj);
+                [retrievemap,o_i,spikeBin,map] = padgrids(n,o_i,spikeBin,map,grid_o_i_Gaze,grid_spikeBin_Gaze,grid_map_Gaze,gz.data.gazeSections,jj);
                 % Adaptive smooth
-                [map_adsm,~,~,smooth_r] = adaptivesmooth(o_i,spikeLoc,alpha);
+                [map_adsm,~,~,smooth_r] = adaptivesmooth(o_i,spikeBin,alpha);
                 % Boxcar smooth  
-                map_boxsm = boxcarsmooth(map, boxfilt, grid_low_occ{jj});
+                map_boxsm = boxcarsmooth(map, boxfilt, grid_low_occ_Gaze{jj});
                 % Store smoothing radii for posthoc analysis
                 if shi == 1
                     if isempty(smooth_r)
-                        grid_sm_radii{jj} = NaN;
+                        grid_sm_radii_Gaze{jj} = NaN;
                     else
-                        grid_sm_radii{jj} = smooth_r;
+                        grid_sm_radii_Gaze{jj} = smooth_r;
                     end
                 end
                 % Remove padding from map
@@ -214,47 +228,48 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
                 map_boxsm = map_boxsm(retrievemap(1,1):retrievemap(1,2),retrievemap(2,1):retrievemap(2,2));
 
             else
-                map_adsm = grid_map{jj};
-                map_boxsm = grid_map{jj};
+                map_adsm = grid_map_Gaze{jj};
+                map_boxsm = grid_map_Gaze{jj};
                 if shi == 1
-                    grid_sm_radii{jj} = NaN;
+                    grid_sm_radii_Gaze{jj} = NaN;
                 end
             end
             
             % Collect output
-            grid_map_adsm{jj} = map_adsm;
-            grid_map_boxsm{jj} = map_boxsm;
+            grid_map_adsm_Gaze{jj} = map_adsm;
+            grid_map_boxsm_Gaze{jj} = map_boxsm;
         end
         
         % Restructure grid bins back into linear array
-        lin_map_adsm = nan(size(lin_map));
-        lin_map_boxsm = lin_map_adsm;
+        lin_map_adsm_Gaze = nan(size(lin_map_Gaze));
+        lin_map_boxsm_Gaze = lin_map_adsm_Gaze;
         for ii = 1:size(binDepths,1)
             if ii > 1
                 % index of corresponding linear bin
                 ind_lin = sum(binDepths(1:ii-1,1).*binDepths(1:ii-1,2))+1:binDepths(ii,1)*binDepths(ii,2)+sum(binDepths(1:ii-1,1).*binDepths(1:ii-1,2));
                 % Reshape grid so as to concatenate each row from left to right
-                a = permute(grid_map_adsm{ii},[2,1]);
+                a = permute(grid_map_adsm_Gaze{ii},[2,1]);
                 % Fill in adaptive smooth map
-                lin_map_adsm(ind_lin,1) = a(:);
+                lin_map_adsm_Gaze(ind_lin,1) = a(:);
                 % Reshape grid so as to concatenate each row from left to right
-                b = permute(grid_map_boxsm{ii},[2,1]);
+                b = permute(grid_map_boxsm_Gaze{ii},[2,1]);
                 % Fill in boxsmooth map
-                lin_map_boxsm(ind_lin,1) = b(:);
+                lin_map_boxsm_Gaze(ind_lin,1) = b(:);
             else
-                lin_map_adsm(ii,1) = grid_map_adsm{ii};
+                lin_map_adsm_Gaze(ii,1) = grid_map_adsm_Gaze{ii};
+                lin_map_boxsm_Gaze(ii,1) = grid_map_boxsm_Gaze{ii};
             end
         end
         
         % COMPUTE SIC
         % compute total duration across all positions
-        So_i = sum(lin_o_i);
+        So_i = sum(lin_o_i_Gaze);
         % compute proportion of occupied time
-        P_i = lin_o_i/So_i;
+        P_i = lin_o_i_Gaze/So_i;
         % compute mean firing rate over all positions weighed by proportion of
         % occupied time
         % replace NaN with 0 in meanFRs;
-        lambda_i = lin_map_adsm;
+        lambda_i = lin_map_adsm_Gaze;
         lambda_i(isnan(lambda_i)) = 0;
         lambda_bar = P_i' * lambda_i;
         % divide firing for each position by the overall mean
@@ -271,9 +286,9 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             bits_per_spike = NaN;
         end
         linsh_SIC(shi,1) = bits_per_spike;
-        linsh_map_adsmooth(:,shi) = lin_map_adsm;
-        linsh_map_raw(:,shi) = lin_map;
-        linsh_map_boxsmooth(:,shi) = lin_map_boxsm;
+        linsh_map_adsmooth(:,shi) = lin_map_adsm_Gaze;
+        linsh_map_raw(:,shi) = lin_map_Gaze;
+        linsh_map_boxsmooth(:,shi) = lin_map_boxsm_Gaze;
         linsh_lambda_i(:,shi) = lambda_i;
     end
     % Store data
@@ -284,10 +299,16 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             data.maps_raw = linsh_map_raw(:,1);
             data.maps_boxsmooth = linsh_map_boxsmooth(:,1);
             data.maps_adsmooth = linsh_map_adsmooth(:,1);
+            data.binGazeLin = binGazeLin;
+            data.binGazeGrid = binGazeGrid;
+            data.binLocLin = binLocLin;
+            data.binLocGrid = binLocGrid;
+            data.spikepersample = spikepersample;
+            data.fixObjNum = gz.data.fixObjNum;
 
             data.SIC = linsh_SIC(1,1);
             data.SICsh = linsh_SIC;
-            data.smoothingradii = grid_sm_radii';
+            data.smoothingradii = grid_sm_radii_Gaze';
         case 2
             
             data.maps_raw1sthalf = linsh_map_raw(:,1);
@@ -295,7 +316,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             data.maps_adsmooth1sthalf = linsh_map_adsmooth(:,1);
                 
             data.SIC1sthalf = linsh_SIC(1,1);
-            data.smoothingradii1sthalf = grid_sm_radii';
+            data.smoothingradii1sthalf = grid_sm_radii_Gaze';
         case 3
             
             data.maps_raw2ndhalf = linsh_map_raw(:,1);
@@ -303,7 +324,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             data.maps_adsmooth2ndhalf = linsh_map_adsmooth(:,1);
                 
             data.SIC2ndhalf = linsh_SIC(1,1);
-            data.smoothingradii2ndhalf = grid_sm_radii';
+            data.smoothingradii2ndhalf = grid_sm_radii_Gaze';
     end
 end
 
