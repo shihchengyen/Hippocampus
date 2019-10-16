@@ -32,7 +32,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
 				'MaxTimeDiff',0.002,'MinTrials',5, 'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
-                'UseAllTrials',1, 'AdaptiveSmooth',1, 'FiltLowOcc',0);
+                'UseAllTrials',1, 'AdaptiveSmooth',1, 'FiltLowOcc',1);
 Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -73,12 +73,14 @@ end
 function obj = createObject(Args,varargin)
 
 if(~isempty(dir(Args.RequiredFile)))
+    cwd = pwd;
 	% load gaze object
 	gz = gaze('auto',varargin{:});
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
     % load unity maze object
     um = umaze('auto',varargin{:});
+    cd(cwd);
 	% load spike train file
 	spiketrain = load(Args.RequiredFile); 
 
