@@ -187,7 +187,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
         
         % SMOOTH MAPS
         % Adaptive smooth scaling factor
-        alpha = 1e4;
+        alpha = 1e2;
         % Boxcar filter
         boxfilt = [0.0025 0.0125 0.0200 0.0125 0.0025;...
                0.0125 0.0625 0.1000 0.0625 0.0125;...
