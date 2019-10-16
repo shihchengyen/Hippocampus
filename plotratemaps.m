@@ -4,6 +4,7 @@ function [] = plotratemaps(objtype,sortsic,plottype,save,maptype,varargin)
 % 1-3 = Place. Maps are grouped by session
 % 4 = Spatial view. Maps are grouped by session
 % 5 For single cells only: Place by spatial view. objtype should be 'place'
+cwd = pwd;
 
 if nargin > 5
     % Load cell list
@@ -35,7 +36,7 @@ else
 %     cd(cwd);
     % load celllist 
     % celllist = textread('/Volumes/User/huimin/Desktop/condor_shuffle/cell_list copy.txt','%c');
-    cwd = pwd;
+
     fid = fopen([cwd '/cell_list.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
@@ -59,12 +60,17 @@ identifiers = zeros(size(cellList,1),5);
 cellid = cell(size(cellList,1),1);
 missing = [];
 for ii = 1:size(cellList,1)
-    if exist(cellList{ii},'dir') == 7
-        % Collect date, session, array, channel, cell
-        identifiers(ii,:) = [str2double(cellList{ii}(s-9:s-2)) str2double(cellList{ii}(s+7:s+8)) ...
-            str2double(cellList{ii}(s+15:s+16)) str2double(cellList{ii}(s+25:s+27)) str2double(cellList{ii}(s+33:s+34))];
-        % Cell identifier
-        cellid{ii} = horzcat(num2str(identifiers(ii,4)),'-',num2str(identifiers(ii,5)));
+    if exist(cellList{ii},'dir') == 7 
+        cd(cellList{ii});
+        if exist('vmplacecell.mat','file') == 2
+            % Collect date, session, array, channel, cell
+            identifiers(ii,:) = [str2double(cellList{ii}(s-9:s-2)) str2double(cellList{ii}(s+7:s+8)) ...
+                str2double(cellList{ii}(s+15:s+16)) str2double(cellList{ii}(s+25:s+27)) str2double(cellList{ii}(s+33:s+34))];
+            % Cell identifier
+            cellid{ii} = horzcat(num2str(identifiers(ii,4)),'-',num2str(identifiers(ii,5)));
+        else
+            missing = [missing ii];
+        end
     else
         missing = [missing ii];
     end
@@ -75,6 +81,7 @@ cellid(missing) = [];
 cellList(missing) = [];
 setsessions = unique(identifiers(:,1));
 setcells = unique(cellid);
+cd(cwd);
 
 % Load firing rate maps depending on smoothing type
 switch maptype
@@ -92,7 +99,7 @@ nCells = obj.data.numSets;
 % Specify saved figure location
 cwd = pwd;
 if save
-    figdir = [ '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/alpha1e3/Spatialview/' 'ratemaps' 'plottype' num2str(plottype) 'maptype' num2str(maptype)];
+    figdir = [ '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/alpha1e3/Place/sfn/' 'ratemaps' 'plottype' num2str(plottype) 'maptype' num2str(maptype)];
     if exist(figdir,'dir') == 7
         rmdir(figdir,'s');
     end
@@ -225,10 +232,12 @@ if plottype == 1 || plottype == 2 || plottype == 3
                 if jj > plotgridh * plotgridv && mod(jj, (plotgridh * plotgridv)) == 1
                     % Save figure
                     if save
+                        cd(figdir);
                         % Save previous figure
                         figtitle = [num2str(setsessions(ii)) '-' num2str(floor(jj/(plotgridh * plotgridv)))];
                         saveas(h,figtitle,'png');
                         print('-painters',figtitle,'-dsvg');
+                        cd(cwd);
                     end
                     fig = fig + 1;
                     subpnum = 1;
@@ -251,7 +260,7 @@ if plottype == 1 || plottype == 2 || plottype == 3
                 h = figure(fig);
                 hold on;
                 colormap(jet);
-                set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 1 1 1]);
+                set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 0.9 0.9 0.9]);
                 ax = subplot(plotgridv,plotgridh,subpnum);
                 % Plot
 %                 pcolor([mapGrid nan(size(mapGrid,1),1); nan(1, size(mapGrid,2)+1)]);
@@ -286,11 +295,14 @@ if plottype == 1 || plottype == 2 || plottype == 3
                 
         end
         if save
+            cd(figdir);
             % Save figure
             figtitle = [num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv)))];
             saveas(h,figtitle,'png');
             print('-painters',figtitle,'-dsvg');
+            cd(cwd);
         end
+        close(figure(fig));
         fig = fig + 1;
         subpnum = 1;
     end
@@ -301,15 +313,16 @@ elseif plottype == 4
     plotgridh = 3;
     plotgridv = 3;
     % Plot params
-    axnum = [   1 NaN 0.05 0.55
-                1 NaN 0.05 0.55
-                8 NaN 0.325 0.05
-                2 NaN 0.325 0.55
-                4 6   0.05 0.3
-                5 NaN 0.325 0.3
-                5 NaN 0.325 0.3 
-                5 NaN 0.325 0.3
-                5 NaN 0.325 0.3];
+    axnum = [   1 NaN 0.05 0.65 % Cue
+                1 NaN 0.05 0.65 % Hint
+                8 NaN 0.325 0.05    % Ground
+                2 NaN 0.325 0.65    % Ceiling
+%                 4 6   0.05 0.3
+                5 NaN 0.325 0.325     % Walls
+                5 NaN 0.325 0.325     % Pillar1
+                5 NaN 0.325 0.325     % Pillar2
+                5 NaN 0.325 0.325     % Pillar3
+                5 NaN 0.325 0.325];   % Pillar4
     fig = 1;
     for ii = 1:size(setsessions,1) % For each session
         cells_ind = find(identifiers(:,1) == setsessions(ii));
@@ -348,6 +361,7 @@ elseif plottype == 4
             maxC = nanmax(mapLin);
             % Initialise empty cell array for grid maps
             grid_map = cell(size(binDepths,1),1);
+            axhandles = cell(size(binDepths,1),1);
             for bb = 1:size(binDepths,1) % for each grid
                 % Initialise empty matrices
                 map = nan(binDepths(bb,1),binDepths(bb,2));
@@ -375,25 +389,22 @@ elseif plottype == 4
                         else
                             ax = axes('Position',[axnum(bb,3)+0.55 axnum(bb,4) 0.35 0.4]);
                         end
+                        axhandles{bb} = ax;
+                        % Plot rate maps
                         plotspatialview(bb,plotgridv,plotgridh,map,ax,half);
-                        view(ax,[110 60]);
                         if ~isnan(maxC) && maxC ~= 0
                             set(ax,'CLim',[0 maxC],'Visible','Off','ZLim',[0 15],'XLim',[0 40],'YLim',[0 40]);
                         else
                             set(ax,'CLim',[0 1],'Visible','Off','ZLim',[0 15],'XLim',[0 40],'YLim',[0 40]);
                         end
+                        % Rotate view
+                        view(ax,[120 70]);
                     end
                 end
             end
-
-%             lgd = legend('spatialview');
-%             lgd.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' SI=',num2str(SI,2),'/',num2str(shprc,2));
-%             if obj.data.SIC(cell_ind,1) > shprc
-%                 ax.Title.Color = 'r';
-%             else
-%                 ax.Title.Color = 'k';
-%             end
             
+            % Plot outlines of shapes
+            patchboundaries(axhandles)
             
             if save
                 cd(figdir)
@@ -593,8 +604,7 @@ switch bb
         
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([0 0 40 40],[0 40 40 0], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
+        
         hold(ax,'off');
     case 4 % Ceiling
         hold(ax,'on');
@@ -605,12 +615,11 @@ switch bb
         
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([0 0 40 40],[0 40 40 0], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
+        
         hold(ax,'off');
     case 5 % Walls
         hold(ax,'on');
-        if half == 1
+%         if half == 1
             % Left 
             surfx = repmat(fliplr(0:40),9,1);
             surfy = zeros(9,41);
@@ -619,9 +628,7 @@ switch bb
 
             surf(surfx,surfy,surfz,surfmap);
             shading flat;
-            % Outline shape
-            patch([0 0 40 40],[0 0 0 0], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
-
+            
             % Top
             surfx = zeros(9,41);
             surfy = repmat((0:40),9,1);
@@ -630,11 +637,9 @@ switch bb
 
             surf(surfx,surfy,surfz,surfmap);
             shading flat;
-            % Outline shape
-            patch([0 0 0 0],[0 0 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
             
-            hold(ax,'off');
-        elseif half == 2
+%             hold(ax,'off');
+%         elseif half == 2
             % Right
             surfx = repmat((0:40),9,1);
             surfy = repmat(40,9,41);
@@ -643,9 +648,7 @@ switch bb
 
             surf(surfx,surfy,surfz,surfmap);
             shading flat;
-            % Outline shape
-            patch([0 0 40 40], [40 40 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
-
+            
             % Bottom
             surfx = repmat(40,9,41);
             surfy = repmat(fliplr(0:40),9,1);
@@ -654,9 +657,8 @@ switch bb
 
             surf(surfx,surfy,surfz,surfmap);
             shading flat;
-            % Outline shape
-            patch([40 40 40 40],[0 0 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
-        end
+            
+%         end
         hold(ax,'off');
         
     case 6 % Pillar1 (Bottom Right)
@@ -669,8 +671,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 32 32],[24 24 24 24], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Top
         surfx = repmat(24,6,9);
         surfy = repmat((24:32),6,1);
@@ -679,8 +680,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 24 24],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Right
         surfx = repmat((24:32),6,1);
         surfy = repmat(32,6,9);
@@ -689,8 +689,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 32 32],[32 32 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Bottom
         surfx = repmat(32,6,9);
         surfy = repmat(fliplr(24:32),6,1);
@@ -699,11 +698,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([32 32 32 32],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
-
-        % Outline Rabit poster on m_wall_25
-        patch([26.88 26.88 29.12 29.12],[32 32 32 32], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
+        
         hold(ax,'off');
 
     case 7 % Pillar 2 (Bottom Left)
@@ -716,8 +711,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 32 32],[8 8 8 8], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+
         % Top
         surfx = repmat(24,6,9);
         surfy = repmat((8:16),6,1);
@@ -726,8 +720,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 24 24],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Right
         surfx = repmat((24:32),6,1);
         surfy = repmat(16,6,9);
@@ -736,8 +729,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([24 24 32 32],[16 16 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Bottom
         surfx = repmat(32,6,9);
         surfy = repmat(fliplr(8:16),6,1);
@@ -746,15 +738,6 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        
-        % Outline shape
-        patch([32 32 32 32],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
-        
-        % Outline Cat poster on m_wall_10
-        patch([32 32 32 32],[10.88 10.88 13.12 13.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
-        
-        % Outline Pig poster on m_wall_29
-        patch([24 24 24 24],[10.88 10.88 13.12 13.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
         
         hold(ax,'off');
         
@@ -768,8 +751,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 16 16],[24 24 24 24], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Top
         surfx = repmat(8,6,9);
         surfy = repmat((24:32),6,1);
@@ -778,8 +760,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 8 8],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Right
         surfx = repmat((8:16),6,1);
         surfy = repmat(32,6,9);
@@ -788,8 +769,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 16 16],[32 32 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Bottom
         surfx = repmat(16,6,9);
         surfy = repmat(fliplr(24:32),6,1);
@@ -798,15 +778,6 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        
-        % Outline shape
-        patch([16 16 16 16],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
-        
-        % Outline Croc poster on m_wall_4
-        patch([16 16 16 16],[26.88 26.88 29.12 29.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
-        
-        % Outline Donkey poster on m_wall_15
-        patch([8 8 8 8],[26.88 26.88 29.12 29.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
         
         hold(ax,'off');
     case 9 % Pillar4 (Top Left)
@@ -819,8 +790,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 16 16],[8 8 8 8], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Top
         surfx = repmat(8,6,9);
         surfy = repmat((8:16),6,1);
@@ -829,8 +799,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 8 8],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Right
         surfx = repmat((8:16),6,1);
         surfy = repmat(16,6,9);
@@ -839,8 +808,7 @@ switch bb
 
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
-        % Outline shape
-        patch([8 8 16 16],[16 16 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
         % Bottom
         surfx = repmat(16,6,9);
         surfy = repmat(fliplr(8:16),6,1);
@@ -850,18 +818,93 @@ switch bb
         surf(surfx,surfy,surfz,surfmap);
         shading flat;
         
-        % Outline shape
-        patch([16 16 16 16],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
-        
-        % Outline Camel poster on m_wall_20
-        patch([10.88 10.88 13.12 13.12],[8 8 8 8], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
-        
         hold(ax,'off');
 end
 
 
+function [] = patchboundaries(axhandles)
 
+for ii = 1:size(axhandles,1)
+    
+    % Get axis of subplot
+    axes(axhandles{ii});
+    hold(axhandles{ii},'on');
+    switch ii
+        case 1 % Cue
+            
+        case 2  % Hint
+            
+        case 3  % Ground
+            
+            % Outer boundaries
+            patch([0 0 40 40],[0 40 40 0], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
+            % Pillars
+            
+        case 4  % Ceiling
+            
+            % Outer boundaries
+            patch([0 0 40 40],[0 40 40 0], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
+            
+        case 5  % Walls
+            
+            % Outer boundaries
+            patch([0 0 40 40],[0 0 0 0], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
+            patch([0 0 0 0],[0 0 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
+            patch([0 0 40 40], [40 40 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
+            patch([40 40 40 40],[0 0 40 40], [0 8 8 0] ,[1 1 1 1],'FaceColor','none');
+            
+        case 6  % Pillar1
+            
+            % Outer boundaries
+            patch([24 24 32 32],[24 24 24 24], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([24 24 24 24],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([24 24 32 32],[32 32 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([32 32 32 32],[24 24 32 32], [0    5 5 0] ,[1 1 1 1],'FaceColor','none');
 
+            % Outline Rabit poster on m_wall_25
+            patch([26.88 26.88 29.12 29.12],[32 32 32 32], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');    
+            
+        case 7  % Pillar2
+            
+            % Outer boundaries
+            patch([24 24 32 32],[8 8 8 8], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([24 24 24 24],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([24 24 32 32],[16 16 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([32 32 32 32],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+        
+            % Outline Cat poster on m_wall_10
+            patch([32 32 32 32],[10.88 10.88 13.12 13.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
 
+            % Outline Pig poster on m_wall_29
+            patch([24 24 24 24],[10.88 10.88 13.12 13.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
+            
+        case 8  % Pillar3
+            
+            % Outer boundaries
+            patch([8 8 16 16],[24 24 24 24], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([8 8 8 8],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([8 8 16 16],[32 32 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([16 16 16 16],[24 24 32 32], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+
+            % Outline Croc poster on m_wall_4
+            patch([16 16 16 16],[26.88 26.88 29.12 29.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
+
+            % Outline Donkey poster on m_wall_15
+            patch([8 8 8 8],[26.88 26.88 29.12 29.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
+            
+        case 9  % Pillar4
+            
+            % Outer boundaries
+            patch([8 8 16 16],[8 8 8 8], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([8 8 8 8],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([8 8 16 16],[16 16 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+            patch([16 16 16 16],[8 8 16 16], [0 5 5 0] ,[1 1 1 1],'FaceColor','none');
+
+            % Outline Camel poster on m_wall_20
+            patch([10.88 10.88 13.12 13.12],[8 8 8 8], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
+    end
+    
+    
+end
 
 
