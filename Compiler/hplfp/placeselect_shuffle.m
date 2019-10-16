@@ -173,7 +173,7 @@ for kk = 1:3 % For either full session (1), 1st half (2) or 2nd half (3)
             mapGrid(ii,:) = mapTrial( (ii-1)*Args.GridSteps+1:ii*Args.GridSteps );
         end
         % Adaptive smooth scaling factor
-        alpha = 1e3; % Scaling factor
+        alpha = 1e4; % Scaling factor
         % Boxcar filter
         boxfilt = [0.0025 0.0125 0.0200 0.0125 0.0025;...
                0.0125 0.0625 0.1000 0.0625 0.0125;...
