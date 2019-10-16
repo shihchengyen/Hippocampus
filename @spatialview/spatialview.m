@@ -79,7 +79,7 @@ if(~isempty(dir(Args.RequiredFile)))
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
     % load unity maze object
-    um = umaze('auto',varargin{:});
+    um = umaze('auto','GridSteps',40,varargin{:});
     cd(cwd);
 	% load spike train file
 	spiketrain = load(Args.RequiredFile); 
