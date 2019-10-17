@@ -256,6 +256,9 @@ if(~isempty(dir(Args.RequiredFile)))
             firing_counts_full1(isnan(firing_counts_full1)) = 0;
             disp('debug');
             to_compute = 1:0.5:(max(size(gpdur1(:,:,1)))/4 + min(size(gpdur1(:,:,1)))/4);
+            if length(to_compute) > 50
+                to_compute = 1:0.5:25;
+            end
             possible = NaN(length(to_compute),2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
             to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
             to_fill(preset_to_zeros) = 0;
