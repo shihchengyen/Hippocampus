@@ -242,6 +242,7 @@ if(~isempty(dir(Args.RequiredFile)))
         
         for jj = 3:size(grid_o_i_Gaze,1) % for each grid
             
+            disp('debug');
             wip = ones(Args.NumShuffles+1,1);
             gpdur1 = grid_o_i_Gaze{jj};
             preset_to_zeros = gpdur1(:,:,1);
@@ -253,8 +254,8 @@ if(~isempty(dir(Args.RequiredFile)))
             firing_counts_full1 = grid_spikeBin_Gaze{jj}; % kw_issue (need to set nans to zeros?)
             gpdur1(isnan(gpdur1)) = 0;
             firing_counts_full1(isnan(firing_counts_full1)) = 0;
-            
-            to_compute = 1:0.5:max(size(gpdur1(:,:,1)))/2;
+            disp('debug');
+            to_compute = 1:0.5:(max(size(gpdur1(:,:,1)))/4 + min(size(gpdur1(:,:,1)))/4);
             possible = NaN(length(to_compute),2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
             to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
             to_fill(preset_to_zeros) = 0;
