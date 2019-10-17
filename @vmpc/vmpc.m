@@ -123,18 +123,20 @@ if(~isempty(dir(Args.RequiredFile)))
     grid_numbers = bins_sieved;
     firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
     
-    median_stats = NaN(Args.GridSteps^2,1);
-    var_stats = NaN(Args.GridSteps^2,1);
-    perc_stats = NaN(Args.GridSteps^2,5);
+%     median_stats = NaN(Args.GridSteps^2,1);
+%     var_stats = NaN(Args.GridSteps^2,1);
+%     perc_stats = NaN(Args.GridSteps^2,5);
+    occ_data = cell(length(grid_numbers), 2);
     
     for grid_ind = 1:length(grid_numbers)
         tmp = N(:,location==grid_numbers(grid_ind));
         tmp1 = N(1,location==grid_numbers(grid_ind));
         tmp2 = duration1(location==grid_numbers(grid_ind));
         tmp3 = tmp1./tmp2;
-        var_stats(grid_numbers(grid_ind)) = var(tmp3);
-        median_stats(grid_numbers(grid_ind)) = median(tmp3);
-        perc_stats(grid_numbers(grid_ind),:) = prctile(tmp3, [2.5 25 50 75 97.5]);
+        occ_data(grid_ind,:) = {grid_numbers(grid_ind), tmp3};
+%         var_stats(grid_numbers(grid_ind)) = var(tmp3);
+%         median_stats(grid_numbers(grid_ind)) = median(tmp3);
+%         perc_stats(grid_numbers(grid_ind),:) = prctile(tmp3, [2.5 25 50 75 97.5]);
         firing_counts_full(:,grid_ind) = sum(tmp,2);
     end   
     
@@ -273,10 +275,11 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.SIC = sic_out(1);
     data.SICsh = sic_out;
-    data.median_occ_firings = median_stats';
-    data.variance_occ_firings = var_stats';
-    data.perc_occ_firings = perc_stats';
+%     data.median_occ_firings = median_stats';
+%     data.variance_occ_firings = var_stats';
+%     data.perc_occ_firings = perc_stats';
     data.gridSteps = Args.GridSteps;
+    data.occ_data = occ_data;
     
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
