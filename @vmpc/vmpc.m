@@ -191,6 +191,8 @@ if(~isempty(dir(Args.RequiredFile)))
         possible = NaN(length(to_compute),2,Args.GridSteps,Args.GridSteps,Args.NumShuffles + 1);
         to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
         to_fill(preset_to_zeros) = 0;
+        to_fill_time = NaN(size(possible,3), size(possible,4), size(possible,5));
+        to_fill_time(preset_to_zeros) = 0;        
         
         for idx = 1:length(to_compute)
             
@@ -206,6 +208,7 @@ if(~isempty(dir(Args.RequiredFile)))
             slice2 = squeeze(possible(idx,2,:,:,:));
 
             to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
+            to_fill_time(logic1 & isnan(to_fill_time)) = slice1(logic1 & isnan(to_fill_time));
             
             disp('smoothed with kernel size:');
             disp(to_compute(idx));
@@ -231,6 +234,12 @@ if(~isempty(dir(Args.RequiredFile)))
         to_fill = permute(to_fill, [3 1 2]);
         to_fill = reshape(to_fill, Args.NumShuffles + 1, Args.GridSteps^2);
         to_fill = to_fill(:,bins_sieved);
+        
+        to_fill_time(isnan(to_fill_time)) = 0;
+        to_fill_time = permute(to_fill_time, [3 1 2]);
+        to_fill_time = reshape(to_fill_time, Args.NumShuffles + 1, Args.GridSteps^2);
+        to_fill_time = to_fill_time(:,bins_sieved);
+        
         firing_rates_full = to_fill;
 
         % smoothing part ends
@@ -246,10 +255,10 @@ if(~isempty(dir(Args.RequiredFile)))
         data.maps_raw = to_save;
     end
     
-        gpdur1 = zeros(1,Args.GridSteps^2);
-        gpdur1(bins_sieved) = gpdur;
-        Pi1 = gpdur1/sum(gpdur1);
-        Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
+        gpdur1 = zeros(Args.NumShuffles+1,Args.GridSteps^2);
+        gpdur1(:,bins_sieved) = to_fill_time;
+        Pi1 = gpdur1./sum(gpdur1,2);
+%         Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
         
         lambda_i = NaN(Args.NumShuffles+1,Args.GridSteps^2);
         lambda_i(:,bins_sieved) = firing_rates_full;

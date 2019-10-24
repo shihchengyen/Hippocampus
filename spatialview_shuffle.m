@@ -100,7 +100,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             inds = trialInds(npi,1):trialInds(npi,2);
             t = tTrial(1:size(inds,2),npi);
             tstart = timestampsTrial(1,npi);
-            tend = timestampsTrial(size(inds,2),npi);
+            tend = timestampsTrial(size(inds,2),npi); % BAD?
             
             % get spike times aligned to cue offset time
             temp = find(sTimes(shi,:) > tstart & sTimes(shi,:) < tend);

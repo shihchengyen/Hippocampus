@@ -103,7 +103,8 @@ if(~isempty(dir(Args.RequiredFile)))
     % calculating proportion of occupied time in each grid position across
     % entire session. trial based here, compared to occurrence based in
     % vmpc (should be standardized, needs time).
-    
+        
+        gaz.data.binGazeLin(isnan(gaz.data.binGazeLin)) = 12345678;
         diff1 = diff(gaz.data.binGazeLin);
         size(diff1)
         change_index = find(diff1~=0);
@@ -135,9 +136,13 @@ if(~isempty(dir(Args.RequiredFile)))
         testing2 = zeros(size(testing,1),3);
         testing2(:,1:2) = testing;
         testing2(1:end-1,3) = diff(testing(:,1));
+        testing2(testing2(:,2)==12345678,2) = NaN;
         
         gaz.data.sessionTimeGaze = testing2;
-        zero_indices = find(gaz.data.sessionTimeGaze(:,2)==0);
+%         zero_indices = find(gaz.data.sessionTimeGaze(:,2)==0);
+        binGazeLin = gaz.data.binGazeLin;
+        timestamps1 = gaz.data.timestamps;
+%         save('debug_base.mat', 'testing2','binGazeLin','timestamps1');
     
     
     if Args.FiltLowOcc
@@ -162,13 +167,13 @@ if(~isempty(dir(Args.RequiredFile)))
     edge_end = 0.5+size(full_arr,1);
     [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), gaz.data.sessionTimeGaze(:,1), 0.5:1:edge_end);
     
-    N(zero_indices(1:end-1),:) = [];
+%     N(zero_indices(1:end-1),:) = [];
     N = N';
 
     location = gaz.data.sessionTimeGaze(:,2)';
-    location(zero_indices) = [];
+%     location(zero_indices) = [];
     duration1 = gaz.data.sessionTimeGaze(:,3)';
-    duration1(zero_indices) = [];
+%     duration1(zero_indices) = [];
     
     grid_numbers = bins_sieved;
     firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
@@ -178,7 +183,10 @@ if(~isempty(dir(Args.RequiredFile)))
 %     perc_stats = NaN(Args.GridSteps^2,5);
     
     for grid_ind = 1:length(grid_numbers)
-        tmp = N(:,location==grid_numbers(grid_ind));
+%         if grid_numbers(grid_ind) == 4802
+%             disp('filler');
+%         end
+        tmp = N(:,find(location(1:end-1)==grid_numbers(grid_ind)));
         firing_counts_full(:,grid_ind) = sum(tmp,2);
     end   
     
@@ -186,7 +194,11 @@ if(~isempty(dir(Args.RequiredFile)))
     firing_counts_full1(:,grid_numbers) = firing_counts_full;
     lin_spikeLoc_Gaze = firing_counts_full1';
     lin_o_i_Gaze = repmat(gpdur_s,1,Args.NumShuffles+1);
-    disp('yes');
+%     disp('yes');
+%     
+%     disp('temporary');
+%     abc1 = firing_counts_full1(1,:);
+%     abc = firing_counts_full1(1,:)'./gpdur_s;
     
     %%%
             % Restructure bins from linear to separate grids
@@ -298,12 +310,7 @@ if(~isempty(dir(Args.RequiredFile)))
             to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
             grid_smoothed_Gaze{jj} = to_fill;
             
-%             tmp10 = grid_o_i_Gaze{jj};
-%             tmp10 = tmp10(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-%             grid_o_i_Gaze{jj} = tmp10;
-%             tmp10 = grid_spikeBin_Gaze{jj};
-%             tmp10 = tmp10(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-%             grid_spikeBin_Gaze{jj} = tmp10;
+
         end
 
         disp('checkpoint');
