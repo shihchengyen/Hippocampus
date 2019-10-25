@@ -39,6 +39,16 @@ function aligning_objects(threshold)
     dubious_counter = 0;
     dubious_collector = [];
 
+    saving_closest_fix_times = el.data.fix_times(:,1:2);
+    ts = el.data.timestamps;
+    
+    tic;
+    parfor row = 1:size(el.data.fix_times,1)
+        for col = 1:2
+            [~,saving_closest_fix_times(row,col)] = min(abs(ts-saving_closest_fix_times(row,col)));
+        end
+    end
+    toc
     for i = 1:length(true_timestamps)-1
 
         true_start = true_timestamps(i);
@@ -153,7 +163,13 @@ function aligning_objects(threshold)
         full_shift = el.data.session_start - target;
         el.data.timestamps = uint32(el.data.timestamps - full_shift);
         el.data.session_start_index = finding_index;
-        el.data.fix_times(:,1:2) = el.data.fix_times(:,1:2) - double(full_shift);
+        
+        parfor row = 1:size(el.data.fix_times,1)
+            for col = 1:2
+                el.data.fix_times(row,col) = el.data.timestamps(saving_closest_fix_times(row,col));
+            end
+        end        
+%         el.data.fix_times(:,1:2) = el.data.fix_times(:,1:2) - double(full_shift);
 
         session_trial_duration = rp.data.timeStamps(1,1) - true_session_start;
         uf_session_trial_chunk = uf.data.unityTime(1:uf.data.unityTriggers(1,1)+1);
@@ -186,7 +202,7 @@ function aligning_objects(threshold)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    toc
     save('unityfile.mat', 'uf', '-v7.3');
     save('eyelink.mat', 'el', '-v7.3');
     save('rplparallel.mat', 'rp', '-v7.3');
