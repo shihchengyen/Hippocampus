@@ -14,8 +14,8 @@ function [obj, varargout] = plot(obj,varargin)
 %       creates a figure with an imagesc plot on top of an errorbar plot.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Errorbar',0, ...
-          'SIC',0,'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4);
+		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Map',0,'Smooth',1,'SameScale',0, ...
+          'SIC',0,'Radii',0,'Details',0,'MinDur',0,'Filtered',0,'SortByRatio',0);
 Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
@@ -29,82 +29,35 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-    if(Args.Errorbar)
-    	if(obj.data.Args.UseMedian)
-    		errorbar(1:size(obj.data.meanFRs,1),obj.data.meanFRs(:,n), ...
-    			obj.data.semFRs(:,(n*2)-1),obj.data.semFRs(:,n*2),'x')
-    	else
-	        errorbar(obj.data.meanFRs(:,n),obj.data.semFRs(:,n),'.')
-	    end
-    elseif(Args.SIC)
-        % get shuffled SIC
-        shSIC = obj.data.SICsh(2:end,n);
-        % get 95th percentile
-        shSIC95 = prctile(shSIC,95);
-        histogram(shSIC)
-        hold on
-        line(repmat(shSIC95,1,2),ylim,'Color','r')
-        line(repmat(obj.data.SICsh(1,n),1,2),ylim,'Color','g')
-        % line(repmat(obj.data.SIC(n),1,2),ylim,'Color','m')
-        hold off
-    elseif(Args.Shuffle)
-        r = obj.data.SICsh(2:end,n);
-        % get number of shuffles
-        nShuffles = obj.data.Args.NumShuffles;
-        ni = nShuffles/Args.ShuffleSteps;
-        ra = zeros(ni,1);
-        ii = 1:ni;
-        for i = ii
-            iend = i*Args.ShuffleSteps;
-            ri = 1:iend;
-            ra(i) = prctile(r(ri),95);
-            if(iend(end)==1000)
-                p1000 = ra(i);
-            end
-        end
-        plot(ii*Args.ShuffleSteps,ra,'*-');
-        hold on
-        line(xlim,repmat(p1000,1,2),'Color','m')
-        hold off
-%         hold on
-%         dra = 0.05 * mean(abs(diff(ra(1:4))));
-%         line(repmat(xlim',1,2),repmat([ra(end)-dra ra(end)+dra],2,1))
-%         hold off
-        xlabel('Number of Shuffles')
-        ylabel('95th percentile SIC')
-    else  % if(Args.Errorbar)
-        gSteps = obj.data.gridSteps;
-        imagesc(reshape(obj.data.maps_raw(n,:),gSteps,gSteps));
-        colorbar
-    end  % if(Args.Errorbar)
+    if(Args.Map)
+        disp('placeholder');
+    end
 
 	sdstr = get(obj,'SessionDirs');
 	title(getDataOrder('ShortName','DirString',sdstr{n}))
 else
 	% plot all data
 	n = get(obj,'Number');
-    if(Args.SIC)
-        % get data SIC
-        dSIC = obj.data.SICsh(1,:);
-        sSIC = obj.data.SICsh(2:end,:);
-        sSIC95 = prctile(sSIC,95);
-        % plot SIC versus shuffle
-        nsp = Args.NumSubPlots;
-        % get number of cells per subplot
-        npsubplot = ceil(n/nsp);
-        % generate indices
-        npi = 1:npsubplot;
-        for i = 1:nsp
-            subplot(nsp,1,i)
-            dindices = npi+((i-1)*npsubplot);
-            plot(dindices,dSIC(dindices),'b*-')
-            hold on
-            plot(dindices,sSIC95(dindices),'ro-')
-            hold off
-            xlim([dindices(1)-1 dindices(end)+1])
+    clf;
+    if(Args.Map)
+        if Args.Smooth
+            maps = obj.data.maps_adsmooth;
+            plot_all_maps(maps,Args);
+        else
+            maps = obj.data.maps_raw;
+            plot_all_maps(maps,Args);
         end
-        xlabel('Cell Number')
-        ylabel('SIC')
+    elseif(Args.SIC)
+        histogram(obj.data.SICsh);
+        max_count = max(histcounts(obj.data.SICsh));
+        hold on;
+        line([obj.data.SIC obj.data.SIC], [0 max_count]);
+        hold off;
+    elseif(Args.Details)
+        detailed_plot(obj.data.detailed_fr,Args);
+    elseif(Args.Radii)
+        maps = obj.data.smoothed_size;
+        plot_all_maps(maps,Args);
     end
 end
 
@@ -126,3 +79,190 @@ if(lRR>0)
 else
     varargout = {};
 end
+
+
+
+
+
+
+
+
+
+function plot_all_maps(map,Args)
+
+        % subplot('Position',[left bottom width height]);
+        if Args.SameScale
+            high = 0;
+            for jj = 1:size(map,1)
+                if max(max(map{jj})) > high
+                    high = max(max(map{jj}));
+                end           
+            end
+        end
+
+        subplot('Position',[0.05 0.85 0.1 0.1]);
+        if Args.SameScale
+            imagesc(map{1}, [0 high]);
+        else
+            imagesc(map{1});
+            colorbar();
+        end
+        title('1st cell');
+
+        subplot('Position',[0.05 0.7 0.1 0.1]);
+        if Args.SameScale
+            imagesc(map{2}, [0 high]);
+        else
+            imagesc(map{2});
+            colorbar();
+        end
+        title('2nd cell');
+
+        subplot('Position',[0.20 0.65 0.3 0.3]);
+        if Args.SameScale
+            imagesc(map{3}, [0 high]);
+        else
+            imagesc(map{3});
+            colorbar();
+        end
+        title('3rd cell');
+
+        subplot('Position',[0.55 0.65 0.3 0.3]);
+        if Args.SameScale
+            imagesc(map{4}, [0 high]);
+            colorbar();
+        else
+            imagesc(map{4});
+            colorbar();
+        end
+        title('4th cell');
+
+        subplot('Position',[0.05 0.5 0.9 0.09]);
+        top_half = map{5};
+        internal_max = max(max(top_half));
+        cut = floor(size(top_half,2)/2);
+        top_half = top_half(:,1:cut);
+        bot_half = map{5};
+        bot_half = bot_half(:,cut+1:end);
+        if Args.SameScale
+            imagesc(top_half, [0 high]);
+        else
+            imagesc(top_half, [0 internal_max]);
+            colorbar();
+        end
+        title('5th cell (first then second half)');
+
+        subplot('Position',[0.05 0.4 0.9 0.09]);
+        if Args.SameScale
+            imagesc(bot_half, [0 high]);
+        else
+            imagesc(bot_half, [0 internal_max]);
+            colorbar();
+        end
+
+        subplot('Position',[0.025 0.25 0.45 0.1]);
+        if Args.SameScale
+            imagesc(map{6}, [0 high]);
+        else
+            imagesc(map{6});
+            colorbar();
+        end
+        title('6th cell');
+
+        subplot('Position',[0.525 0.25 0.45 0.1]);
+        if Args.SameScale
+            imagesc(map{7}, [0 high]);
+        else
+            imagesc(map{7});
+            colorbar();
+        end
+        title('7th cell');
+
+        subplot('Position',[0.025 0.1 0.45 0.1]);
+        if Args.SameScale
+            imagesc(map{8}, [0 high]);
+        else
+            imagesc(map{8});
+            colorbar();
+        end
+        title('8th cell');
+
+        subplot('Position',[0.525 0.1 0.45 0.1]);
+        if Args.SameScale
+            imagesc(map{9}, [0 high]);
+        else
+            imagesc(map{9});
+            colorbar();
+        end
+        title('9th cell');
+        
+        
+        
+function detailed_plot(details1,Args)
+
+    unique_bins = unique(details1(1,:));
+    if Args.Filtered
+        checking_for_activity = details1(:,find(details1(2,:)>0));
+        unique_bins = unique(checking_for_activity(1,:));
+    end
+    
+    bin_limits = [0:5:25 max(details1(4,:))];
+    binned_data = NaN(length(bin_limits),length(unique_bins));
+    for col = 1:length(unique_bins)
+        subset_arr = details1(3:4,find(details1(1,:)==unique_bins(col)));
+        if Args.MinDur ~= 0
+            subset_arr = subset_arr(:,find(subset_arr(1,:)>Args.MinDur));
+        end
+        zero_count = sum(subset_arr(2,:)==0);
+        binned_temp = histcounts(subset_arr(2,:), bin_limits);
+        binned_temp(1) = binned_temp(1) - zero_count;
+        binned_data(1:length(binned_temp)+1,col) = [zero_count binned_temp];
+    end
+    
+    if Args.SortByRatio
+        ratio = sum(binned_data(2:end,:),1)./binned_data(1,:);
+        binned_data_temp = [ratio; binned_data; unique_bins];
+        binned_data_temp = sortrows(binned_data_temp.',1).';
+        binned_data = fliplr(binned_data_temp(2:end-1,:));
+        unique_bins = fliplr(binned_data_temp(end,:));
+    end
+    
+
+    for column = 1:min(10,size(binned_data,2))
+        subplot(1,11,column);
+        imagesc(binned_data(2:end,column));
+        set(gca,'Ytick',1:size(binned_data(2:end,1),1)-1,'YTickLabel',[5:5:25]);
+        colorbar();
+        title(['grid ' num2str(unique_bins(column))]);
+        xlabel({['zeros: ' num2str(binned_data(1,column))],['ratio: ' num2str(sum(binned_data(2:end,column))/binned_data(1,column))]});
+    end
+    
+    if length(unique_bins) > 10
+        ss = 1/floor(length(unique_bins)/10);
+        uicontrol('Style', 'slider', 'Min', 0, 'Max', floor(length(unique_bins)/10), ...
+            'Value', 0, 'SliderStep', [ss ss], 'Units','normalized', 'Position', [0.75 0.1 0.1 0.8], ...
+            'Callback', {@react_to_slider, binned_data, unique_bins});
+    end
+    
+    function react_to_slider(source, ~, binned_data, unique_bins)
+        val = round(get(source, 'Value'));
+        set(source, 'Value', val);
+        disp(val);
+        counter = 1;
+        for column = (10*val)+1:10*(val+1)
+            sp_col = 11;
+            subplot(1,sp_col,counter);
+            if column > size(binned_data,2)
+                data_to_clear = zeros(size(binned_data,1)-1,1);
+                imagesc(data_to_clear);
+                colorbar();
+                title(' - ');
+            else
+                imagesc(binned_data(2:end,column));
+                set(gca,'Ytick',1:size(binned_data(2:end,1),1)-1,'YTickLabel',[5:5:25]);
+                colorbar();
+                title(['grid ' num2str(unique_bins(column))]);
+                xlabel({['zeros: ' num2str(binned_data(1,column))],['ratio: ' num2str(sum(binned_data(2:end,column))/binned_data(1,column))]});
+            end
+            counter = counter + 1;
+        end        

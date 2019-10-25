@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',5000, ...
                 'FRSIC',0, 'UseMedian',0, 'MinObs',5, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',1);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',1, 'UseAllTrials', 1);
             
-Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
+Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltLowOcc','AdaptiveSmooth'};                           
+Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltLowOcc','AdaptiveSmooth','UseAllTrials'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -67,6 +67,7 @@ dnum = size(dlist,1);
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
      
+    %use this to test in kw_testing/20181102
     gaz1 = load('temp_gaze.mat');
     gaz.data.binGazeLin = gaz1.a1;
     gaz.data.timestamps = gaz1.a2;
@@ -79,14 +80,15 @@ if(~isempty(dir(Args.RequiredFile)))
     gaz.data.binLocGrid = gaz2.a8;
     gaz3 = load('gaze2.mat');
     gaz.data.gazeSections = gaz3.a9;
-    
-    
 	rp = load('../../../rplparallel.mat');
     rp = rp.rp.data;
+    
+    %use this for real gaze objects
 %     rp = rplparallel('auto');
 %     rp = rp.data;
-    spiketrain = load(Args.RequiredFile);
 %     gaz = gaze('auto',varargin{:});  
+
+    spiketrain = load(Args.RequiredFile);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -133,6 +135,27 @@ if(~isempty(dir(Args.RequiredFile)))
             end
         end
         
+        if ~Args.UseAllTrials
+            
+            uma = umaze('auto','GridSteps',Args.GridSteps);
+            pt = uma.data.processTrials;
+            pt_n = 1:size(rp.timeStamps,1);
+            pt_n(pt) = [];
+            zero_indices = find(testing(:,2)==0);
+            for i = 1:length(pt_n)
+                
+                if pt_n(i) == length(zero_indices)
+                    testing(zero_indices(pt_n(i))+1:size(testing,1), 2) = 12345678;
+                else
+                    testing(zero_indices(pt_n(i))+1:zero_indices(pt_n(i)+1)-1, 2) = 12345678;
+                end
+                
+            end
+            
+        end
+        data.UseAllTrials = Args.UseAllTrials;
+        
+        
         testing2 = zeros(size(testing,1),3);
         testing2(:,1:2) = testing;
         testing2(1:end-1,3) = diff(testing(:,1));
@@ -143,7 +166,7 @@ if(~isempty(dir(Args.RequiredFile)))
         binGazeLin = gaz.data.binGazeLin;
         timestamps1 = gaz.data.timestamps;
 %         save('debug_base.mat', 'testing2','binGazeLin','timestamps1');
-    
+        data.sessionTime_generated = testing2;
     
     if Args.FiltLowOcc
         bins_sieved = find(sum(~isnan(gaz.data.gpDurGaze),2)>Args.MinObs);
@@ -178,14 +201,19 @@ if(~isempty(dir(Args.RequiredFile)))
     grid_numbers = bins_sieved;
     firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
     
-%     median_stats = NaN(Args.GridSteps^2,1);
-%     var_stats = NaN(Args.GridSteps^2,1);
-%     perc_stats = NaN(Args.GridSteps^2,5);
+    non_shuffle_details = NaN(3,size(N,2));
+    non_shuffle_details(2,:) = N(1,:);
+    non_shuffle_details(3,:) = gaz.data.sessionTimeGaze(1:end-1,3)';
+    non_shuffle_details(1,:) = gaz.data.sessionTimeGaze(1:end-1,2)';
+    non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
+    non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
+    non_shuffle_data = sortrows(non_shuffle_details.',1).';
+    non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
+    non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
+    data.detailed_fr = non_shuffle_data;
     
     for grid_ind = 1:length(grid_numbers)
-%         if grid_numbers(grid_ind) == 4802
-%             disp('filler');
-%         end
+
         tmp = N(:,find(location(1:end-1)==grid_numbers(grid_ind)));
         firing_counts_full(:,grid_ind) = sum(tmp,2);
     end   
@@ -194,11 +222,7 @@ if(~isempty(dir(Args.RequiredFile)))
     firing_counts_full1(:,grid_numbers) = firing_counts_full;
     lin_spikeLoc_Gaze = firing_counts_full1';
     lin_o_i_Gaze = repmat(gpdur_s,1,Args.NumShuffles+1);
-%     disp('yes');
-%     
-%     disp('temporary');
-%     abc1 = firing_counts_full1(1,:);
-%     abc = firing_counts_full1(1,:)'./gpdur_s;
+    
     
     %%%
             % Restructure bins from linear to separate grids
@@ -231,7 +255,7 @@ if(~isempty(dir(Args.RequiredFile)))
         end
      
 %%%%%%%%%%%%
-            grid_o_i_Gaze_original = grid_o_i_Gaze;
+
             retrievemap = cell(size(grid_o_i_Gaze,1),1);
             for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
             
@@ -248,13 +272,24 @@ if(~isempty(dir(Args.RequiredFile)))
                 
     if Args.AdaptiveSmooth
         
+        maps_raw = cell(size(gaz.data.binDepths,1),1);
+        for jj = 1:size(grid_o_i_Gaze,1)
+            temp1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
+            maps_raw{jj} = temp1(:,:,1);
+        end
+        
         alpha = 1e2;
         grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
         grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
+        grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
+        grid_smoothed_dur{1} = grid_o_i_Gaze{1};
+        grid_smoothed_dur{2} = grid_o_i_Gaze{2};
+        grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
+        grid_ad_size{1} = NaN;
+        grid_ad_size{2} = NaN;        
         
         for jj = 3:size(grid_o_i_Gaze,1) % for each grid
             
-            disp('debug');
             wip = ones(Args.NumShuffles+1,1);
             gpdur1 = grid_o_i_Gaze{jj};
             preset_to_zeros = gpdur1(:,:,1);
@@ -263,17 +298,19 @@ if(~isempty(dir(Args.RequiredFile)))
             preset_to_zeros = ~preset_to_zeros;
             preset_to_zeros = repmat(preset_to_zeros, [1,1,size(gpdur1,3)]);
             
-            firing_counts_full1 = grid_spikeBin_Gaze{jj}; % kw_issue (need to set nans to zeros?)
+            firing_counts_full1 = grid_spikeBin_Gaze{jj};
             gpdur1(isnan(gpdur1)) = 0;
             firing_counts_full1(isnan(firing_counts_full1)) = 0;
-            disp('debug');
-            to_compute = 1:0.5:(max(size(gpdur1(:,:,1)))/4 + min(size(gpdur1(:,:,1)))/4);
-            if length(to_compute) > 50
-                to_compute = 1:0.5:25;
-            end
-            possible = NaN(length(to_compute),2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
-            to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
+
+            to_compute = 1:0.5:(max(size(gpdur1(:,:,1)))/2);
+
+            possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
+            to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
             to_fill(preset_to_zeros) = 0;
+            to_fill_smoothed_duration = NaN(size(possible,2), size(possible,3), size(possible,4));
+            to_fill_smoothed_duration(preset_to_zeros) = 0;
+            to_fill_size = NaN(size(possible,2), size(possible,3), size(possible,4));
+            to_fill_size(preset_to_zeros) = 0;            
             
                     for idx = 1:length(to_compute)
 
@@ -281,49 +318,70 @@ if(~isempty(dir(Args.RequiredFile)))
                         f(f>=(max(max(f))/3))=1;
                         f(f~=1)=0;
 
-                        possible(idx,1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f), 1,1,Args.NumShuffles+1);   %./scaler;
-                        possible(idx,2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f);   %./scaler;
+                        possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f), 1,1,Args.NumShuffles+1); 
+                        possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f); 
 
-                        logic1 = squeeze(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
-                        slice1 = squeeze(possible(idx,1,:,:,:));
-                        slice2 = squeeze(possible(idx,2,:,:,:));
+                        logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
+                        slice1 = squeeze(possible(1,:,:,:));
+                        slice2 = squeeze(possible(2,:,:,:));
 
                         to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
-
-                        disp('smoothed with kernel size:');
-                        disp(to_compute(idx));
-                        disp('grids left');
-                        disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
+                        to_fill_smoothed_duration(logic1 & isnan(to_fill_smoothed_duration)) = slice2(logic1 & isnan(to_fill_smoothed_duration))./slice1(logic1 & isnan(to_fill_smoothed_duration));
+                        to_fill_size(logic1 & isnan(to_fill_size)) = to_compute(idx);
+                        
+                        remaining = sum(sum(sum(isnan(to_fill(:,:,:)))));
+                        disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
 
                         check = squeeze(sum(sum(isnan(to_fill),2),1));
                         wip(check==0) = 0;
 
-                        if sum(sum(sum(isnan(to_fill(:,:,:))))) == 0
-                            disp('breaking');
+                        if remaining == 0
+                            disp('done');
                             break;
                         end
-
-                    end       
+                    end    
                     
-                    clear possible;
             to_fill(isnan(to_fill)) = 0;
             to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
             grid_smoothed_Gaze{jj} = to_fill;
+            to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
+            to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+            grid_smoothed_dur{jj} = to_fill_smoothed_duration;
+            to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+            grid_ad_size{jj} = to_fill_size(:,:,1);
             
-
         end
 
         disp('checkpoint');
         
         % smoothing part ends
-        data.maps_adsmooth = grid_smoothed_Gaze;
+        data.maps_raw = maps_raw;
+        non_shuffle_smooth = cell(size(gaz.data.binDepths,1),1);
+        non_shuffle_size = cell(size(gaz.data.binDepths,1),1);
+        for jj = 1:size(grid_o_i_Gaze,1)
+            temp10 = grid_smoothed_Gaze{jj};
+            non_shuffle_smooth{jj} = temp10(:,:,1);
+            temp10 = grid_ad_size{jj};
+            non_shuffle_size{jj} = temp10(:,:,1);
+        end        
+        data.maps_adsmooth = non_shuffle_smooth;
+        data.smoothed_size = non_shuffle_size;
         
-    else % kw_notes definitely broken
-        firing_rates_full = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
-
-        to_save = NaN(1,Args.GridSteps^2);
-        to_save(bins_sieved) = firing_rates_full(1,:);
-        data.maps_raw = to_save;
+    else
+        maps_raw = cell(size(gaz.data.binDepths,1),1);
+        for jj = 1:size(grid_o_i_Gaze,1)
+            temp1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
+            maps_raw{jj} = temp1(:,:,1);
+        end
+        data.maps_raw = maps_raw;
+        % create nptdata so we can inherit from it    
+        data.numSets = 1;
+        data.Args = Args;
+        n = nptdata(1,0,pwd);
+        d.data = data;
+        obj = class(d,Args.classname,n);
+        saveObject(obj,'ArgsC',Args);
+        return;
     end
     
     
@@ -334,20 +392,19 @@ if(~isempty(dir(Args.RequiredFile)))
     for jj = 1:size(grid_smoothed_Gaze,1)
         total_grids = total_grids + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
     end
-    gpdur1 = zeros(1,total_grids);
+    gpdur1 = zeros(Args.NumShuffles+1,total_grids);
     lambda_i = NaN(Args.NumShuffles+1,total_grids);
     filling_index = 0;
     for jj = 1:size(grid_o_i_Gaze,1)
-        temp4 = reshape(grid_o_i_Gaze_original{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-        temp4 = temp4(:,1);
+        temp4 = reshape(grid_smoothed_dur{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
         temp3 = reshape(grid_smoothed_Gaze{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-        gpdur1(filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4(1,:);
+        gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
         lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
         filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
     end    
     
-    Pi1 = gpdur1/sum(gpdur1);
-    Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
+    Pi1 = gpdur1./repmat(sum(gpdur1,2), 1, size(gpdur1,2));
+%     Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
     lambda_i(isnan(lambda_i)) = 0;
       
     
@@ -374,9 +431,6 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.SIC = sic_out(1);
     data.SICsh = sic_out;
-%     data.median_occ_firings = median_stats';
-%     data.variance_occ_firings = var_stats';
-%     data.perc_occ_firings = perc_stats';
     data.gridSteps = Args.GridSteps;
     
 	% create nptdata so we can inherit from it    
