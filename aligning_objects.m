@@ -43,7 +43,7 @@ function aligning_objects(threshold)
     ts = el.data.timestamps;
     
     tic;
-    parfor row = 1:size(el.data.fix_times,1)
+    for row = 1:size(el.data.fix_times,1)
         for col = 1:2
             [~,saving_closest_fix_times(row,col)] = min(abs(ts-saving_closest_fix_times(row,col)));
         end
@@ -164,11 +164,14 @@ function aligning_objects(threshold)
         el.data.timestamps = uint32(el.data.timestamps - full_shift);
         el.data.session_start_index = finding_index;
         
-        parfor row = 1:size(el.data.fix_times,1)
+        working_copy = el.data.fix_times(:,1:2);
+        for row = 1:size(working_copy,1)
             for col = 1:2
-                el.data.fix_times(row,col) = el.data.timestamps(saving_closest_fix_times(row,col));
+                working_copy = el.data.timestamps(saving_closest_fix_times(row,col));
             end
-        end        
+        end       
+        el.data.fix_times(:,1:2) = working_copy;
+        toc
 %         el.data.fix_times(:,1:2) = el.data.fix_times(:,1:2) - double(full_shift);
 
         session_trial_duration = rp.data.timeStamps(1,1) - true_session_start;
