@@ -40,14 +40,34 @@ function aligning_objects(threshold)
     dubious_collector = [];
 
     saving_closest_fix_times = el.data.fix_times(:,1:2);
+    saving_closest_fix_times = saving_closest_fix_times';
+    saving_closest_fix_times = saving_closest_fix_times(:);
     ts = el.data.timestamps;
     
     tic;
-    for row = 1:size(el.data.fix_times,1)
-        for col = 1:2
-            [~,saving_closest_fix_times(row,col)] = min(abs(ts-saving_closest_fix_times(row,col)));
-        end
+    difference = NaN;
+    index = 1;
+    for stamps = 1:length(ts)
+        if isnan(difference)
+            difference = ts(stamps) - saving_closest_fix_times(index);
+        else
+            if ts(stamps) - saving_closest_fix_times(index) > 0
+                if abs(difference) > abs(ts(stamps) - saving_closest_fix_times(index))
+                    saving_closest_fix_times(index) = stamps;
+                else
+                    saving_closest_fix_times(index) = stamps - 1;
+                end
+                difference = NaN;
+                index = index + 1;
+            else
+                difference = ts(stamps) - saving_closest_fix_times(index);
+            end
+        end 
     end
+    saving_closest_fix_times = saving_closest_fix_times';
+    saving_closest_fix_times = reshape(saving_closest_fix_times,2,[]);
+    saving_closest_fix_times = saving_closest_fix_times';
+    
     toc
     for i = 1:length(true_timestamps)-1
 
@@ -164,10 +184,11 @@ function aligning_objects(threshold)
         el.data.timestamps = uint32(el.data.timestamps - full_shift);
         el.data.session_start_index = finding_index;
         
+        toc
         working_copy = el.data.fix_times(:,1:2);
         for row = 1:size(working_copy,1)
             for col = 1:2
-                working_copy = el.data.timestamps(saving_closest_fix_times(row,col));
+                working_copy(row,col) = el.data.timestamps(saving_closest_fix_times(row,col));
             end
         end       
         el.data.fix_times(:,1:2) = working_copy;
@@ -206,7 +227,7 @@ function aligning_objects(threshold)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     toc
-    save('unityfile.mat', 'uf', '-v7.3');
+       save('unityfile.mat', 'uf', '-v7.3');
     save('eyelink.mat', 'el', '-v7.3');
     save('rplparallel.mat', 'rp', '-v7.3');
 
