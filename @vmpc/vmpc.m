@@ -112,8 +112,21 @@ if(~isempty(dir(Args.RequiredFile)))
     edge_end = 0.5+size(full_arr,1);
     [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), uma.data.sessionTime(:,1), 0.5:1:edge_end);
     size(full_arr)
+    N1 = N';
     N(uma.data.zero_indices(1:end-1),:) = [];
     N = N';
+    
+    non_shuffle_details = NaN(3,size(N1,2));
+    non_shuffle_details(2,:) = N1(1,:);
+    non_shuffle_details(3,:) = uma.data.sessionTime(1:end-1,3)';
+    non_shuffle_details(3,:) = uma.data.sessionTime(1:end-1,3)';
+    non_shuffle_details(1,:) = uma.data.sessionTime(1:end-1,2)';
+    non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
+    non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
+    non_shuffle_data = sortrows(non_shuffle_details.',1).';
+    non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
+    non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
+    data.detailed_fr = non_shuffle_data;    
 
     location = uma.data.sessionTime(:,2)';
     location(uma.data.zero_indices) = [];
@@ -288,7 +301,7 @@ if(~isempty(dir(Args.RequiredFile)))
 %     data.variance_occ_firings = var_stats';
 %     data.perc_occ_firings = perc_stats';
     data.gridSteps = Args.GridSteps;
-    data.occ_data = occ_data;
+%     data.occ_data = occ_data;
     
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
@@ -301,51 +314,6 @@ else
 	% create empty object
 	obj = createEmptyObject(Args);
 end
-
-% function [to_fill] = fill_remainder(to_fill, gpdur1, firing_counts_full1, starting_size, max_to_consider, alpha)
-% 
-% disp('starting with this size');
-% disp(starting_size);
-% temp = padarray(to_fill, [max_to_consider, max_to_consider, 0], 'both');
-% 
-% targets = isnan(temp);
-% [I, J, K] = find(targets);
-% disp('total number of grids to fill');
-% disp(length(J));
-% 
-% gpdur1 = padarray(gpdur1, [max_to_consider, max_to_consider, 0], 'both');
-% firing_counts_full1 = padarray(firing_counts_full1, [max_to_consider, max_to_consider, 0], 'both');
-% 
-% for tind = 1:length(J)
-%     
-%     disp('doing grid number');
-%     disp(tind);
-%     size1 = starting_size;
-%     
-%     disp('with this size');
-%     while size1 < max_to_consider
-%         disp(size1);
-%         f=fspecial('disk',size1);
-%         f(f>=(max(max(f))/3))=1;
-%         f(f~=1)=0;
-%         
-%         a1 = int32(I(tind))-int32(floor(size1));
-%         a2 = int32(I(tind))+int32(floor(size1));
-%         a3 = int32(J(tind))-int32(floor(size1));
-%         a4 = int32(J(tind))+int32(floor(size1));
-%         
-%         d = sum(sum(gpdur1(a1:a2,a3:a4,K(tind)).*f));
-%         s = sum(sum(firing_counts_full1(a1:a2,a3:a4,K(tind)).*f));
-%         if size1 >= alpha/(d*sqrt(s))
-%             temp(I(tind),J(tind),K(tind)) = s/d;
-%             break;
-%         end
-%         
-%         size1 = size1 + 0.5;
-%     end
-% end
-% 
-% to_fill = temp(max_to_consider+1:end-max_to_consider,max_to_consider+1:end-max_to_consider);
 
 
 

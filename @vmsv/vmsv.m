@@ -15,7 +15,7 @@ function [obj, varargout] = vmsv(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
 				'GridSteps',40, ...
-                'ShuffleLimits',[0.1 0.9], 'NumShuffles',5000, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, 'MinObs',5, ...
                 'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',1, 'UseAllTrials', 1);
             
@@ -66,27 +66,11 @@ dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
-     
-    %use this to test in kw_testing/20181102
-    gaz1 = load('temp_gaze.mat');
-    gaz.data.binGazeLin = gaz1.a1;
-    gaz.data.timestamps = gaz1.a2;
-    gaz.data.gpDurGaze = gaz1.a3;
-    gaz.data.sessionTimeGaze = gaz1.a4;
-    gaz2 = load('gaze1.mat');
-    gaz.data.binGazeGrid = gaz2.a5;
-    gaz.data.binDepths = gaz2.a6;
-    gaz.data.binLocLin = gaz2.a7;
-    gaz.data.binLocGrid = gaz2.a8;
-    gaz3 = load('gaze2.mat');
-    gaz.data.gazeSections = gaz3.a9;
-	rp = load('../../../rplparallel.mat');
-    rp = rp.rp.data;
     
     %use this for real gaze objects
-%     rp = rplparallel('auto');
-%     rp = rp.data;
-%     gaz = gaze('auto',varargin{:});  
+    rp = rplparallel('auto');
+    rp = rp.data;
+    gaz = gaze('auto',varargin{:});  
 
     spiketrain = load(Args.RequiredFile);
 

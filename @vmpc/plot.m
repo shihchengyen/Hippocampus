@@ -15,7 +15,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Errorbar',0, ...
-          'SIC',0,'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4);
+          'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4, ...
+          'Map',0,'Smooth',1,'SIC',0,'Radii',0,'Details',0,'MinDur',0,'Filtered',0,'SortByRatio',0);
 Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
@@ -83,28 +84,25 @@ if(~isempty(Args.NumericArguments))
 else
 	% plot all data
 	n = get(obj,'Number');
-    if(Args.SIC)
-        % get data SIC
-        dSIC = obj.data.SICsh(1,:);
-        sSIC = obj.data.SICsh(2:end,:);
-        sSIC95 = prctile(sSIC,95);
-        % plot SIC versus shuffle
-        nsp = Args.NumSubPlots;
-        % get number of cells per subplot
-        npsubplot = ceil(n/nsp);
-        % generate indices
-        npi = 1:npsubplot;
-        for i = 1:nsp
-            subplot(nsp,1,i)
-            dindices = npi+((i-1)*npsubplot);
-            plot(dindices,dSIC(dindices),'b*-')
-            hold on
-            plot(dindices,sSIC95(dindices),'ro-')
-            hold off
-            xlim([dindices(1)-1 dindices(end)+1])
+    figure;
+    if(Args.Map)
+        if Args.Smooth
+            maps = obj.data.maps_adsmooth;
+            imagesc(reshape(maps,sqrt(length(maps)),sqrt(length(maps))));
+            colorbar();
+        else
+            maps = obj.data.maps_raw;
+            imagesc(reshape(maps,sqrt(length(maps)),sqrt(length(maps))));
+            colorbar();
         end
-        xlabel('Cell Number')
-        ylabel('SIC')
+    elseif(Args.SIC)
+        histogram(obj.data.SICsh);
+        max_count = max(histcounts(obj.data.SICsh));
+        hold on;
+        line([obj.data.SIC obj.data.SIC], [0 max_count]);
+        hold off;
+    elseif(Args.Details)
+        detailed_plot(obj.data.detailed_fr,Args);
     end
 end
 
@@ -126,3 +124,74 @@ if(lRR>0)
 else
     varargout = {};
 end
+
+
+
+
+function detailed_plot(details1,Args)
+
+    unique_bins = unique(details1(1,:));
+    if Args.Filtered
+        checking_for_activity = details1(:,find(details1(2,:)>0));
+        unique_bins = unique(checking_for_activity(1,:));
+    end
+    
+    bin_limits = [0:5:25 max(details1(4,:))];
+    binned_data = NaN(length(bin_limits),length(unique_bins));
+    for col = 1:length(unique_bins)
+        subset_arr = details1(3:4,find(details1(1,:)==unique_bins(col)));
+        if Args.MinDur ~= 0
+            subset_arr = subset_arr(:,find(subset_arr(1,:)>Args.MinDur));
+        end
+        zero_count = sum(subset_arr(2,:)==0);
+        binned_temp = histcounts(subset_arr(2,:), bin_limits);
+        binned_temp(1) = binned_temp(1) - zero_count;
+        binned_data(1:length(binned_temp)+1,col) = [zero_count binned_temp];
+    end
+    
+    if Args.SortByRatio
+        ratio = sum(binned_data(2:end,:),1)./binned_data(1,:);
+        binned_data_temp = [ratio; binned_data; unique_bins];
+        binned_data_temp = sortrows(binned_data_temp.',1).';
+        binned_data = fliplr(binned_data_temp(2:end-1,:));
+        unique_bins = fliplr(binned_data_temp(end,:));
+    end
+    
+
+    for column = 1:min(10,size(binned_data,2))
+        subplot(1,11,column);
+        imagesc(binned_data(2:end,column));
+        set(gca,'Ytick',1:size(binned_data(2:end,1),1)-1,'YTickLabel',[5:5:25]);
+        colorbar();
+        title(['grid ' num2str(unique_bins(column))]);
+        xlabel({['zeros: ' num2str(binned_data(1,column))],['ratio: ' num2str(sum(binned_data(2:end,column))/binned_data(1,column))]});
+    end
+    
+    if length(unique_bins) > 10
+        ss = 1/floor(length(unique_bins)/10);
+        uicontrol('Style', 'slider', 'Min', 0, 'Max', floor(length(unique_bins)/10), ...
+            'Value', 0, 'SliderStep', [ss ss], 'Units','normalized', 'Position', [0.75 0.1 0.1 0.8], ...
+            'Callback', {@react_to_slider, binned_data, unique_bins});
+    end
+    
+    function react_to_slider(source, ~, binned_data, unique_bins)
+        val = round(get(source, 'Value'));
+        set(source, 'Value', val);
+        counter = 1;
+        for column = (10*val)+1:10*(val+1)
+            sp_col = 11;
+            subplot(1,sp_col,counter);
+            if column > size(binned_data,2)
+                data_to_clear = zeros(size(binned_data,1)-1,1);
+                imagesc(data_to_clear);
+                colorbar();
+                title(' - ');
+            else
+                imagesc(binned_data(2:end,column));
+                set(gca,'Ytick',1:size(binned_data(2:end,1),1)-1,'YTickLabel',[5:5:25]);
+                colorbar();
+                title(['grid ' num2str(unique_bins(column))]);
+                xlabel({['zeros: ' num2str(binned_data(1,column))],['ratio: ' num2str(sum(binned_data(2:end,column))/binned_data(1,column))]});
+            end
+            counter = counter + 1;
+        end        

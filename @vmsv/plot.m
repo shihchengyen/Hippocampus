@@ -38,7 +38,7 @@ if(~isempty(Args.NumericArguments))
 else
 	% plot all data
 	n = get(obj,'Number');
-    clf;
+    figure;
     if(Args.Map)
         if Args.Smooth
             maps = obj.data.maps_adsmooth;
@@ -247,7 +247,6 @@ function detailed_plot(details1,Args)
     function react_to_slider(source, ~, binned_data, unique_bins)
         val = round(get(source, 'Value'));
         set(source, 'Value', val);
-        disp(val);
         counter = 1;
         for column = (10*val)+1:10*(val+1)
             sp_col = 11;

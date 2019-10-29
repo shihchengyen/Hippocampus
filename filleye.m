@@ -106,6 +106,9 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
     slice_after = NaN(missing_rows,2); % this section accounts for triples that look ok, but are made of two trials with the same posters
     slice_index = 1;
     for row = 1:size(arranged_array,1)
+        if row > 316
+            disp('debugger');
+        end
         if ~isnan(arranged_array(row,1))
             if ~isnan(arranged_array(row,2))
                 tmp = arranged_array';
@@ -113,8 +116,8 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
                 idx = sum(~isnan(tmp(1:3*(row-1)+1)));
                 td = eye_timestamps(idx+1) - eye_timestamps(idx);
 
-                    rpl_chunk = truth_timestamps(row:min([row row+missing_rows+1]),1:2);
-                    rpl_chunk_flag = truth(row:min([row row+missing_rows+1]),1:2);
+                    rpl_chunk = truth_timestamps(row:min([max([row row+missing_rows+1]) size(truth_timestamps,1)]),1:2);
+                    rpl_chunk_flag = truth(row:min([max([row row+missing_rows+1]) size(truth_timestamps)]),1:2); %min was bug?
 
                 rpl_chunk = rpl_chunk(rpl_chunk_flag(:,1)==arranged_array(row,1),:);           
                 rpl_td = rpl_chunk(:,2) - rpl_chunk(:,1);
@@ -130,8 +133,8 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
                 idx3 = sum(~isnan(tmp(1:3*(row-1)+3))); 
                 td = eye_timestamps(idx3) - eye_timestamps(idx);
 
-                    rpl_chunk = truth_timestamps(row:min([row row+missing_rows+1]),1:3);
-                    rpl_chunk_flag = truth(row:min([row row+missing_rows+1]),1:3);
+                    rpl_chunk = truth_timestamps(row:min([max([row row+missing_rows+1]) size(truth_timestamps,1)]),1:3);
+                    rpl_chunk_flag = truth(row:min([max([row row+missing_rows+1]) size(truth_timestamps,1)]),1:3); %min was bug?
 
                 rpl_chunk = rpl_chunk(rpl_chunk_flag(:,1)==arranged_array(row,1),:);  
                 rpl_td = rpl_chunk(:,3) - rpl_chunk(:,1);
@@ -148,8 +151,8 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
                 idx = sum(~isnan(tmp(1:3*(row-1)+2))); 
                 td = eye_timestamps(idx+1) - eye_timestamps(idx);
 
-                    rpl_chunk = truth_timestamps(row:min([row row+missing_rows+1]),2:3);
-                    rpl_chunk_flag = truth(row:min([row row+missing_rows+1]),2:3);
+                    rpl_chunk = truth_timestamps(row:min([max([row row+missing_rows+1]) size(truth_timestamps,1)]),2:3);
+                    rpl_chunk_flag = truth(row:min([max([row row+missing_rows+1]) size(truth_timestamps,1)]),2:3); %min was bug?
 
                 rpl_chunk = rpl_chunk(rpl_chunk_flag(:,2)==arranged_array(row,2),:);
                 rpl_td = rpl_chunk(:,2) - rpl_chunk(:,1);

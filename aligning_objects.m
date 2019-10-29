@@ -63,6 +63,9 @@ function aligning_objects(threshold)
                 difference = ts(stamps) - saving_closest_fix_times(index);
             end
         end 
+        if index > length(saving_closest_fix_times)
+            break;
+        end
     end
     saving_closest_fix_times = saving_closest_fix_times';
     saving_closest_fix_times = reshape(saving_closest_fix_times,2,[]);
