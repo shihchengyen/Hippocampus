@@ -67,14 +67,19 @@ dnum = size(dlist,1);
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
     
+    ori = pwd;
+
+    data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
+    pwd
 %     uma = load('../../../unitymaze.mat');
 %     uma = uma.um;
 %     uma.data.zero_indices = find(uma.data.sessionTime(:,2)==0);
-    
+ 
 	rp = rplparallel('auto',varargin{:});
+    cd(ori);
     spiketrain = load(Args.RequiredFile);
-    
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -126,7 +131,7 @@ if(~isempty(dir(Args.RequiredFile)))
     non_shuffle_data = sortrows(non_shuffle_details.',1).';
     non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
     non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
-    data.detailed_fr = non_shuffle_data;    
+    data.detailed_fr = {non_shuffle_data};    
 
     location = uma.data.sessionTime(:,2)';
     location(uma.data.zero_indices) = [];
