@@ -15,6 +15,8 @@ trialInds = gz.data.trialInds;
 gpDurGaze = gz.data.gpDurGaze;
 gpDurLoc = gz.data.gpDurLoc;
 timestampsTrial = gz.data.timestampsTrial;
+% ####
+% timestampsTrial = timestampsTrial;
 timestamps = gz.data.timestamps;
 T = (timestamps-timestamps(1));
 tTrial = gz.data.tTrial;
@@ -97,10 +99,14 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
         emptyspikepersample = zeros(size(binGazeLin,1),1);
         for npi = 1:size(subset,1)
             
-            inds = trialInds(npi,1):trialInds(npi,2);
-            t = tTrial(1:size(inds,2),npi);
-            tstart = timestampsTrial(1,npi);
-            tend = timestampsTrial(size(inds,2),npi); % BAD?
+            g = subset(npi);
+            
+            inds = trialInds(g,1):trialInds(g,2);
+            t = tTrial(1:size(inds,2),g);
+%             tstart = timestampsTrial(1,npi);
+%             tend = timestampsTrial(size(inds,2),npi); % BAD?
+            tstart = rp.data.timeStamps(g,2);
+            tend = rp.data.timeStamps(g,3);
             
             % get spike times aligned to cue offset time
             temp = find(sTimes(shi,:) > tstart & sTimes(shi,:) < tend);
@@ -114,7 +120,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             % bins will be 9     9   150   150   150   156   156   158   240   240   248
             % get non-nan values
             [hcounts,uTT,bins] = histcounts(trialSpkTimes,t);
-            [hcounts,uTT,Bin] = histcounts(sTimes(shi,temp),T);
+            [hcounts,uTT,Bin] = histcounts(sTimes(shi,temp),timestamps);
             uBin = unique(Bin);
             for bb = 1:size(uBin,2)
                 spikepersample(uBin(bb),1) = spikepersample(uBin(bb),1) + sum(Bin == uBin(bb));
@@ -212,7 +218,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
                 n = 5;
                 [retrievemap,o_i,spikeBin,map] = padgrids(n,o_i,spikeBin,map,grid_o_i_Gaze,grid_spikeBin_Gaze,grid_map_Gaze,gz.data.gazeSections,jj);
                 % Adaptive smooth
-                [map_adsm,~,~,smooth_r] = adaptivesmooth(o_i,spikeBin,alpha);
+                [map_adsm,spk_adsm,pos_adsm,smooth_r] = adaptivesmooth(o_i,spikeBin,alpha);
                 % Boxcar smooth  
                 map_boxsm = boxcarsmooth(map, boxfilt, grid_low_occ_Gaze{jj});
                 % Store smoothing radii for posthoc analysis
