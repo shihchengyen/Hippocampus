@@ -64,6 +64,7 @@ function obj = createObject(Args,varargin)
 
 if(~isempty(dir(Args.RequiredFile)))
 	% Load raycast data
+    disp('Loading raycast data...');
     rcdata = load(Args.RequiredFile);
     rcdata = rcdata.el.data;
 
@@ -72,15 +73,18 @@ if(~isempty(dir(Args.RequiredFile)))
 
     %  Group gaze data into object types and get raw gaze position data
     %  relative to bottom left corner of fixated object type
+    disp('Re-grouping gaze data...');
     [fixObjNum,RelGazeRawAdj,gazeSections,playerLocAdj] = groupgazesections(rcdata.fixatedObj,rcdata.RelativeToFixdObjGaze,rcdata.playerLocation);
 
     % Bin relative gaze position data into linear array for session
+    disp('Binning gaze data...');
     [binGazeLin,binLocLin,binDepths,binGridRef] = bingazedata(fixObjNum,RelGazeRawAdj,gridSize,playerLocAdj,gridSteps);
     
     % Split binnedRelGaze into trials
+    disp('Splitting gaze data into trials...');
     trialTimestamps = rcdata.trialTimestamps;
     timestamps = rcdata.timestamps;
-    [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,trialTimestamps,timestamps,binDepths,binLocLin,gridSteps);
+    [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,trialTimestamps,index,timestamps,binDepths,binLocLin,gridSteps);
 
     %%% Output data
     
@@ -474,7 +478,7 @@ for ii = 1:size(fixObjNum,1)
 end
 
 
-function [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,timestampsOrigEvent,timestampsOrigAll,binDepths,binLocLin,gridSteps)
+function [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,timestampsOrigEvent,index,timestampsOrigAll,binDepths,binLocLin,gridSteps)
 
 ntrial = size(timestampsOrigEvent,1);
 longestDur = max(timestampsOrigEvent(:,3) - timestampsOrigEvent(:,2))+2;
@@ -489,7 +493,8 @@ gpDurLoc = nan(gridSteps*gridSteps,ntrial);
 for ii = 1:ntrial
     
     % Find trial indices from cue offset
-    inds = find(ismember(timestampsOrigAll,timestampsOrigEvent(ii,2):0.001:timestampsOrigEvent(ii,3)));
+%     inds = find(ismember(timestampsOrigAll,timestampsOrigEvent(ii,2):0.001:timestampsOrigEvent(ii,3)));
+    inds = index(ii,2):index(ii,3);
     % get indices for this trial 
     indsx = inds(2:end-1);
     % Adjust trial timestamps to seconds from ms
