@@ -1,28 +1,32 @@
-function [] = plotratemaps(objtype,sortsic,plottype,save,maptype,varargin)
+function [] = plotratemaps(objtype,sortsic,save,maptype,varargin)
 
-% Plot type
-% 1-3 = Place (batch). Maps are grouped by session. Whole session map.
-% 2 = Place (batch). Maps are grouped by session. 1st half + 2nd half maps.
-% 4 = Spatial view (batch). Maps are grouped by session
-% 5 For single cells only: Place by spatial view. objtype should be 'place'
+% Function to plot rate maps for place, spatialview and heading direction
 % 
-% Varargin:
+% objtype: 'Place', 'Spatialview', or 'Direction'
+% 
+% sortsic: 1 (sort the plotting by descending SIC) or 0 (sort the plotting
+% by date) 
+% 
+% save: 1 (save figures) or 0 
+% 
+% maptype: Type of smoothing, 'raw' (unsmoothed), 'boxcar'
+% (boxcar-smoothed) or 'adaptive' (adaptive-smooted) NOTE: Currently only
+% raw and adaptive smoothing have been tested.
+% 
+% Varargin: If only need to plot 1 cell's maps
 % 1st: cell directory
 
 % Specify saved figure location
 cwd = pwd;
 if save
-%     figdir = [ '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/SpatialviewOnPlace/' 'ratemaps' 'plottype' num2str(plottype) 'maptype' num2str(maptype)];
-    figdir = [ '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/alpha1e2/SpatialView/postsfn/' 'ratemaps' 'plottype' num2str(plottype) 'maptype' num2str(maptype)];
+    figdir = [ '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/alpha1e2/SpatialView/postsfn/' 'ratemaps' 'maptype' num2str(maptype)];
     if exist(figdir,'dir') ~= 7
-%         rmdir(figdir,'s');
-%     end
         mkdir(figdir);
     end
 end
 video = 0;
 
-if nargin > 6
+if nargin > 5 % If plotting a single cell and map is already given as input (only used in placebyspatialview.m) 
     % Load cell list
     cellList = varargin(1);
     mapGrid = varargin{2};
@@ -44,7 +48,7 @@ if nargin > 6
             objMain = objMain.vmd;
             stepsMain = objMain.data.DirSteps;
     end
-elseif nargin > 5
+elseif nargin > 4 % If plotting a single cell and map needs to be loaded
     cellList = varargin(1);
     cd(cellList{1});
     % Load object
@@ -63,7 +67,7 @@ elseif nargin > 5
             objMain = objMain.vmd;
             stepsMain = objMain.data.DirSteps;
     end
-else
+else % If plotting a batch of cells
     % Load cell list
     cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/MountainSort/alpha1e2/SpatialView/postsfn';
     cd(cwd);
@@ -110,7 +114,7 @@ switch maptype
     case 'boxcar'
         maps = objMain.data.maps_boxsmooth;
     case 'adaptive'
-        maps = objMain.data.maps_adsmooth';
+        maps = objMain.data.maps_adsmooth;
 end
 
 % Load nptdata objMainect 
@@ -129,7 +133,7 @@ switch objtype
         end
 end
 
-if plottype == 1 || plottype == 2  % Place maps
+if strcmp(objtype, 'Place')  % Place maps
     % For each session, plot rate maps for each cell
     fig = 1;
     subpnum = 1;
@@ -150,89 +154,89 @@ if plottype == 1 || plottype == 2  % Place maps
                 cell_ind = cells_ind(jj);
             end
             
-            if plottype == 2 || plottype == 3 
-                
-                %% % Compute first and second half correlation
-                
-                % Find figure number
-                if jj*2 > plotgridh * plotgridv && mod((jj*2), (plotgridh * plotgridv)) == 2
-                    % Save figure
-                    if save
-                        % Save previous figure
-                        figtitle = [num2str(setsessions(ii)) '-' num2str(floor((jj*2)/(plotgridh * plotgridv)))];
-                        saveas(h,figtitle,'png');
-                        print('-painters',figtitle,'-dsvg');
-                    end
-                    fig = fig + 1;
-                    subpnum = 1;
-                end
-                
-                %%%%%%% CORRELATION %%%%%%%%%%%
-                
-                % Intra-session correlation %%%%%% NOTE: Should use boxcar
-                % smoothed map
-                map1 = objMain.data.maps_adsmooth1sthalf(:,cell_ind);
-                vis1 = ~isnan(map1);
-                SI1 = objMain.data.SIC1sthalf(cell_ind);
-                map2 = objMain.data.maps_adsmooth2ndhalf(:,cell_ind);
-                vis2 = ~isnan(map2);
-                SI2 = objMain.data.SIC2ndhalf(cell_ind);
-                vis = vis1 & vis2; % Correlate only visited bins;
-                intracorr = corr2(map1(vis), map2(vis));
-                % Get shuffled SI cutoff for this cell - 95th percentile
-                SIthr = prctile(objMain.data.SICsh(2:end,cell_ind),95);
-                
-                % Plot
-                
-                for kk = 1:2
-                    
-                    % Get map
-                    if kk == 1
-                        mapLin = map1;
-                    else
-                        mapLin = map2;
-                    end
-                    % Plot
-                    h = figure(fig);
-                    hold on;
-                    colormap(jet);
-                    set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 1 1 1]);
-                    ax = subplot(plotgridv,plotgridh,subpnum);
-                    % Restructure bins from linear to square grid
-                    mapGrid = nan(objMain.data.Args.GridSteps);
-                    for mm = 1:objMain.data.Args.GridSteps
-                        mapGrid(mm,:) = mapLin( (mm-1)*objMain.data.Args.GridSteps+1:mm*objMain.data.Args.GridSteps );
-                    end
-                    pcolor([mapGrid nan(size(mapGrid,1),1); nan(1, size(mapGrid,2)+1)]);
-                    shading flat;
-                    if ~isnan(max(max(mapGrid))) && max(max(mapGrid)) ~= 0
-                        set(ax,'CLim',[0 max(max(mapGrid))]);
-                    else
-                        set(ax,'CLim',[0 1]);
-                    end
-                    subpax = gca;
-%                     set(subpax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{});
-                    subpax.YLabel.String = horzcat(num2str(max(mapLin)),'Hz');
-                    if kk == 1
-                        subpax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' corr=',num2str(intracorr,2), ', SI=',num2str(SI1,2), '/',num2str(SIthr,2));
-                        if SI1 > SIthr
-                            subpax.Title.Color = 'r';
-                        else
-                            subpax.Title.Color = 'k';
-                        end
-                    else
-                        subpax.Title.String = horzcat('SI=',num2str(SI2,2),'/',num2str(SIthr,2));
-                        if SI2 > SIthr
-                            subpax.Title.Color = 'r';
-                        else
-                            subpax.Title.Color = 'k';
-                        end
-                    end
-                    subpnum = subpnum + 1;
-                    hold off;
-                end
-                
-            else 
+%             if plottype == 2 || plottype == 3 
+%                 
+%                 %% % Compute first and second half correlation
+%                 
+%                 % Find figure number
+%                 if jj*2 > plotgridh * plotgridv && mod((jj*2), (plotgridh * plotgridv)) == 2
+%                     % Save figure
+%                     if save
+%                         % Save previous figure
+%                         figtitle = [num2str(setsessions(ii)) '-' num2str(floor((jj*2)/(plotgridh * plotgridv)))];
+%                         saveas(h,figtitle,'png');
+%                         print('-painters',figtitle,'-dsvg');
+%                     end
+%                     fig = fig + 1;
+%                     subpnum = 1;
+%                 end
+%                 
+%                 %%%%%%% CORRELATION %%%%%%%%%%%
+%                 
+%                 % Intra-session correlation %%%%%% NOTE: Should use boxcar
+%                 % smoothed map
+%                 map1 = objMain.data.maps_adsmooth1sthalf(:,cell_ind);
+%                 vis1 = ~isnan(map1);
+%                 SI1 = objMain.data.SIC1sthalf(cell_ind);
+%                 map2 = objMain.data.maps_adsmooth2ndhalf(:,cell_ind);
+%                 vis2 = ~isnan(map2);
+%                 SI2 = objMain.data.SIC2ndhalf(cell_ind);
+%                 vis = vis1 & vis2; % Correlate only visited bins;
+%                 intracorr = corr2(map1(vis), map2(vis));
+%                 % Get shuffled SI cutoff for this cell - 95th percentile
+%                 SIthr = prctile(objMain.data.SICsh(2:end,cell_ind),95);
+%                 
+%                 % Plot
+%                 
+%                 for kk = 1:2
+%                     
+%                     % Get map
+%                     if kk == 1
+%                         mapLin = map1;
+%                     else
+%                         mapLin = map2;
+%                     end
+%                     % Plot
+%                     h = figure(fig);
+%                     hold on;
+%                     colormap(jet);
+%                     set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 1 1 1]);
+%                     ax = subplot(plotgridv,plotgridh,subpnum);
+%                     % Restructure bins from linear to square grid
+%                     mapGrid = nan(objMain.data.Args.GridSteps);
+%                     for mm = 1:objMain.data.Args.GridSteps
+%                         mapGrid(mm,:) = mapLin( (mm-1)*objMain.data.Args.GridSteps+1:mm*objMain.data.Args.GridSteps );
+%                     end
+%                     pcolor([mapGrid nan(size(mapGrid,1),1); nan(1, size(mapGrid,2)+1)]);
+%                     shading flat;
+%                     if ~isnan(max(max(mapGrid))) && max(max(mapGrid)) ~= 0
+%                         set(ax,'CLim',[0 max(max(mapGrid))]);
+%                     else
+%                         set(ax,'CLim',[0 1]);
+%                     end
+%                     subpax = gca;
+% %                     set(subpax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{});
+%                     subpax.YLabel.String = horzcat(num2str(max(mapLin)),'Hz');
+%                     if kk == 1
+%                         subpax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' corr=',num2str(intracorr,2), ', SI=',num2str(SI1,2), '/',num2str(SIthr,2));
+%                         if SI1 > SIthr
+%                             subpax.Title.Color = 'r';
+%                         else
+%                             subpax.Title.Color = 'k';
+%                         end
+%                     else
+%                         subpax.Title.String = horzcat('SI=',num2str(SI2,2),'/',num2str(SIthr,2));
+%                         if SI2 > SIthr
+%                             subpax.Title.Color = 'r';
+%                         else
+%                             subpax.Title.Color = 'k';
+%                         end
+%                     end
+%                     subpnum = subpnum + 1;
+%                     hold off;
+%                 end
+%                 
+%             else 
               
                 %% Plot 1 map for 1 cell
                 
@@ -298,7 +302,7 @@ if plottype == 1 || plottype == 2  % Place maps
                 subpnum = subpnum + 1;
                 hold off;
                 
-            end
+%             end
                 
         end
         if save
@@ -333,89 +337,89 @@ elseif strcmp(objtype,'Direction')
                 cell_ind = cells_ind(jj);
             end
             
-            if plottype == 2 || plottype == 3 
-                
-                %% % Compute first and second half correlation
-                
-                % Find figure number
-                if jj*2 > plotgridh * plotgridv && mod((jj*2), (plotgridh * plotgridv)) == 2
-                    % Save figure
-                    if save
-                        % Save previous figure
-                        figtitle = [num2str(setsessions(ii)) '-' num2str(floor((jj*2)/(plotgridh * plotgridv)))];
-                        saveas(h,figtitle,'png');
-                        print('-painters',figtitle,'-dsvg');
-                    end
-                    fig = fig + 1;
-                    subpnum = 1;
-                end
-                
-                %%%%%%% CORRELATION %%%%%%%%%%%
-                
-                % Intra-session correlation %%%%%% NOTE: Should use boxcar
-                % smoothed map
-                map1 = objMain.data.maps_adsmooth1sthalf(:,cell_ind);
-                vis1 = ~isnan(map1);
-                SI1 = objMain.data.SIC1sthalf(cell_ind);
-                map2 = objMain.data.maps_adsmooth2ndhalf(:,cell_ind);
-                vis2 = ~isnan(map2);
-                SI2 = objMain.data.SIC2ndhalf(cell_ind);
-                vis = vis1 & vis2; % Correlate only visited bins;
-                intracorr = corr2(map1(vis), map2(vis));
-                % Get shuffled SI cutoff for this cell - 95th percentile
-                SIthr = prctile(objMain.data.SICsh(2:end,cell_ind),95);
-                
-                % Plot
-                
-                for kk = 1:2
-                    
-                    % Get map
-                    if kk == 1
-                        mapLin = map1;
-                    else
-                        mapLin = map2;
-                    end
-                    % Plot
-                    h = figure(fig);
-                    hold on;
-                    colormap(jet);
-                    set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 1 1 1]);
-                    ax = subplot(plotgridv,plotgridh,subpnum);
-                    % Restructure bins from linear to square grid
-                    mapGrid = nan(objMain.data.Args.GridSteps);
-                    for mm = 1:objMain.data.Args.GridSteps
-                        mapGrid(mm,:) = mapLin( (mm-1)*objMain.data.Args.GridSteps+1:mm*objMain.data.Args.GridSteps );
-                    end
-                    pcolor([mapGrid nan(size(mapGrid,1),1); nan(1, size(mapGrid,2)+1)]);
-                    shading flat;
-                    if ~isnan(max(max(mapGrid))) && max(max(mapGrid)) ~= 0
-                        set(ax,'CLim',[0 max(max(mapGrid))]);
-                    else
-                        set(ax,'CLim',[0 1]);
-                    end
-                    subpax = gca;
-%                     set(subpax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{});
-                    subpax.YLabel.String = horzcat(num2str(max(mapLin)),'Hz');
-                    if kk == 1
-                        subpax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' corr=',num2str(intracorr,2), ', SI=',num2str(SI1,2), '/',num2str(SIthr,2));
-                        if SI1 > SIthr
-                            subpax.Title.Color = 'r';
-                        else
-                            subpax.Title.Color = 'k';
-                        end
-                    else
-                        subpax.Title.String = horzcat('SI=',num2str(SI2,2),'/',num2str(SIthr,2));
-                        if SI2 > SIthr
-                            subpax.Title.Color = 'r';
-                        else
-                            subpax.Title.Color = 'k';
-                        end
-                    end
-                    subpnum = subpnum + 1;
-                    hold off;
-                end
-                
-            else 
+%             if plottype == 2 || plottype == 3 
+%                 
+%                 %% % Compute first and second half correlation
+%                 
+%                 % Find figure number
+%                 if jj*2 > plotgridh * plotgridv && mod((jj*2), (plotgridh * plotgridv)) == 2
+%                     % Save figure
+%                     if save
+%                         % Save previous figure
+%                         figtitle = [num2str(setsessions(ii)) '-' num2str(floor((jj*2)/(plotgridh * plotgridv)))];
+%                         saveas(h,figtitle,'png');
+%                         print('-painters',figtitle,'-dsvg');
+%                     end
+%                     fig = fig + 1;
+%                     subpnum = 1;
+%                 end
+%                 
+%                 %%%%%%% CORRELATION %%%%%%%%%%%
+%                 
+%                 % Intra-session correlation %%%%%% NOTE: Should use boxcar
+%                 % smoothed map
+%                 map1 = objMain.data.maps_adsmooth1sthalf(:,cell_ind);
+%                 vis1 = ~isnan(map1);
+%                 SI1 = objMain.data.SIC1sthalf(cell_ind);
+%                 map2 = objMain.data.maps_adsmooth2ndhalf(:,cell_ind);
+%                 vis2 = ~isnan(map2);
+%                 SI2 = objMain.data.SIC2ndhalf(cell_ind);
+%                 vis = vis1 & vis2; % Correlate only visited bins;
+%                 intracorr = corr2(map1(vis), map2(vis));
+%                 % Get shuffled SI cutoff for this cell - 95th percentile
+%                 SIthr = prctile(objMain.data.SICsh(2:end,cell_ind),95);
+%                 
+%                 % Plot
+%                 
+%                 for kk = 1:2
+%                     
+%                     % Get map
+%                     if kk == 1
+%                         mapLin = map1;
+%                     else
+%                         mapLin = map2;
+%                     end
+%                     % Plot
+%                     h = figure(fig);
+%                     hold on;
+%                     colormap(jet);
+%                     set(h,'Name',num2str(setsessions(ii)),'Units','Normalized','Position',[0 1 1 1]);
+%                     ax = subplot(plotgridv,plotgridh,subpnum);
+%                     % Restructure bins from linear to square grid
+%                     mapGrid = nan(objMain.data.Args.GridSteps);
+%                     for mm = 1:objMain.data.Args.GridSteps
+%                         mapGrid(mm,:) = mapLin( (mm-1)*objMain.data.Args.GridSteps+1:mm*objMain.data.Args.GridSteps );
+%                     end
+%                     pcolor([mapGrid nan(size(mapGrid,1),1); nan(1, size(mapGrid,2)+1)]);
+%                     shading flat;
+%                     if ~isnan(max(max(mapGrid))) && max(max(mapGrid)) ~= 0
+%                         set(ax,'CLim',[0 max(max(mapGrid))]);
+%                     else
+%                         set(ax,'CLim',[0 1]);
+%                     end
+%                     subpax = gca;
+% %                     set(subpax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{});
+%                     subpax.YLabel.String = horzcat(num2str(max(mapLin)),'Hz');
+%                     if kk == 1
+%                         subpax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' corr=',num2str(intracorr,2), ', SI=',num2str(SI1,2), '/',num2str(SIthr,2));
+%                         if SI1 > SIthr
+%                             subpax.Title.Color = 'r';
+%                         else
+%                             subpax.Title.Color = 'k';
+%                         end
+%                     else
+%                         subpax.Title.String = horzcat('SI=',num2str(SI2,2),'/',num2str(SIthr,2));
+%                         if SI2 > SIthr
+%                             subpax.Title.Color = 'r';
+%                         else
+%                             subpax.Title.Color = 'k';
+%                         end
+%                     end
+%                     subpnum = subpnum + 1;
+%                     hold off;
+%                 end
+%                 
+%             else 
               
                 %% Plot 1 map for 1 cell
                 
@@ -510,7 +514,7 @@ elseif strcmp(objtype,'Direction')
                 subpnum = subpnum + 1;
                 hold off;
                 
-            end
+%             end
                 
         end
         if save
@@ -523,7 +527,7 @@ elseif strcmp(objtype,'Direction')
         subpnum = 1;
     end
     
-elseif plottype == 4 % Spatial view
+elseif strcmp(objtype, 'Spatialview') 
     
     fig = 1;
     % Set up cell counts
@@ -555,7 +559,7 @@ elseif plottype == 4 % Spatial view
             SI = objMain.data.SICsh(1,cell_ind);
             SIthr = prctile(objMain.data.SICsh(2:end,cell_ind),95);
             
-            if nargin <= 6 % If mapGrid is not already specified (i.e. if plotting for a batch of cells)
+            if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells)
                 % Get map
                 mapLin = maps(:,cell_ind);
                 % Restructure bins from linear to square grid
