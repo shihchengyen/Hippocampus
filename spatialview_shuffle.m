@@ -4,19 +4,16 @@ function data = spatialview_shuffle(gz,rp,um,spiketrain,Args)
 binDepths = gz.data.binDepths; 
 binNumGaze = sum(binDepths(:,1).*binDepths(:,2));
 binGazeLin = gz.data.binGazeLin;
-binGazeGrid = gz.data.binGazeGrid;
+binLocLin = gz.data.binLocLin;
+binGridRef = gz.data.binGridRef;
 gridSteps = gz.data.gridSteps;
 binNumLoc = gridSteps * gridSteps;
-binLocLin = gz.data.binLocLin;
-binLocGrid = gz.data.binLocGrid;
 trialInds = gz.data.trialInds;
 
 % get duration spent at each grid position per trial
 gpDurGaze = gz.data.gpDurGaze;
 gpDurLoc = gz.data.gpDurLoc;
 timestampsTrial = gz.data.timestampsTrial;
-% ####
-% timestampsTrial = timestampsTrial;
 timestamps = gz.data.timestamps;
 T = (timestamps-timestamps(1));
 tTrial = gz.data.tTrial;
@@ -306,9 +303,7 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             data.maps_boxsmooth = linsh_map_boxsmooth(:,1);
             data.maps_adsmooth = linsh_map_adsmooth(:,1);
             data.binGazeLin = binGazeLin;
-            data.binGazeGrid = binGazeGrid;
             data.binLocLin = binLocLin;
-            data.binLocGrid = binLocGrid;
             data.spikepersample = spikepersample;
             data.fixObjNum = gz.data.fixObjNum;
 
