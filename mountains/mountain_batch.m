@@ -96,7 +96,7 @@ function mountain_channel(full_cell, index)
     unix('source ~/.bash_profile; conda activate mountainlab; sh sort.sh.txt')
     
     disp('finished for this channel');
-    
+    hyclusterquality
     cd(origin);
 
 end
