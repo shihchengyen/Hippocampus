@@ -125,18 +125,15 @@ if(dlsize>0)
             %remove data that is outside the dimensions of the screen
             x = (edfdata.FSAMPLE.gx(1,:))';
             x(x>Args.ScreenX)= NaN;
-            x(x<0)= NaN;
+            %x(x<=-1)= NaN;
             
             y = (edfdata.FSAMPLE.gy(1,:))';
             y(y>Args.ScreenY)= NaN;
-            y(y<0)= NaN;
+            %y(y<=-1)= NaN;
             
             eyePos = horzcat(x,y);
             
             %Assign values to the object data fields
-            % clear data, which in most cases would have been used to create the data from
-            % the navigation sessions
-            data = [];
             data.trial_timestamps = trialTimestamps;
             data.indices = indices;
             data.eyePos = eyePos;
@@ -162,7 +159,8 @@ if(dlsize>0)
             fprintf ('\n');
             
             %get the number of ACTUAL sessions
-            actualSessionNo = size(dir(Args.NavDirName),1);
+            sessionName = dir(Args.NavDirName);
+            actualSessionNo = size(sessionName,1);
             % actualSessionNo = {actualSessionNo.name};
             % actualSessionNo = contains(actualSessionNo, {'session0'});
             % actualSessionNo = size(find(actualSessionNo),2);
@@ -171,11 +169,11 @@ if(dlsize>0)
             %%screen, i.e. the eye positions were outside the screen bounds
             x = (edfdata.FSAMPLE.gx(1,:))';
             x(x>Args.ScreenX)= NaN;
-            x(x<0)= NaN;
+            %x(x<=-1)= NaN;
             
             y = (edfdata.FSAMPLE.gy(1,:))';
             y(y>Args.ScreenY)= NaN;
-            y(y<0)= NaN;
+            %y(y<=-1)= NaN;
             
             eyePos = horzcat(x,y);
             
@@ -195,62 +193,135 @@ if(dlsize>0)
             m(mindex) = [];
             messageEvent(mindex) = [];
             
-            %Trigger Version 84 signals the start of the session, so look for
-            %all the Trigger Version 84 msgs in edf file
+            % look for the message indicating the beginning of a session in the edf file
             s = Args.TriggerMessage;
-            sessionIndex = find(strcmp(m, s)); %sessionIndex has the index inside messageEvent where a new session starts
-            noOfSessions = size (sessionIndex, 1); %this stores the number of sessions in the day
-            fprintf ('No. of Sessions %d\n',noOfSessions);
-            % disp(noOfSessions);
             
-            %Compares with the number of Actual Sessions found earlier
-            extraSessions = 0;
-            if(noOfSessions > actualSessionNo) %If there are more sessions than there should be
-                display('EDF file has extra sessions!');
-                extraSessions = actualSessionNo - noOfSessions;
-            elseif(noOfSessions < actualSessionNo)
-            	display('EDF file has fewer sessions!')
-            end
             
-            %preallocate for speed.
-            trialTimestamps = zeros(size(m,1), 3*noOfSessions); %stores timestamps at which start/cue/end trial events occured
-            noOfTrials = zeros(1, 1); %stores number of trials per session
-            missingData = []; %stores missing data from edf file that is then saved in an edf file
-            sessionFolder = 1; %stores the current sessionFolder we are in
-            
-            %This loop goes through all the sessions found in the edf file and:
-            %(1)Checks if the edf file is complete by calling completeData
-            %(2)fills in the trialTimestamps and missingData tables by indexing
-            %   using session index (i)
-			sessionName = dir('session*');
+            if(~isempty(s))
+				sessionIndex = find(strcmp(m, s)); %sessionIndex has the index inside messageEvent where a new session starts
+				noOfSessions = size (sessionIndex, 1); %this stores the number of sessions in the day
+				fprintf ('No. of Sessions %d\n',noOfSessions);
+			
+				%Compares with the number of Actual Sessions found earlier
+				extraSessions = 0;
+				if(noOfSessions > actualSessionNo) %If there are more sessions than there should be
+					display('EDF file has extra sessions!');
+					extraSessions = actualSessionNo - noOfSessions;
+				elseif(noOfSessions < actualSessionNo)
+					display('EDF file has fewer sessions!')
+				end
+			
+				%preallocate for speed.
+				trialTimestamps = zeros(size(m,1), 3*noOfSessions); %stores timestamps at which start/cue/end trial events occured
+				noOfTrials = zeros(1, 1); %stores number of trials per session
+				missingData = []; %stores missing data from edf file that is then saved in an edf file
+				sessionFolder = 1; %stores the current sessionFolder we are in
+			
+				%This loop goes through all the sessions found in the edf file and:
+				%(1)Checks if the edf file is complete by calling completeData
+				%(2)fills in the trialTimestamps and missingData tables by indexing
+				%   using session index (i)
 
-            for i=1:noOfSessions                
-                if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
-                    fprintf('Session Name: %s\n',sessionName(sessionFolder).name);
-                    idx = sessionIndex(i,1);
+				for i=1:noOfSessions                
+					if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
+						fprintf('Session Name: %s\n',sessionName(sessionFolder).name);
+						idx = sessionIndex(i,1);
+					
+						if (i==noOfSessions)
+							[corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:end, 1), messageEvent(idx:end,1), sessionName(sessionFolder).name, extraSessions);
+						else
+							idx2 = sessionIndex(i+1,1);
+							[corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:idx2, 1), messageEvent(idx:idx2,1), sessionName(sessionFolder).name, extraSessions);
+						end
+					
+						if (flag == 0)
+							l = 1 + (sessionFolder-1)*3; 
+							u = 3 + (sessionFolder-1)*3;
+							row = size(corrected_times,1);
+							trialTimestamps (1:row, l:u) = corrected_times;
+							noOfTrials (1,sessionFolder) = size(corrected_times, 1);
+							missingData = vertcat(missingData, tempMissing);
+							sessionFolder = sessionFolder+1;
+						else
+							fprintf('Dummy Session skipped %d\n',i);
+						end
+					end  % if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
+				end  % for i=1:noOfSessions                            
+			else
+				% some of the early sessions did not have a message indicating the beginning
+				% of the session, so we will have to do something different
+				
+                %preallocate for speed.
+                noOfSessions = actualSessionNo;
+				trialTimestamps = zeros(size(m,1), 3*noOfSessions); %stores timestamps at which start/cue/end trial events occured
+				noOfTrials = zeros(1, 1); %stores number of trials per session
+				missingData = []; %stores missing data from edf file that is then saved in an edf file
+				%sessionFolder = 1; %stores the current sessionFolder we are in
+			    sessionIndex = [];
+				extraSessions = 0;
+			               
+                %loop through each session
+                for i=1:noOfSessions 
+                    %cd to specific session directory
+                    cd (sessionName(i).name)
                     
-                    if (i==noOfSessions)
-                        [corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:end, 1), messageEvent(idx:end,1), sessionName(sessionFolder).name, extraSessions);
-                    else
-                        idx2 = sessionIndex(i+1,1);
-                        [corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:idx2, 1), messageEvent(idx:idx2,1), sessionName(sessionFolder).name, extraSessions);
+                    %initialising variables for session01
+                    if i==1
+                        sessionIndex = [sessionIndex,1];
+                        nextSessionIndex=1;
+                    end
+                                       
+                    %load the rplparallel object to find out how many trials
+                    % there were
+                    idx = nextSessionIndex;
+                    err=0;        
+
+                    rplObj = rplparallel('auto'); 
+                    TrialNum =  size(rplObj.data.markers);
+                    TrialNum= TrialNum(1);
+                    nextSessionIndex = 3 * TrialNum + idx;  
+
+                    %look through the messages to figure out which to
+                    %skip (aborted sessions)
+                    k=nextSessionIndex;  
+                    while (contains(m(k),'Start') && contains(m(k+1), 'Start')) 
+                        err=err+1;
+                        k=k+1;
                     end
                     
+                    % save the session transitions in sessionIndex
+                    nextSessionIndex= nextSessionIndex+err;
+
+                    if (i ~= noOfSessions) 
+                        sessionIndex = [sessionIndex;nextSessionIndex];
+                    end
+                    
+                    cd ..
+                                                     
+                    %Check if eyelink has missing data by calling completeData   
+                    if (i==noOfSessions)
+							[corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:end, 1), messageEvent(idx:end,1), sessionName(i).name, extraSessions);
+					else
+							idx2 = idx + 3*TrialNum -1;
+							[corrected_times,tempMissing, flag] = completeData(edfdata, m(idx:idx2, 1), messageEvent(idx:idx2,1), sessionName(i).name, extraSessions);
+                    end
+                    
+                    %fills in the trialTimestamps and missingData tables
                     if (flag == 0)
-                        l = 1 + (sessionFolder-1)*3;
-                        u = 3 + (sessionFolder-1)*3;
+                        l = 1 + (i-1)*3; 
+                        u = 3 + (i-1)*3;
                         row = size(corrected_times,1);
                         trialTimestamps (1:row, l:u) = corrected_times;
-                        noOfTrials (1,sessionFolder) = size(corrected_times, 1);
+                        noOfTrials (1,i) = size(corrected_times, 1);
                         missingData = vertcat(missingData, tempMissing);
+					else
+						fprintf('Dummy Session skipped %d\n',i);
+                    end                   
+                    %increase i to go to the next sessionfolder
+                    i=i+1;                        
+                end              
+			end
 
-                        sessionFolder = sessionFolder+1;
-                    else
-                        fprintf('Dummy Session skipped %d\n',i);
-                    end
-                end  % if(contains(sessionName(sessionFolder).name, num2str(sessionFolder)) == 1)
-            end  % for i=1:noOfSessions                
-            
             %edit the size of the array and remove all zero rows and extra
             %columns
             trialTimestamps = trialTimestamps(any(trialTimestamps,2),:);
@@ -259,12 +330,12 @@ if(dlsize>0)
             %modify noOf Sessions
             noOfSessions = size(trialTimestamps,2)/Args.NumTrialMessages;
             
+           
             if(size(missingData,1) ~= 0) %if the table is not empty
                 str = strcat('missingData_', (dlist(1).name), '.csv');
                 writetable(missingData, (str));
             end
-            
-            
+                        
             %%Make a matrix with all the timeouts in all the trials in the session
             %%which we can check when we are graphing lines for the end trial (refer plot.m)
             c = {'Timeout'};
@@ -272,51 +343,6 @@ if(dlsize>0)
             timeouts = {edfdata.FEVENT(messageEvent(find(timeouts))).sttime}';
             timeouts = cell2mat (timeouts); %stores all the timeouts in the session
             
-            %% make a maxtrix with all the trial codes so that 
-            %%post processing knows what reward is used for the trial
-            messages = vertcat({edfdata.FEVENT(messageEvent).sttime},{edfdata.FEVENT(messageEvent).message})';
-            
-            %add missing messages
-            messages = vertcat(messages, missingData(:, [2, 3]));
-            
-            messages = sortrows(messages, 1);
-            
-            % remove the time column
-            messages = table2array(messages(:, 2));
-            
-            % remove unwanted messages
-            trigger_idx = contains(messages, 'Trigger');
-            
-            messages = messages(~trigger_idx); % trim out 'Trigger Version'
-            
-            while 1==1
-                temp_count = 0;
-                if(contains(messages{end}, 'end', 'IgnoreCase', false))
-                    messages = string(messages(1:end-1)); % trim out 'end'
-                    temp_count = temp_count + 1;
-                end
-                if(contains(messages{end}, 'error', 'IgnoreCase', true)) % kw_edit
-                    messages = string(messages(1:end-1)); % trim out 'error'
-                    temp_count = temp_count + 1;
-                end       
-                if temp_count == 0
-                    break;
-                end
-            end
-            
-            %get the codes
-            messages = strtrim(messages);
-            messages = extractAfter(messages, strlength(messages)-2);
-            messages = str2double(messages);
-            messages = uint32(messages);
-             
-            
-            % reshape
-            messages = reshape(messages, 3, []);
-            
-            messages = messages';
-            
-            %%
             %Store the index of the fixation adn saccade events in the edf file
             %into the vectors indexFix and indexSacc.
             events = {edfdata.FEVENT(:).codestring}';
@@ -360,8 +386,6 @@ if(dlsize>0)
             fix = fix(any(fix,2),:);
             sacc = sacc(any(sacc,2), :);
             
-            sessionStart = 0;
-            
             %This for loop splits the created matrices, which contain
             %timestamps from all sessions, into session objects.
             for idx=1:noOfSessions
@@ -374,10 +398,6 @@ if(dlsize>0)
                 data.trial_timestamps = trialTimestamps(:, l:u); %contains all start, cue and and times for all the trials
                 data.trial_timestamps = data.trial_timestamps(any(data.trial_timestamps,2),:);
                 
-                data.trial_codes = messages(sessionStart+1:sessionStart+length(data.trial_timestamps), :);
-                
-                sessionStart = length(data.trial_timestamps);
-                
                 data.sacc_event = sacc;
                 data.fix_event = fix;
                 data.fix_times = fixTimes;
@@ -387,8 +407,6 @@ if(dlsize>0)
                 data.timeouts = timeouts;
                 data.noOfTrials= noOfTrials(1, idx);
                 data.expTime =  edfdata.FEVENT(1).sttime;
-                
-                data.session_start = edfdata.FEVENT(messageEvent(sessionIndex(idx))).sttime;
                 
                 % create nptdata so we can inherit from it
                 data.numSets = 1;    %eyelink is a session object = each session has only object
@@ -426,7 +444,6 @@ data.noOfSessions = 0;
 %data.exp_start_time = double(startTime);
 data.timeouts = [];
 data.noOfTrials= 0;
-
 
 % create nptdata so we can inherit from it
 % useful fields for most objects

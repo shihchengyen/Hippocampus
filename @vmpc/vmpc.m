@@ -218,8 +218,8 @@ if(~isempty(dir(Args.RequiredFile)))
             f(f>=(max(max(f))/3))=1;
             f(f~=1)=0;
             
-            possible(idx,1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f), 1,1,Args.NumShuffles+1);   %./scaler;
-            possible(idx,2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f);   %./scaler;
+            possible(idx,1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);   %./scaler;
+            possible(idx,2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv');   %./scaler;
             
             logic1 = squeeze(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
             slice1 = squeeze(possible(idx,1,:,:,:));

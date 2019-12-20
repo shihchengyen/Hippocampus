@@ -67,11 +67,12 @@ dnum = size(dlist,1);
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
     
+    data.origin = {pwd};
     %use this for real gaze objects
     rp = rplparallel('auto');
     rp = rp.data;
     gaz = gaze('auto',varargin{:});  
-
+    data.binDepths = gaz.data.binDepths;
     spiketrain = load(Args.RequiredFile);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,6 +241,12 @@ if(~isempty(dir(Args.RequiredFile)))
      
 %%%%%%%%%%%%
 
+        maps_raw1 = cell(size(gaz.data.binDepths,1),1);
+        for jj = 1:size(grid_o_i_Gaze,1)
+            mr1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
+            maps_raw1{jj} = mr1(:,:,1);
+        end
+
             retrievemap = cell(size(grid_o_i_Gaze,1),1);
             for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
             
@@ -256,13 +263,10 @@ if(~isempty(dir(Args.RequiredFile)))
                 
     if Args.AdaptiveSmooth
         
-        maps_raw = cell(size(gaz.data.binDepths,1),1);
-        for jj = 1:size(grid_o_i_Gaze,1)
-            temp1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
-            maps_raw{jj} = temp1(:,:,1);
-        end
+        maps_raw = maps_raw1;
         
         alpha = 1e2;
+%         alpha = 1;
         grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
         grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
         grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
@@ -286,7 +290,7 @@ if(~isempty(dir(Args.RequiredFile)))
             gpdur1(isnan(gpdur1)) = 0;
             firing_counts_full1(isnan(firing_counts_full1)) = 0;
 
-            to_compute = 1:0.5:(max(size(gpdur1(:,:,1)))/2);
+            to_compute = 1:0.5:20; % was 1
 
             possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
             to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
@@ -302,10 +306,14 @@ if(~isempty(dir(Args.RequiredFile)))
                         f(f>=(max(max(f))/3))=1;
                         f(f~=1)=0;
 
-                        possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f), 1,1,Args.NumShuffles+1); 
-                        possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f); 
+                        possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1); 
+                        possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv'); 
 
                         logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
+                        
+                        %debug
+%                         logic1(~logic1) = 1;
+                        
                         slice1 = squeeze(possible(1,:,:,:));
                         slice2 = squeeze(possible(2,:,:,:));
 
@@ -696,3 +704,94 @@ switch gazeSections{jj}
         spikeLoc = spikeLoc_temp;
 
 end
+
+
+
+
+
+
+
+function [smoothedRate,smoothedSpk,smoothedPos,radiiUsedList] = adaptivesmooth(pos,spk,alpha)
+% Adapted from rates_adaptivesmooth.m (Wills et al)
+% pos = occupancy map/dwell time in each position bin (in seconds)
+% spk = spike map/spike count in each position bin
+% alpha = scaling parameter (1e6 for Skaggs et al 1996, 1e5 for Wills et al 2010)
+
+% Check for empty spk maps %
+if sum(sum(spk))==0
+    smoothedPos=pos;    smoothedPos(pos==0)=nan;
+    smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
+    smoothedRate=spk;   smoothedRate(pos==0)=nan;
+    radiiUsedList=nan(1,sum(sum(pos>0)));
+    return
+end
+% Pre-assign output %
+smoothedPos=zeros(size(pos));
+smoothedSpk=zeros(size(pos));
+% Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
+vis=zeros(size(pos));
+vis(pos>0)=1;
+% Pre-assign map which records which bins have passed %
+smoothedCheck=false(size(pos));
+smoothedCheck(pos==0)=true; % Disregard unvisited - mark as already done.
+% Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
+radiiUsedList=nan(1,sum(sum(pos>0)));
+radiiUsedCount=1;
+% These parameters depend on place or dir mode %
+if size(pos,2)>1
+    boundary=0;             % IMFILTER boundary condition
+    rBump=0.5;              % Increase radius in 0.5 bin steps.
+elseif size(pos,2)==1
+    boundary='circular';
+    rBump=1;                % Increase radius in 1 bin steps.
+end
+
+%%% Run increasing radius iterations %%%
+r=1; % Circle radius
+while any(any(~smoothedCheck))
+    % Check radius isn't getting too big (if >map/2, stop running) %
+    if r>max(size(pos))/2
+        smoothedSpk(~smoothedCheck)=nan;
+        smoothedPos(~smoothedCheck)=nan;
+        break
+    end
+    % Construct filter kernel ...
+    if size(pos,2)>1
+        % Place: Flat disk, where r>=distance to bin centre %
+        f=fspecial('disk',r); 
+        f(f>=(max(max(f))/3))=1;
+        f(f~=1)=0;
+    elseif size(pos,2)==1 
+        % Direction: boxcar window, r bins from centre symmetrically %
+        f=ones(1+(r*2),1);
+    end     
+    % Filter maps (get N spikes and pos sum within kernel) %
+    fSpk=imfilter(spk,f,boundary);
+    fPos=imfilter(pos,f,boundary);
+    fVis=imfilter(vis,f,boundary);
+    % Which bins pass criteria at this radius? %
+    warning('off', 'MATLAB:divideByZero');
+    binsPassed=alpha./(sqrt(fSpk).*fPos) <= r;
+    warning('on', 'MATLAB:divideByZero');
+    binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
+    % Add these to list of radii used %
+    nBins=sum(binsPassed(:));
+    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
+    radiiUsedCount=radiiUsedCount+nBins;
+    % Assign values to smoothed maps %
+    smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
+    smoothedPos(binsPassed)=fPos(binsPassed)./fVis(binsPassed);
+    % Record which bins were smoothed this iteration %
+    smoothedCheck(binsPassed)=true;
+    % Increase circle radius (half-bin steps) %
+    r=r+rBump;
+end
+
+% Assign Output %
+warning('off', 'MATLAB:divideByZero');
+smoothedRate=smoothedSpk./smoothedPos;
+warning('on', 'MATLAB:divideByZero');
+smoothedRate(pos==0)=nan;
+smoothedPos(pos==0)=nan;
+smoothedSpk(pos==0)=nan;
+% report radii sizes?

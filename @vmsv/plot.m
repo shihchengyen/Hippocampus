@@ -38,6 +38,14 @@ if(~isempty(Args.NumericArguments))
 else
 	% plot all data
 	n = get(obj,'Number');
+    
+%     %collate all data for multi channels into cell
+%     if isempty(Args.Sessions) % single 
+%         
+%     else
+%         
+%     end
+    
     figure;
     if(Args.Map)
         if Args.Smooth
