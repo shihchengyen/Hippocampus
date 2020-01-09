@@ -17,7 +17,7 @@ ml-run-process ephys.mask_out_artifacts \
 	--outputs timeseries_out:output/pre2.mda \
 	--parameters \
 		threshold:25 \
-		chunk_size:30 \
+		chunk_size:2000 \
 
 # Spike sorting
 ml-run-process ms4alg.sort \

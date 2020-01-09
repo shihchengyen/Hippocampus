@@ -1,0 +1,18 @@
+#/bin/bash 
+  
+#PBS -P PnV_SIC
+#PBS -q serial
+#PBS -l select=1:ncpus=1:mem=15GB
+#PBS -j oe 
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+current_dir=$(pwd)
+
+base='scp -P 8398 pnv_shuffle.mat hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data/'
+additional="$(echo $current_dir | tr -s '/' '\n' | grep "picasso-misc" -A 10 | tr -s '\n' '/')"
+
+combined="$base$additional"
+eval $combined
+
+

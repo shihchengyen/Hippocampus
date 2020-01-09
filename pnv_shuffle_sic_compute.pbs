@@ -1,0 +1,10 @@
+#/bin/bash 
+  
+#PBS -P PnV_SIC
+#PBS -q openmp
+#PBS -l select=1:ncpus=2:mem=150GB
+#PBS -j oe 
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+matlab2016b2 -nodisplay -nosplash -r "placeandview_sic_compute(pwd)"

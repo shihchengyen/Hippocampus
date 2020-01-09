@@ -10,6 +10,7 @@ function placeandview()
     st = st.timestamps;
     st = st./1000;
     
+%     figure('name','abc','units','normalized','outerposition',[0.1 0.1 0.8 0.8])
     figure('name',vms.origin{1},'units','normalized','outerposition',[0.1 0.1 0.8 0.8])
 %     figure(); % for older vms files
 %     a = load('bindepths.mat'); % for older vms files

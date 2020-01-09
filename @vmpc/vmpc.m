@@ -264,6 +264,15 @@ if(~isempty(dir(Args.RequiredFile)))
         to_save = NaN(1,Args.GridSteps^2);
         to_save(bins_sieved) = firing_rates_full(1,:);
         data.maps_adsmooth = to_save;
+        to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+        to_save(:,bins_sieved) = firing_rates_full(2:end,:);
+        data.maps_all = to_save;
+        to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+        to_save(:,bins_sieved) = to_fill_time(2:end,:);
+        data.dur_map_all = to_save;
+        to_save = NaN(1,Args.GridSteps^2);
+        to_save(bins_sieved) = to_fill_time(1,:);
+        data.dur_map_actual = to_save;
         
     else
         firing_rates_full = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
@@ -275,7 +284,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
         gpdur1 = zeros(Args.NumShuffles+1,Args.GridSteps^2);
         gpdur1(:,bins_sieved) = to_fill_time;
-        Pi1 = gpdur1./sum(gpdur1,2);
+        Pi1 = gpdur1./sum(gpdur1,2); % consider nansum to play safe
 %         Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
         
         lambda_i = NaN(Args.NumShuffles+1,Args.GridSteps^2);
