@@ -7,50 +7,40 @@ morigin = readmda('raw_data.mda');
 cd('..')
 points=[];
 row0=1;
-column0=1;
 row1=1;
-column1=1;
 maxcluster=max(moutput(3,:));
 isodistance=[];
 lratio=[];
 interval=cell(1,maxcluster);
 rperiod=[];
 index=[];
-index1=[];
-size1=0;
-delete=[];
-clusterquality=[];
-rthreshold=2.5;
+
 tt=cell(1,maxcluster);
 twidth=50;
-maxx=-100;
+
 swidth=cell(1,maxcluster);
 meanwidth=[];
 amp=cell(1,maxcluster);
 meanamp=[];
 widthvar=[];
 ampvar=[];
-good=0;
+
 if nargin<3
     thresholdi=16;
     thresholdl=0.1;
     thresholdr=0.01;
 end
-for k = 1:maxcluster
-    clusterquality(k,1)=k;
-end
-for i=moutput(2,:)
-    column0=1;
-    for j=(i-25):(i+25)
-        points(row0,column0)=morigin(j);
-        column0=column0+1;
-    end
-    
-        
-    row0=row0+1;
-end
 
-[coeff, score] =pca(points);
+clusterquality = nan(maxcluster,9);
+clusterquality(:,1) = [1:maxcluster]';
+
+
+points = repmat([-25:25], size(moutput,2), 1);
+starts = moutput(2,:)';
+points = points + starts;
+points = morigin(points);
+
+[~, score] =pca(points);
 score1=score(:,1:5);
 for i = 1:maxcluster
     column1=1;
@@ -62,7 +52,7 @@ for i = 1:maxcluster
     end
     row1=row1+1;
 end
-  for ii =1:maxcluster
+for ii =1:maxcluster
     delete=[];
     index1=index(ii,:);
     size1=size(index1,2);
@@ -82,7 +72,7 @@ end
     [L, Lratio, df] = L_Ratio(score1, index1);
     lratio=[lratio,Lratio];
     
-  end
+end
 isodistance=isodistance';
 lratio=lratio';
 for i = 1:maxcluster
@@ -94,13 +84,9 @@ clusterquality(:,2)=isodistance;
 clusterquality(:,3)=lratio;
 clusterquality(:,4)=rperiod;
 for i =1:maxcluster
-    for k = 1:size(moutput,2)
-        if moutput(3,k)==i
-            tt{1,i}=[tt{1,i},moutput(2,k)];
-        end
-    end
+    tt{1,i} = moutput(2,find(moutput(3,:)==i));
 end
-for j=1:maxcluster
+for j=1:maxcluster % if nothing to do refactor this
     for k=1:size(tt{1,j},2)
         maxx=-100;
         minn=100;
