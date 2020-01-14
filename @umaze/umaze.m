@@ -15,7 +15,7 @@ function [obj, varargout] = umaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', ...
 				'GridSteps',40, 'overallGridSize',25, ...
-                'MinObs',5);
+                'MinObs',5,'SpeedLimit',1);
             
 % GridSteps: number of bins to cut the maze into
 % overallGridSize: length/width of entire maze
@@ -24,7 +24,7 @@ Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps', 'MinObs', 'overallGridSize'};                            
+Args.DataCheckArgs = {'GridSteps', 'MinObs', 'overallGridSize','SpeedLimit'};                            
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -184,7 +184,7 @@ if(dnum>0)
     % trial at 27.2817 s is marked with position 0, and is immediately
     % followed by the end of the trial at 36.2458 s, marked as before
     % with a 0 in the 2nd column.  
-    sessionTime = zeros(size(gridPosition,1),5);	
+    sessionTime = zeros(size(gridPosition,1),3); % was 5, with the coarse direction
 
     % start the array with 0 to make sure any spike times before the 
     % first trigger	are captured 
@@ -308,8 +308,8 @@ if(dnum>0)
             % add the Unity frame intervals to the starting timestamp to
             % create corrected version of unityTime, which will also be the
             % bin limits for the histogram function call
-            sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];
-            sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc)-binHt(gpc+1)];
+            sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];            
+%             sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc)-binHt(gpc+1)];
             sTi = sTi + ngpc;
 
             % occasionally we will get a change in grid position in the frame interval
@@ -348,6 +348,58 @@ if(dnum>0)
 
     end % for a = 1:totTrials    
 
+    disp('speed thresholding portion');
+    
+    speeding_checker = [unityTime [0; unityData(:,7)./unityData(:,2)]];
+    speeding_checker(:,2) = speeding_checker(:,2) > Args.SpeedLimit;
+    speeding_checker(:,3) = [0; diff(speeding_checker(:,2))];
+    if speeding_checker(1,2) == 0
+        speeding_checker(1,3) = -1;
+    else
+        speeding_checker(1,3) = 1;
+    end
+    stop_intervals = nan(max([sum(speeding_checker(:,3)==1) sum(speeding_checker(:,3)==-1)]), 2);
+
+    % storing portions of session that is invalid due to lower speeds
+    stop_intervals(1:sum(speeding_checker(:,3)==-1),1) = speeding_checker(find(speeding_checker(:,3)==-1),1);
+    stop_intervals(1:sum(speeding_checker(:,3)==1),2) = speeding_checker(find(speeding_checker(:,3)==1),1);
+    stop_intervals(find((stop_intervals(:,2)-stop_intervals(:,1))==0),:) = [];
+    
+    for block_row = 1:size(stop_intervals,1)
+        if isnan(stop_intervals(block_row,2)) % last part, edge case
+            remaining_rows = find(sessionTime(:,1) > stop_intervals(block_row,1));
+            top_limit = remaining_rows(1) - 1;
+            subrows_to_discard = find(sessionTime(remaining_rows,2)~=0);
+            remaining_rows(subrows_to_discard) = [];
+            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [sessionTime(remaining_rows,:)]]; % not finished here
+            break;
+        end
+        top_limit = find(sessionTime(:,1) > stop_intervals(block_row,1));
+        top_limit = top_limit(1) - 1;
+        bot_limit = find(sessionTime(:,1) >= stop_intervals(block_row,2));
+        bot_limit = bot_limit(1);
+%         disp([top_limit bot_limit]);
+        if sum(sessionTime(top_limit+1:bot_limit-1,2)==0)>0
+            zero_line = sessionTime(top_limit+find(sessionTime(top_limit+1:bot_limit-1,2)==0),:);
+            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; zero_line; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
+        else
+            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
+        end
+    end
+    
+    % removing duplicate timings - sort and keep first (smallest, preserving
+    % any potential zeros)
+    
+    sessionTime(find(sessionTime(:,2)==-1),2) = 0.5; % prioritize zeros, then neg ones, temp change only
+    sessionTime = sortrows(sessionTime, [1 2]);
+    sessionTime(find(sessionTime(:,2)==0.5),2) = -1; % swap back;
+    to_remove = find(diff(sessionTime(:,1))==0)+1;
+    if to_remove(end) > size(sessionTime,1)
+        to_remove = to_remove(1:end-1);
+    end
+    sessionTime(to_remove,:) = [];    
+
+    
     % Calculate performance
     errorInd = find(sumCost(:,5) == 40); 
     sumCost(errorInd,6) = 0; 
@@ -401,7 +453,7 @@ if(dnum>0)
         ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
     end    
     
-    zero_indices = find(sTime(:,2)==0);
+%     zero_indices = find(sTime(:,2)==0);
     
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
@@ -419,9 +471,10 @@ if(dnum>0)
 		data.gridPosition = gridPosition;
 		data.gpDurations = gpDurations;
 		data.setIndex = [0; totTrials];
+        data.SpeedLimit = Args.SpeedLimit;
 
         data.sessionTime = sTime;
-        data.zero_indices = zero_indices;
+%         data.zero_indices = zero_indices;
         data.sortedGPindices = sTPi;
         data.sortedGPindinfo = sortedGPindinfo;
         data.sGPi_minobs = sTPinm;
