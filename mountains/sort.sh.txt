@@ -5,14 +5,14 @@ set -e
 mkdir -p output
 
 # Preprocess
-ml-run-process ephys.bandpass_filter \
+ml-exec-process ephys.bandpass_filter \
 	--inputs timeseries:dataset/raw_data.mda \
 	--outputs timeseries_out:output/filt.mda \
 	--parameters samplerate:30000 freq_min:300 freq_max:6000
-ml-run-process ephys.whiten \
+ml-exec-process ephys.whiten \
 	--inputs timeseries:dataset/raw_data.mda \
 	--outputs timeseries_out:output/pre.mda
-ml-run-process ephys.mask_out_artifacts \
+ml-exec-process ephys.mask_out_artifacts \
 	--inputs timeseries:output/pre.mda \
 	--outputs timeseries_out:output/pre2.mda \
 	--parameters \
@@ -20,7 +20,7 @@ ml-run-process ephys.mask_out_artifacts \
 		chunk_size:2000 \
 
 # Spike sorting
-ml-run-process ms4alg.sort \
+ml-exec-process ms4alg.sort \
 	--inputs \
 		timeseries:output/pre2.mda geom:dataset/geom.csv \
 	--outputs \
@@ -33,13 +33,13 @@ ml-run-process ms4alg.sort \
 		max_num_clips_for_pca:2000 \ 
 
 # Compute templates
-ml-run-process ephys.compute_templates \
+ml-exec-process ephys.compute_templates \
 	--inputs timeseries:dataset/raw_data.mda firings:output/firings.mda \
 	--outputs templates_out:output/templates.mda.prv \
 	--parameters \
 		clip_size:150
 
-ml-run-process ephys.compute_cluster_metrics \
+ml-exec-process ephys.compute_cluster_metrics \
     --inputs firings:output/firings.mda timeseries:dataset/raw_data.mda \
     --outputs metrics_out:output/metrics.json \
     --parameters \
