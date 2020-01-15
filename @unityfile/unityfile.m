@@ -207,12 +207,15 @@ if(~isempty(rd))
         end
         dd(:,1) = 360 - dd(:,1);
         dd(find(dd(:,1)==360),1) = 0;
-        dd(find(dd(:,2)==0),1) = NaN;
+        dd(find(dd(:,2)==0),1) = NaN;        
         
         % sixth column in degrees, north set to 0, clockwise. seventh column
         % magnitude in unity units.
 
 		data.unityData = [unityData dd];
+        % data.unityData(:,7) = data.unityData(:,7)./data.unityData(:,2); % converted to unity units per second
+        % above line not used as we can only compute velocity after timing
+        % has been realigned, step moved to umaze.m
 		data.unityTriggers = unityTriggers;
 		data.unityTrialTime = unityTrialTime;
 
