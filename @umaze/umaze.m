@@ -368,7 +368,11 @@ if(dnum>0)
     for block_row = 1:size(stop_intervals,1)
         if isnan(stop_intervals(block_row,2)) % last part, edge case
             remaining_rows = find(sessionTime(:,1) > stop_intervals(block_row,1));
-            top_limit = remaining_rows(1) - 1;
+            if isempty(remaining_rows)
+                top_limit = size(sessionTime,1);
+            else
+                top_limit = remaining_rows(1) - 1;
+            end
             subrows_to_discard = find(sessionTime(remaining_rows,2)~=0);
             remaining_rows(subrows_to_discard) = [];
             sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [sessionTime(remaining_rows,:)]]; % not finished here
@@ -408,50 +412,75 @@ if(dnum>0)
     disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
     processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
 
-    % get number of rows in sessionTime
-    snum = sTi - 1;
     % reduce memory for sessionTime
-    sTime = sessionTime(1:snum,:);
+    snum = size(sessionTime,1);
+    sTime = sessionTime;
     % fill in 3rd column with time interval so it will be easier to compute
     % firing rate
     sTime(1:(snum-1),3) = diff(sTime(:,1));
-    % sort the 2nd column so we can extract the firing rates by position
-    [sTP,sTPi] = sort(sTime(:,2));
-    % find the number of observations per position by looking for 
-    % the indices when position changes. The first change should be from
-    % position 0 to 1st non-zero position. Add 1 to adjust for the change
-    % in index when using diff. These will be the starting indices for 
-    % the unique positions not including 0.
-    sTPsi = find(diff(sTP)~=0) + 1;
-    % find the ending indices by subtracting 1 from sTPsi, and adding
-    % snum at the end
-    sTPind = [sTPsi [ [sTPsi(2:end)-1]; snum]];
-    % compute the number of observations per position
-    sTPin = diff(sTPind,1,2) + 1;
-    % arrange the information into a matrix for easier access
-    sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
-    % set up the conversion from grid position to index to make accessing the information
-    % easier
-    [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
-    % find positions (excluding 0) with more than MinReps observations
-    sTPinm = find(sTPin>(Args.MinObs-1));
-    % create temporary variable that will be used for calculations below
-    % this is not a variable that we will save
-    sTPsi2 = sTPsi(sTPinm);
-    % save the number of observations for the positions that exceed the
-    % minimum number of observations
-    sTPin2 = sTPin(sTPinm);
-    % save the position numbers
-    sTPu = sTP(sTPsi2);
-    % find number of positions
-    nsTPu = size(sTPu,1);	
-    % save the subset of starting and ending indices for sTime
-    sTPind2 = sTPind(sTPinm,:);
-    % compute occupancy proportion
-    ou_i = zeros(nsTPu,1);
-    for pi = 1:nsTPu
-        ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
-    end    
+    
+    sTime_backup = sTime; 
+    % following few lines used to calculate decent speed duration and number of times entered each grid
+    
+    sTime(find(sTime(:,2)==-1),:) = [];
+    sTime_temp2 = sTime;
+    sTime_temp2(find(sTime_temp2(:,2)==0),:) = [];
+    sTime_temp2 = [sTime_temp2; [0 Args.GridSteps.^2 0]];
+    dur_spent_moving_per_grid = accumarray(sTime_temp2(:,2),sTime_temp2(:,3));
+    
+    sTime(find(diff(sTime(:,2))==0)+1,:) = [];
+    sTime(:,3) = [diff(sTime(:,1)); 0];
+    sTime(find(sTime(:,2)==0),:) = [];
+    sTime = [sTime; [0 Args.GridSteps.^2 0]];
+    occur_per_grid = accumarray(sTime(:,2),ones(size(sTime(:,2))));
+    well_sampled_grids = find(occur_per_grid > Args.MinObs-1);
+    dur_per_grid = accumarray(sTime(:,2),sTime(:,3));
+    
+    sTime = sTime_backup;
+    
+%     % sort the 2nd column so we can extract the firing rates by position
+%     [sTP,sTPi] = sort(sTime(:,2));
+%     % ad hoc change
+%     sorted_dur = sortrows(sTime, 2);
+% %     sorted_dur = sorted_dur(:,3);
+%     % find the number of observations per position by looking for 
+%     % the indices when position changes. The first change should be from
+%     % position 0 to 1st non-zero position. Add 1 to adjust for the change
+%     % in index when using diff. These will be the starting indices for 
+%     % the unique positions not including 0.
+%     sTPsi = find(diff(sTP)~=0) + 1;
+%     % find the ending indices by subtracting 1 from sTPsi, and adding
+%     % snum at the end
+%     sTPind = [sTPsi [ [sTPsi(2:end)-1]; size(sTP,1)]];
+%     % compute the number of observations per position
+%     sTPin = diff(sTPind,1,2) + 1;
+%     % arrange the information into a matrix for easier access
+%     sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
+%     % set up the conversion from grid position to index to make accessing the information
+%     % easier
+%     [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
+%     % find positions (excluding 0) with more than MinReps observations
+%     sTPinm = find(sTPin>(Args.MinObs-1));
+    
+    
+    
+%     % create temporary variable that will be used for calculations below
+%     % this is not a variable that we will save
+%     sTPsi2 = sTPsi(sTPinm);
+%     % save the number of observations for the positions that exceed the
+%     % minimum number of observations
+%     sTPin2 = sTPin(sTPinm);
+%     % save the position numbers
+%     sTPu = sTP(sTPsi2);
+%     % find number of positions
+%     nsTPu = size(sTPu,1);	
+%     % save the subset of starting and ending indices for sTime
+%     sTPind2 = sTPind(sTPinm,:);
+%     % compute occupancy proportion
+%     ou_i = zeros(nsTPu,1);
+%     for pi = 1:nsTPu
+%         ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
+%     end    
     
 %     zero_indices = find(sTime(:,2)==0);
     
@@ -474,19 +503,24 @@ if(dnum>0)
         data.SpeedLimit = Args.SpeedLimit;
 
         data.sessionTime = sTime;
+        data.dur_spent_moving_per_grid = dur_spent_moving_per_grid;
+        data.occur_per_grid = occur_per_grid;
+        data.well_sampled_grids = well_sampled_grids;
+        data.dur_per_grid = dur_per_grid;
+        
 %         data.zero_indices = zero_indices;
-        data.sortedGPindices = sTPi;
-        data.sortedGPindinfo = sortedGPindinfo;
-        data.sGPi_minobs = sTPinm;
-        data.sTPu = sTPu;
-        data.nsTPu = nsTPu;
-        data.ou_i = ou_i;
-        data.P_i = ou_i / sum(ou_i); 
-        data.gp2ind = gp2ind;
+%         data.sortedGPindices = sTPi;
+%         data.sortedGPindinfo = sortedGPindinfo;
+%         data.sGPi_minobs = sTPinm;
+%         data.sTPu = sTPu;
+%         data.nsTPu = nsTPu;
+%         data.ou_i = ou_i;
+%         data.P_i = ou_i / sum(ou_i); 
+%         data.gp2ind = gp2ind;
         
         %%% temporary, for sfn generation %%%
-        data.unityTriggers = ufdata.data.unityTriggers;
-        data.unityTrialTime = ufdata.data.unityTrialTime;
+%         data.unityTriggers = ufdata.data.unityTriggers;
+%         data.unityTrialTime = ufdata.data.unityTrialTime;
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
