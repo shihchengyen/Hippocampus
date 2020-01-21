@@ -89,6 +89,8 @@ function mountain_channel(full_cell, index)
     disp(max(data));
     disp(min(data));
     
+    data = threshold_removal(data);
+    
     writemda(data, 'raw_data.mda', 'float32');
     unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
     cd('..');
@@ -194,4 +196,20 @@ function [channels_identified] = comb_channels_ms()
     
     cd(origin);
     
+end
+
+
+function [data] = threshold_removal(data)
+
+    threshold = 250;
+    window_size = 2000;
+    single_pts = find(data>threshold);
+    single_pts = single_pts';
+    all_pts = single_pts + repmat(-floor(window_size/2):floor(window_size/2),length(single_pts),1);
+    all_pts(all_pts < 1) = 1;
+    all_pts(all_pts > length(data)) = length(data);
+    all_pts = all_pts(:);
+    all_pts = unique(all_pts);
+    data(all_pts) = 0;
+
 end
