@@ -204,7 +204,7 @@ function [data, all_pts] = threshold_removal(data)
 
     threshold = 250;
     window_size = 2000;
-    single_pts = find(data>threshold);
+    single_pts = find(abs(data)>threshold);
     single_pts = single_pts';
     all_pts = single_pts + repmat(-floor(window_size/2):floor(window_size/2),length(single_pts),1);
     all_pts(all_pts < 1) = 1;
