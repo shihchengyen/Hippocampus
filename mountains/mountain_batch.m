@@ -89,10 +89,11 @@ function mountain_channel(full_cell, index)
     disp(max(data));
     disp(min(data));
     
-    [data, pts] = threshold_removal(data);
+    [data1, pts] = threshold_removal(data);
     
     writemda(pts, 'removed_data_indices.mda', 'float32');
-    writemda(data, 'raw_data.mda', 'float32');
+    writemda(data, 'bef_250.mda', 'float32');
+    writemda(data1, 'raw_data.mda', 'float32');
     unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
     cd('..');
     unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/sort.sh.txt .');

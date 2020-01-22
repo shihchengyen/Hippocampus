@@ -5,6 +5,15 @@
 New GUI command something like this:
 qt-mountainview --raw dataset/raw_data.mda --filt output/pre2.mda --pre output/pre.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
 
+As of 22 Jan 2020, use the following to view:
+To interpret GUI:
+Raw -> rplhighpass version.
+Filt -> after passing flat 250 thresholding.
+Filt + whiten -> after passing flat 250, whiten, 25 std dev thresholding.
+
+qt-mountainview --raw dataset/bef_250.mda --filt output/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
+
+
 
 To run MountainSort:
 	go into day directory in MATLAB, run either of the following:
