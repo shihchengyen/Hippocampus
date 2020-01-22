@@ -5,10 +5,6 @@ set -e
 mkdir -p output
 
 # Preprocess
-ml-exec-process ephys.bandpass_filter \
-	--inputs timeseries:dataset/raw_data.mda \
-	--outputs timeseries_out:output/filt.mda \
-	--parameters samplerate:30000 freq_min:300 freq_max:6000
 ml-exec-process ephys.whiten \
 	--inputs timeseries:dataset/raw_data.mda \
 	--outputs timeseries_out:output/pre.mda
