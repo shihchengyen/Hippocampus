@@ -91,7 +91,7 @@ function mountain_channel(full_cell, index)
     
     [data1, pts] = threshold_removal(data);
     
-    writemda(pts, 'removed_data_indices.mda', 'float32');
+    writemda(pts, 'removed_data_reference_pts.mda', 'float32');
     writemda(data, 'bef_250.mda', 'float32');
     writemda(data1, 'raw_data.mda', 'float32');
     unix('source ~/.bash_profile; cp $GITHUB_MATLAB/Hippocampus/mountains/geom.csv .');
@@ -210,7 +210,6 @@ function [data, all_pts] = threshold_removal(data)
     % only process maximum of 2.5x10^6 anchors at once
     start = 1;
     terminate = 0;
-    all_pts = [];
     tic
     disp('flat thresholding starts');
     while 1==1
@@ -222,15 +221,13 @@ function [data, all_pts] = threshold_removal(data)
         curr_pts = single_pts(start:last) + repmat(uint32(-floor(window_size/2):floor(window_size/2)),last - start + 1,1);
         curr_pts(curr_pts < 1) = 1;
         curr_pts(curr_pts > length(data)) = length(data);
-        curr_pts = unique(curr_pts(:));
-        all_pts = [all_pts; curr_pts];
+        data(curr_pts) = 0;
+        start = last + 1;
         if terminate == 1 
             break;
         end
     end
-    all_pts = unique(all_pts);
     time_spent = toc;
     disp(['time taken: ' num2str(time_spent)]);
-    data(all_pts) = 0;
-    
+    all_pts = single_pts;
 end
