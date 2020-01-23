@@ -206,12 +206,31 @@ function [data, all_pts] = threshold_removal(data)
     threshold = 250;
     window_size = 2000;
     single_pts = find(abs(data)>threshold);
-    single_pts = single_pts';
-    all_pts = single_pts + repmat(-floor(window_size/2):floor(window_size/2),length(single_pts),1);
-    all_pts(all_pts < 1) = 1;
-    all_pts(all_pts > length(data)) = length(data);
-    all_pts = all_pts(:);
+    single_pts = uint32(single_pts');
+    % only process maximum of 2.5x10^6 anchors at once
+    start = 1;
+    terminate = 0;
+    all_pts = [];
+    tic
+    disp('flat thresholding starts');
+    while 1==1
+        last = start + 2500000;
+        if last > length(single_pts)
+            last = length(single_pts);
+            terminate = 1;
+        end
+        curr_pts = single_pts(start:last) + repmat(uint32(-floor(window_size/2):floor(window_size/2)),last - start + 1,1);
+        curr_pts(curr_pts < 1) = 1;
+        curr_pts(curr_pts > length(data)) = length(data);
+        curr_pts = unique(curr_pts(:));
+        all_pts = [all_pts; curr_pts];
+        if terminate == 1 
+            break;
+        end
+    end
     all_pts = unique(all_pts);
+    time_spent = toc;
+    disp(['time taken: ' num2str(time_spent)]);
     data(all_pts) = 0;
     
 end
