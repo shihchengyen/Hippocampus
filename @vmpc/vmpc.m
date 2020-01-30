@@ -69,13 +69,8 @@ if(~isempty(dir(Args.RequiredFile)))
     
     ori = pwd;
 
-    data.origin = {pwd};
-	uma = umaze('auto',varargin{:});
-    pwd
-%     uma = load('../../../unitymaze.mat');
-%     uma = uma.um;
-%     uma.data.zero_indices = find(uma.data.sessionTime(:,2)==0);
- 
+    data.origin = {pwd}; 
+    pv = vmpv('auto', varargin{:});
 	rp = rplparallel('auto',varargin{:});
     cd(ori);
     spiketrain = load(Args.RequiredFile);
@@ -90,26 +85,30 @@ if(~isempty(dir(Args.RequiredFile)))
     full_arr = full_arr + tShifts';
     keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
     for row = 2:size(full_arr,1)
-
         full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
-
     end
     
     % calculating proportion of occupied time in each grid position across
     % entire session.
     
     if Args.FiltLowOcc
-        bins_sieved = uma.data.sTPu;
-        data.MinTrials = uma.data.Args.MinObs;
+        bins_sieved = pv.data.well_sampled_grids;
+        data.MinTrials = pv.data.Args.MinObs;
     else
-        bins_sieved = uma.data.sortedGPindinfo(:,1);
+        bins_sieved = 1:(Args.GridSteps*Args.GridSteps);
         data.MinTrials = NaN;
     end
     
-    gpdur = sum(uma.data.gpDurations, 2);
+    gpdur = sum(pv.data.dur_spent_moving_per_grid, 2);
     gpdur = gpdur(bins_sieved)'; 
     Pi = gpdur/sum(gpdur);
 
+    pv2 = pv.data.sessionTimeC;
+    pv2 = pv2([1; find(diff(pv2(:,2)))+1], :);
+    pv2(:,3) = [diff(pv2(:,1)); 0];
+    uma.data.sessionTime = pv2;
+    uma.data.zero_indices = find(pv2(:,2)==0 | pv2(:,2)==-1);
+    
     flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
     temp = full_arr';
     flat_spiketimes(1,:) = temp(:);
