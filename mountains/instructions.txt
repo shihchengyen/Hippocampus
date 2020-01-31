@@ -11,7 +11,7 @@ Raw -> rplhighpass version.
 Filt -> after passing flat 250 thresholding.
 Filt + whiten -> after passing flat 250, whiten, 25 std dev thresholding.
 
-qt-mountainview --raw dataset/bef_250.mda --filt output/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
+qt-mountainview --raw dataset/bef_250.mda --filt dataset/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
 
 
 
