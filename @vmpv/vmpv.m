@@ -148,7 +148,7 @@ if(~isempty(dir(Args.RequiredFile)))
     % first, chunk by number of view bins per timestamp
     time_transitions = find(diff(cst_full(:,1))~=0) + 1;
     time_repeats = diff(time_transitions);
-    unique_times = unique(cst_full(:,1));
+%     unique_times = unique(cst_full(:,1));
     time_repeats = [unique(cst_full(:,1)) [1; time_repeats; NaN]];
     
     % third (for now) column will track candidate redundancies
