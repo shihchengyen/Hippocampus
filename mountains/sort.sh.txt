@@ -12,7 +12,7 @@ ml-exec-process ephys.mask_out_artifacts \
 	--inputs timeseries:output/pre.mda \
 	--outputs timeseries_out:output/pre2.mda \
 	--parameters \
-		threshold:25 \
+		threshold:10 \
 		chunk_size:2000 \
 
 # Spike sorting
