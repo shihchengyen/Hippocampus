@@ -9,6 +9,9 @@ qt-mountainview --raw dataset/bef_250.mda --filt dataset/raw_data.mda --pre outp
 Failsafe version:
 rm -r /tmp/mountainlab-tmp; qt-mountainview --raw dataset/bef_250.mda --filt dataset/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
 
+_________________________________________________
+
+
 
 To run MountainSort:
 	go into day directory in MATLAB, run either of the following:
