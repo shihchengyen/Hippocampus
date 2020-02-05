@@ -203,7 +203,7 @@ end
 
 function [data, all_pts] = threshold_removal(data)
 
-    threshold = 250;
+    threshold = 1000000;
     window_size = 2000;
     single_pts = find(abs(data)>threshold);
     single_pts = uint32(single_pts');

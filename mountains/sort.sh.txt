@@ -31,7 +31,7 @@ ml-exec-process ms4alg.sort \
 # Compute templates
 ml-exec-process ephys.compute_templates \
 	--inputs timeseries:dataset/raw_data.mda firings:output/firings.mda \
-	--outputs templates_out:output/templates.mda.prv \
+	--outputs templates_out:output/templates.mda \
 	--parameters \
 		clip_size:150
 
