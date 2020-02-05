@@ -1,10 +1,3 @@
-20190919 update:
-	in the future, output files will be ~.mda instead of ~.mda.prv (command to use GUI needs to be updated)
-	in the future, preprocessing steps will change, from bandpass-whiten to whiten-artifacts (command for GUI and sort.sh.txt to be updated)
-
-New GUI command something like this:
-qt-mountainview --raw dataset/raw_data.mda --filt output/pre2.mda --pre output/pre.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
-
 As of 22 Jan 2020, use the following to view:
 To interpret GUI:
 Raw -> rplhighpass version.
@@ -13,6 +6,8 @@ Filt + whiten -> after passing flat 250, whiten, 25 std dev thresholding.
 
 qt-mountainview --raw dataset/bef_250.mda --filt dataset/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
 
+Failsafe version:
+rm -r /tmp/mountainlab-tmp; qt-mountainview --raw dataset/bef_250.mda --filt dataset/raw_data.mda --pre output/pre2.mda --samplerate 30000 --firings output/firings.mda --cluster_metrics output/metrics.json
 
 
 To run MountainSort:
