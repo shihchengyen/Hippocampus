@@ -1,0 +1,6 @@
+/volume1/Hippocampus/Data/picasso-misc/20181015/session01
+/volume1/Hippocampus/Data/picasso-misc/20181016/session01
+/volume1/Hippocampus/Data/picasso-misc/20181026/session01
+/volume1/Hippocampus/Data/picasso-misc/20181031/session01
+/volume1/Hippocampus/Data/picasso-misc/20181101/session01
+/volume1/Hippocampus/Data/picasso-misc/20181105/session01

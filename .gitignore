@@ -100,5 +100,4 @@ octave-workspace
 *mccExcludedFiles.log
 *readme.txt
 *requiredMCRProducts.txt
-*.sh
 *.swp

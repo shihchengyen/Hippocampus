@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#PBS -P raycasting
+#PBS -q parallel8
+#PBS -l select=1:ncpus=8:mem=15GB
+#PBS -j oe 
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+~/VirtualMazeExe/VirtualMaze.x86_64 -screen-height 1080 -screen-width 1920 -batchmode -sessionlist batch.txt -density 100 -radius 10 -logfile logs.txt
+
+curr=$(pwd)
+target=${curr#*hpctmp}
+scp -P 8398 unityfile_eyelink.csv hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus$target
+scp -P 8398 binData.hdf hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus$target
+scp -P 8398 VirtualMazeBatchLog.txt hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus$target
+scp -P 8398 logs.txt hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus$target
+
+rm binData.hdf
+rm unityfile_eyelink.csv
+rm VirtualMazeBatchLog.txt
+rm eyelink.mat
+rm unityfile.mat
+rm batch.txt
+rm rcsubmit.pbs.*
+rm logs.txt
