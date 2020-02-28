@@ -187,28 +187,34 @@ function view_by_place_plot
         hold off; colormap(gca, copper); colorbar;
         view(gca, [caz cel]);
         
-        input_num = input('continue, 0 to reverse, 2 4 6 8 to traverse\n');
-        if isempty(input_num)
-            i = i + delta;
-        elseif input_num == 0
-            delta = -1*delta;
-            i = i + delta;
-        elseif input_num == 52
-            i = i - 5*40;            
-        elseif input_num == 2
-            i = i - 40;
-        elseif input_num == 8
-            i = i + 40;
-        elseif input_num == 58
-            i = i + 5*40;
-        elseif input_num == 4
-            i = i - 1;
-        elseif input_num == 54
-            i = i - 5;            
-        elseif input_num == 6
-            i = i + 1;
-        elseif input_num == 56
-            i = i + 5;            
+        input_num = input('continue, 0 to reverse, 2 4 6 8 to traverse\n', 's');
+        
+        if input_num(end) == 'g'
+            i = str2double(input_num(1:end-1));
+        else    
+            input_num = str2double(input_num)
+            if isempty(input_num)
+                i = i + delta;
+            elseif input_num == 0
+                delta = -1*delta;
+                i = i + delta;
+            elseif input_num == 52
+                i = i - 5*40;            
+            elseif input_num == 2
+                i = i - 40;
+            elseif input_num == 8
+                i = i + 40;
+            elseif input_num == 58
+                i = i + 5*40;
+            elseif input_num == 4
+                i = i - 1;
+            elseif input_num == 54
+                i = i - 5;            
+            elseif input_num == 6
+                i = i + 1;
+            elseif input_num == 56
+                i = i + 5;            
+            end
         end
         if i > 1600
             i = 1600;
