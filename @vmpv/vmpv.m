@@ -64,7 +64,7 @@ dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
-    
+
     ori = pwd;
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
@@ -78,21 +78,61 @@ if(~isempty(dir(Args.RequiredFile)))
     vst(:,1) = vst(:,1)/1000;
     cst_1 = [pst(:,1:2) nan(size(pst,1),1) ones(size(pst,1),1)];
     cst_2 = [vst(:,1) nan(size(vst,1),1) vst(:,2) 2.*ones(size(vst,1),1)];
-    cst = [cst_1; cst_2];
-    cst = sortrows(cst, [1 4]); % sort by time, then put place in front
+    cst = [cst_2; cst_1];
+    
+    % hybrid insertion sort instead of default sortrows for speed
+    % does insertion all at one go, at the end
+    % can possibly be improved through some sort of linked-list?
+    
+    disp('sorting in');
+    tic;
+    index_in = nan(1,size(cst_1,1));
+    idx1 = 1;
+    history1 = 1;
+    for r = size(cst_2,1)+1:size(cst,1)
+        for i = history1:size(cst_2,1)
+            if cst(r,1) == cst(i,1) || cst(r,1) < cst(i,1)
+                history1 = i;
+                index_in(idx1) = i + idx1 - 1;
+                break;
+            end
+        end            
+        if isnan(index_in(idx1))
+            index_in(idx1) = idx1 + size(cst_2,1);
+            history1 = size(cst_2,1);
+        end
+        if rem(idx1, 1000) == 0
+            disp([num2str(idx1) '/' num2str(size(cst_1,1))]);
+        end
+        idx1 = idx1 + 1;
+    end
+    to_insert = cst_1;
+    cst(setdiff(1:size(cst,1),index_in),:) = cst(1:size(cst_2,1),:);
+    cst(index_in,:) = to_insert;
+    disp(['sorting in done, time elapsed: ' num2str(toc)]);
+ 
+    % cst = sortrows(cst, [1 4]); % sort by time, then put place in front
+    disp('filling (no progress marker)');
+    tic;
     cst(:,2) = fillmissing(cst(:,2),'previous'); % fills in view rows with place it current is at
     place_rows = find(cst(:,4) == 1);
+    disp(['filling done, time elapsed: ' num2str(toc)]);
+    disp('place pruning start (no progress marker)');
+    tic;
     for row = length(place_rows):-1:1 
         % in the event that place changed at the same time as view's new sample, 
         % we want to remove the place row, as the place information has
         % already been transferred down to the subsequent view rows.
         % note that visual inspection might see it as the same when it
         % isn't, due to rounding in GUI.
-        if cst(place_rows(row),1) ~= cst(place_rows(row)+1,1)
-            place_rows(row) = [];
+        if place_rows(row) ~= size(cst,1)
+            if cst(place_rows(row),1) ~= cst(place_rows(row)+1,1)
+                place_rows(row) = [];
+            end
         end
     end
     cst(place_rows,:) = [];
+    disp(['place pruning end, time elapsed: ' num2str(toc)]);
     
     % now we need to replace surviving place rows, with duplicates of
     % itself, corresponding to the number of views in the previous time
@@ -110,36 +150,70 @@ if(~isempty(dir(Args.RequiredFile)))
     % iterating and inserting rows takes too much time, below method to
     % make it feasible. first we count the number of duplicated place rows
     % to be added, then preallocate the final-sized array. 
+    disp('counting max array size');
+    tic;
     membership = ismember(cst(:,1),reference_times);
     cst_full = nan(size(cst,1)+sum(membership)-length(place_rows),4);
     searching_portion = cst(membership,:);
     % size of gaps needed is calculated here
     insertion_gaps = nan(length(reference_times),1);
     for idx = 1:length(insertion_gaps)
+        if rem(idx, 1000) == 0
+            disp([num2str(idx) '/' num2str(length(insertion_gaps))]);
+        end
         insertion_gaps(idx) = sum(searching_portion(:,1)==reference_times(idx));
     end
+    disp(['counting max done, time elapsed: ' num2str(toc)]);
     % slotting in original cst into enlarged one
     full_start = 1;
     original_start = 1;
+    disp('slotting');
+    tic;
     for idx = 1:length(reference_rows)
+        if rem(idx, 1000) == 0
+            disp([num2str(idx) '/' num2str(length(reference_rows))]);
+        end
         chunk_to_insert = cst(original_start:reference_rows(idx),:);
         cst_full(full_start:full_start-1+size(chunk_to_insert,1),:) = chunk_to_insert;
         original_start = reference_rows(idx)+2;
         full_start = full_start-1+size(chunk_to_insert,1)+insertion_gaps(idx)+1;
     end
     cst_full(full_start:end,:) = cst(reference_rows(end)+2:end,:);
+    disp(['slotting end, time elapsed: ' num2str(toc)]);
     % constructing the new portion
+    disp('inserting (no progress marker)');
+    tic;
     inserting_portion = searching_portion;
     inserting_portion(:,1) = repelem(actual_times,insertion_gaps);
     inserting_portion(:,2) = repelem(place_bins,insertion_gaps);
     inserting_portion(:,4) = 4;
     cst_full(isnan(cst_full(:,1)),:) = inserting_portion;
+    disp(['inserting end, time elapsed: ' num2str(toc)]);
     if ~isempty(find(diff(cst_full(:,1))<0))
         error('combined sessiontime misaligned!');
     end
     cst_full = cst_full(:,1:3);
-    cst_full = unique(cst_full,'rows');
-    cst_full = sortrows(cst_full,[1 3]);
+    disp('guaranteeing unique and ascending');
+    tic;
+    dti = find(diff(cst_full(:,1)));
+    dti(:,2) = [1; 1 + dti(1:end-1,1)];
+    dti = dti(:,[2 1]);
+    dti = [dti; [dti(end,2)+1 size(cst_full,1)]];
+    to_remove = [];
+    for chunk = 1:size(dti, 1)
+        cst_full(dti(chunk, 1): dti(chunk,2),:) = sortrows(cst_full(dti(chunk, 1): dti(chunk,2),:), [1 3]);
+        identify_dup = diff(cst_full(dti(chunk, 1): dti(chunk,2),:));
+        if dti(chunk, 1) - dti(chunk, 2) ~= 0
+            if ~isempty(find(sum(identify_dup,2)==0))
+                to_remove = [to_remove; find(sum(identify_dup,2)==0)+dti(chunk,1)];
+            end
+        end
+    end
+    cst_full(to_remove,:) = [];
+    disp(['duplicates found: ' num2str(length(to_remove))]);
+    disp(['guaranteeing unique and ascending done, time elapsed: ' num2str(toc)]);
+    % cst_full = unique(cst_full,'rows');
+    % cst_full = sortrows(cst_full,[1 3]);
     
     % before we save the combined sessiontime, try to reduce size and
     % optimize searching later on by targeting consecutive timestamps with
@@ -149,7 +223,9 @@ if(~isempty(dir(Args.RequiredFile)))
     time_transitions = find(diff(cst_full(:,1))~=0) + 1;
     time_repeats = diff(time_transitions);
 %     unique_times = unique(cst_full(:,1));
-    time_repeats = [unique(cst_full(:,1)) [1; time_repeats; NaN]];
+    time_repeats = [1; time_repeats; size(cst_full,1)+1-time_transitions(end)];
+    time_repeats = [cst_full([1; time_transitions],1) time_repeats];
+    %time_repeats = [unique(cst_full(:,1)) [1; time_repeats; NaN]];
     
     % third (for now) column will track candidate redundancies
     time_repeats(:,3) = [0; diff(time_repeats(:,2))==0];
@@ -166,7 +242,7 @@ if(~isempty(dir(Args.RequiredFile)))
     possible = find(time_repeats(:,4)==1);
     cst_full(isnan(cst_full(:,3)),3) = -10; % convert nan views to -10 for now
     for idx = 1:length(possible)
-        if rem(idx,50000)==0
+        if rem(idx,100000)==0
             disp(['view ' num2str(100*idx/length(possible))]); % percentage done output
         end
         % long formula basically checks for perfectly identical view bins
@@ -179,7 +255,7 @@ if(~isempty(dir(Args.RequiredFile)))
     time_repeats = [time_repeats zeros(size(time_repeats,1),1)];
     possible = find(time_repeats(:,5)==1);
     for idx = 1:length(possible)
-        if rem(idx,25000)==0
+        if rem(idx,100000)==0
             disp(['place ' num2str(100*idx/length(possible))]); % percentage done output
         end
         if cst_full(time_repeats(possible(idx),1),2) == cst_full(time_repeats(possible(idx)-1,1),2)
@@ -189,6 +265,7 @@ if(~isempty(dir(Args.RequiredFile)))
     % actually remove timings, from combined sessiontime
     timing_to_remove = time_repeats(time_repeats(:,6)==1,2);
     cst_indices = find(ismember(cst_full(:,1), timing_to_remove));
+    disp(['removing ' num2str(length(cst_indices)) ' rows']);
     cst_full(cst_indices,:) = [];   
 
     cst_full(cst_full(:,3)==-10,3) = NaN; % back-conversion

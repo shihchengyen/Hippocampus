@@ -17,6 +17,7 @@ function view_by_place_plot
     
     for i = 1:1600
         
+        disp(i);
         subsample = [pv(pv(:,2)==i, [3 4 5])];
         
         % filling spikes
