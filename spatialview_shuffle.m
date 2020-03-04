@@ -15,7 +15,7 @@ gpDurGaze = gz.data.gpDurGaze;
 gpDurLoc = gz.data.gpDurLoc;
 timestampsTrial = gz.data.timestampsTrial;
 timestamps = gz.data.timestamps;
-T = (timestamps-timestamps(1));
+% T = (timestamps-timestamps(1));
 tTrial = gz.data.tTrial;
 ntrials = gz.data.numTrials;
 if(Args.UseAllTrials)
@@ -100,10 +100,10 @@ for kk = 1:3 % full session (1), 1st half (2) or 2nd half (3)
             
             inds = trialInds(g,1):trialInds(g,2);
             t = tTrial(1:size(inds,2),g);
-%             tstart = timestampsTrial(1,npi);
-%             tend = timestampsTrial(size(inds,2),npi); % BAD?
-            tstart = rp.data.timeStamps(g,2);
-            tend = rp.data.timeStamps(g,3);
+            tstart = timestampsTrial(1,npi);
+            tend = timestampsTrial(size(inds,2),npi); % BAD?
+%             tstart = rp.data.timeStamps(g,2);
+%             tend = rp.data.timeStamps(g,3);
             
             % get spike times aligned to cue offset time
             temp = find(sTimes(shi,:) > tstart & sTimes(shi,:) < tend);
