@@ -71,367 +71,433 @@ if(~isempty(dir(Args.RequiredFile)))
     %use this for real gaze objects
     rp = rplparallel('auto');
     rp = rp.data;
+    uma = umaze('auto',varargin{:});
     gaz = gaze('auto',varargin{:});  
     data.binDepths = gaz.data.binDepths;
     spiketrain = load(Args.RequiredFile);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    spiketimes = spiketrain.timestamps/1000; % now in seconds
-    maxTime = rp.timeStamps(end,3);
-    tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-    full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
-    full_arr = full_arr + tShifts';
-    keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
-    for row = 2:size(full_arr,1)
-        full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
-    end
+    nTrials = size(uma.data.gpDurations,2);
+    midTrial = ceil(nTrials/2);
+    sessionTimeInds = find(uma.data.sessionTime(:,2) == 0); % Look for trial end markers
+    sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
     
-    % calculating proportion of occupied time in each grid position across
-    % entire session. trial based here, compared to occurrence based in
-    % vmpc (should be standardized, needs time).
+    for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
-        gaz.data.binGazeLin(isnan(gaz.data.binGazeLin)) = 12345678;
-        diff1 = diff(gaz.data.binGazeLin);
-        size(diff1)
-        change_index = find(diff1~=0);
-        size(change_index)
-
-        testing = NaN(length(change_index),2);
-        testing(:,2) = gaz.data.binGazeLin(change_index+1);
-        testing(:,1) = gaz.data.timestamps(change_index+1);
-
-        searching_for_first_trial = find(testing>rp.timeStamps(1,2));
-        disp('test');
-        testing = [0 0; rp.timeStamps(1,2) testing(searching_for_first_trial(1),2); testing(searching_for_first_trial(1):end,:)];
-
-        for i = 1:size(rp.timeStamps,1)-1
-
-            to_remove = testing(:,1) > rp.timeStamps(i,3);
-            to_remove2 = testing(:,1) < rp.timeStamps(i+1,2);
-            to_remove = and(to_remove, to_remove2);
-            to_remove = find(to_remove);
-
-            if ~isempty(to_remove)
-
-                end_trial = [rp.timeStamps(i,3) 0];
-                start_trial = [rp.timeStamps(i+1,2) testing(to_remove(length(to_remove)),2)];
-                testing = [testing(1:to_remove(1)-1,:); end_trial; start_trial; testing(to_remove(length(to_remove))+1:end,:)];
-            end
-        end
-        
-        if ~Args.UseAllTrials
-            
-            uma = umaze('auto','GridSteps',Args.GridSteps);
-            pt = uma.data.processTrials;
-            pt_n = 1:size(rp.timeStamps,1);
-            pt_n(pt) = [];
-            zero_indices = find(testing(:,2)==0);
-            for i = 1:length(pt_n)
-                
-                if pt_n(i) == length(zero_indices)
-                    testing(zero_indices(pt_n(i))+1:size(testing,1), 2) = 12345678;
-                else
-                    testing(zero_indices(pt_n(i))+1:zero_indices(pt_n(i)+1)-1, 2) = 12345678;
-                end
-                
-            end
-            
-        end
-        data.UseAllTrials = Args.UseAllTrials;
-        
-        
-        testing2 = zeros(size(testing,1),3);
-        testing2(:,1:2) = testing;
-        testing2(1:end-1,3) = diff(testing(:,1));
-        testing2(testing2(:,2)==12345678,2) = NaN;
-        
-        gaz.data.sessionTimeGaze = testing2;
-%         zero_indices = find(gaz.data.sessionTimeGaze(:,2)==0);
-        binGazeLin = gaz.data.binGazeLin;
-        timestamps1 = gaz.data.timestamps;
-%         save('debug_base.mat', 'testing2','binGazeLin','timestamps1');
-        data.sessionTime_generated = testing2;
-    
-    if Args.FiltLowOcc
-        bins_sieved = find(sum(~isnan(gaz.data.gpDurGaze),2)>Args.MinObs);
-        data.MinTrials = Args.MinObs;
-    else
-        bins_sieved = unique(gaz.data.sessionTimeGaze(2:end,2));
-        bins_sieved(bins_sieved==0) = [];
-        bins_sieved(isnan(bins_sieved)) = [];
-        data.MinTrials = NaN;
-    end
-    
-    gpdur = nansum(gaz.data.gpDurGaze, 2);
-    gpdur_s = gpdur;
-    gpdur = gpdur(bins_sieved)'; 
-    Pi = gpdur/sum(gpdur);
-
-    flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
-    temp = full_arr';
-    flat_spiketimes(1,:) = temp(:);
-    flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
-    edge_end = 0.5+size(full_arr,1);
-    [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), gaz.data.sessionTimeGaze(:,1), 0.5:1:edge_end);
-    
-%     N(zero_indices(1:end-1),:) = [];
-    N = N';
-
-    location = gaz.data.sessionTimeGaze(:,2)';
-%     location(zero_indices) = [];
-    duration1 = gaz.data.sessionTimeGaze(:,3)';
-%     duration1(zero_indices) = [];
-    
-    grid_numbers = bins_sieved;
-    firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
-    
-    non_shuffle_details = NaN(3,size(N,2));
-    non_shuffle_details(2,:) = N(1,:);
-    non_shuffle_details(3,:) = gaz.data.sessionTimeGaze(1:end-1,3)';
-    non_shuffle_details(1,:) = gaz.data.sessionTimeGaze(1:end-1,2)';
-    non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
-    non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
-    non_shuffle_data = sortrows(non_shuffle_details.',1).';
-    non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
-    non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
-    data.detailed_fr = non_shuffle_data;
-    
-    for grid_ind = 1:length(grid_numbers)
-
-        tmp = N(:,find(location(1:end-1)==grid_numbers(grid_ind)));
-        firing_counts_full(:,grid_ind) = sum(tmp,2);
-    end   
-    
-    firing_counts_full1 = NaN(size(firing_counts_full,1),size(gaz.data.gpDurGaze,1));
-    firing_counts_full1(:,grid_numbers) = firing_counts_full;
-    lin_spikeLoc_Gaze = firing_counts_full1';
-    lin_o_i_Gaze = repmat(gpdur_s,1,Args.NumShuffles+1);
-    
-    
-    %%%
-            % Restructure bins from linear to separate grids
-        grid_o_i_Gaze = cell(size(gaz.data.binDepths,1),1);
-        grid_spikeBin_Gaze = grid_o_i_Gaze;
-        grid_smoothed_Gaze = grid_o_i_Gaze;
-
-        for jj = 1:size(gaz.data.binDepths,1) % for each grid
-            % Initialise empty matrices
-            o_i = nan(gaz.data.binDepths(jj,1),gaz.data.binDepths(jj,2),Args.NumShuffles+1);
-            spikeBin = o_i;
-            map = o_i;
-            % Assign linear bin to grid bin
-            for mm = 1:gaz.data.binDepths(jj,1)*gaz.data.binDepths(jj,2) % For every point in linear map
-                if mod(mm,gaz.data.binDepths(jj,2)) == 0
-                    y = gaz.data.binDepths(jj,2);
-                else
-                    y = mod(mm,gaz.data.binDepths(jj,2));
-                end
-                x = ceil(mm/gaz.data.binDepths(jj,2));
-                indbins_lin = mm + sum(gaz.data.binDepths(1:jj-1,1).*gaz.data.binDepths(1:jj-1,2));
-                % Assign
-                o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
-                spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
-
-            end
-            % Collect output 
-            grid_o_i_Gaze{jj} = o_i;
-            grid_spikeBin_Gaze{jj} = spikeBin;
-        end
-     
-%%%%%%%%%%%%
-
-        maps_raw1 = cell(size(gaz.data.binDepths,1),1);
-        for jj = 1:size(grid_o_i_Gaze,1)
-            mr1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
-            maps_raw1{jj} = mr1(:,:,1);
+        if repeat > 1
+            Args.NumShuffles = 0;
         end
 
-            retrievemap = cell(size(grid_o_i_Gaze,1),1);
-            for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
-            
-                if gaz.data.binDepths(jj,1)*gaz.data.binDepths(jj,2) > 2 % For non-cue/non-hint grids
-                    % Pad each grid map with adjoining bins from other grids
-                    % Pad with <<5>> extra bin rows
-                    n = 5;
-                    [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gaz.data.gazeSections,jj);
-    
+        spiketimes = spiketrain.timestamps/1000; % now in seconds
+        maxTime = rp.timeStamps(end,3);
+        tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+        full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
+        full_arr = full_arr + tShifts';
+        keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
+        for row = 2:size(full_arr,1)
+            full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
+        end
+        
+        % Restrict spike array to either 1st or 2nd half if needed
+        if repeat == 2
+            full_arr( full_arr > uma.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+        elseif repeat == 3
+            full_arr( full_arr <= uma.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+        end
+
+        % calculating proportion of occupied time in each grid position across
+        % entire session. trial based here, compared to occurrence based in
+        % vmpc (should be standardized, needs time).
+
+            gaz.data.binGazeLin(isnan(gaz.data.binGazeLin)) = 12345678;
+            diff1 = diff(gaz.data.binGazeLin);
+            size(diff1)
+            change_index = find(diff1~=0);
+            size(change_index)
+
+            testing = NaN(length(change_index),2);
+            testing(:,2) = gaz.data.binGazeLin(change_index+1);
+            testing(:,1) = gaz.data.timestamps(change_index+1);
+
+            searching_for_first_trial = find(testing>rp.timeStamps(1,2));
+            disp('test');
+            testing = [0 0; rp.timeStamps(1,2) testing(searching_for_first_trial(1),2); testing(searching_for_first_trial(1):end,:)];
+
+            for i = 1:size(rp.timeStamps,1)-1
+
+                to_remove = testing(:,1) > rp.timeStamps(i,3);
+                to_remove2 = testing(:,1) < rp.timeStamps(i+1,2);
+                to_remove = and(to_remove, to_remove2);
+                to_remove = find(to_remove);
+
+                if ~isempty(to_remove)
+
+                    end_trial = [rp.timeStamps(i,3) 0];
+                    start_trial = [rp.timeStamps(i+1,2) testing(to_remove(length(to_remove)),2)];
+                    testing = [testing(1:to_remove(1)-1,:); end_trial; start_trial; testing(to_remove(length(to_remove))+1:end,:)];
                 end
             end
-            
-%%%%%%%%%%%%                
-                
-    if Args.AdaptiveSmooth
-        
-        maps_raw = maps_raw1;
-        
-        alpha = 1e2;
-%         alpha = 1;
-        grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
-        grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
-        grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
-        grid_smoothed_dur{1} = grid_o_i_Gaze{1};
-        grid_smoothed_dur{2} = grid_o_i_Gaze{2};
-        grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
-        grid_ad_size{1} = NaN;
-        grid_ad_size{2} = NaN;        
-        
-        for jj = 3:size(grid_o_i_Gaze,1) % for each grid
-            
-            wip = ones(Args.NumShuffles+1,1);
-            gpdur1 = grid_o_i_Gaze{jj};
-            preset_to_zeros = gpdur1(:,:,1);
-            preset_to_zeros(find(preset_to_zeros>0)) = 1;
-            preset_to_zeros(find(preset_to_zeros~=1)) = 0;
-            preset_to_zeros = ~preset_to_zeros;
-            preset_to_zeros = repmat(preset_to_zeros, [1,1,size(gpdur1,3)]);
-            
-            firing_counts_full1 = grid_spikeBin_Gaze{jj};
-            gpdur1(isnan(gpdur1)) = 0;
-            firing_counts_full1(isnan(firing_counts_full1)) = 0;
 
-            to_compute = 1:0.5:20; % was 1
+            if ~Args.UseAllTrials
 
-            possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
-            to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
-            to_fill(preset_to_zeros) = 0;
-            to_fill_smoothed_duration = NaN(size(possible,2), size(possible,3), size(possible,4));
-            to_fill_smoothed_duration(preset_to_zeros) = 0;
-            to_fill_size = NaN(size(possible,2), size(possible,3), size(possible,4));
-            to_fill_size(preset_to_zeros) = 0;            
-            
-                    for idx = 1:length(to_compute)
+                uma = umaze('auto','GridSteps',Args.GridSteps);
+                pt = uma.data.processTrials;
+                pt_n = 1:size(rp.timeStamps,1);
+                pt_n(pt) = [];
+                zero_indices = find(testing(:,2)==0);
+                for i = 1:length(pt_n)
 
-                        f=fspecial('disk',to_compute(idx));
-                        f(f>=(max(max(f))/3))=1;
-                        f(f~=1)=0;
+                    if pt_n(i) == length(zero_indices)
+                        testing(zero_indices(pt_n(i))+1:size(testing,1), 2) = 12345678;
+                    else
+                        testing(zero_indices(pt_n(i))+1:zero_indices(pt_n(i)+1)-1, 2) = 12345678;
+                    end
 
-                        possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1); 
-                        possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv'); 
+                end
 
-                        logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
-                        
-                        %debug
-%                         logic1(~logic1) = 1;
-                        
-                        slice1 = squeeze(possible(1,:,:,:));
-                        slice2 = squeeze(possible(2,:,:,:));
+            end
+            data.UseAllTrials = Args.UseAllTrials;
 
-                        to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
-                        to_fill_smoothed_duration(logic1 & isnan(to_fill_smoothed_duration)) = slice2(logic1 & isnan(to_fill_smoothed_duration))./slice1(logic1 & isnan(to_fill_smoothed_duration));
-                        to_fill_size(logic1 & isnan(to_fill_size)) = to_compute(idx);
-                        
-                        remaining = sum(sum(sum(isnan(to_fill(:,:,:)))));
-                        disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
 
-                        check = squeeze(sum(sum(isnan(to_fill),2),1));
-                        wip(check==0) = 0;
+            testing2 = zeros(size(testing,1),3);
+            testing2(:,1:2) = testing;
+            testing2(1:end-1,3) = diff(testing(:,1));
+            testing2(testing2(:,2)==12345678,2) = NaN;
 
-                        if remaining == 0
-                            disp('done');
-                            break;
-                        end
-                    end    
-                    
-            to_fill(isnan(to_fill)) = 0;
-            to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-            grid_smoothed_Gaze{jj} = to_fill;
-            to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
-            to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-            grid_smoothed_dur{jj} = to_fill_smoothed_duration;
-            to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-            grid_ad_size{jj} = to_fill_size(:,:,1);
-            
+            gaz.data.sessionTimeGaze = testing2;
+    %         zero_indices = find(gaz.data.sessionTimeGaze(:,2)==0);
+            binGazeLin = gaz.data.binGazeLin;
+            timestamps1 = gaz.data.timestamps;
+    %         save('debug_base.mat', 'testing2','binGazeLin','timestamps1');
+            data.sessionTime_generated = testing2;
+
+        if Args.FiltLowOcc
+            bins_sieved = find(sum(~isnan(gaz.data.gpDurGaze),2)>Args.MinObs);
+            data.MinTrials = Args.MinObs;
+        else
+            bins_sieved = unique(gaz.data.sessionTimeGaze(2:end,2));
+            bins_sieved(bins_sieved==0) = [];
+            bins_sieved(isnan(bins_sieved)) = [];
+            data.MinTrials = NaN;
         end
 
-        disp('checkpoint');
-        
-        % smoothing part ends
-        data.maps_raw = maps_raw;
-        non_shuffle_smooth = cell(size(gaz.data.binDepths,1),1);
-        non_shuffle_size = cell(size(gaz.data.binDepths,1),1);
-        for jj = 1:size(grid_o_i_Gaze,1)
-            temp10 = grid_smoothed_Gaze{jj};
-            non_shuffle_smooth{jj} = temp10(:,:,1);
-            temp10 = grid_ad_size{jj};
-            non_shuffle_size{jj} = temp10(:,:,1);
-        end        
-        data.maps_adsmooth = non_shuffle_smooth;
-        data.smoothed_size = non_shuffle_size;
-        
-    else
-        maps_raw = cell(size(gaz.data.binDepths,1),1);
-        for jj = 1:size(grid_o_i_Gaze,1)
-            temp1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
-            maps_raw{jj} = temp1(:,:,1);
-        end
-        data.maps_raw = maps_raw;
-        % create nptdata so we can inherit from it    
-        data.numSets = 1;
-        data.Args = Args;
-        n = nptdata(1,0,pwd);
-        d.data = data;
-        obj = class(d,Args.classname,n);
-        saveObject(obj,'ArgsC',Args);
-        return;
-    end
-    
-    
-    
-%%%%%%%%%%%% new SIC part
-    
-    total_grids = 0;
-    for jj = 1:size(grid_smoothed_Gaze,1)
-        total_grids = total_grids + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
-    end
-    gpdur1 = zeros(Args.NumShuffles+1,total_grids);
-    lambda_i = NaN(Args.NumShuffles+1,total_grids);
-    filling_index = 0;
-    for jj = 1:size(grid_o_i_Gaze,1)
-        temp4 = reshape(grid_smoothed_dur{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-        temp3 = reshape(grid_smoothed_Gaze{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-        gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
-        lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
-        filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
-    end    
-    
-    Pi1 = gpdur1./repmat(sum(gpdur1,2), 1, size(gpdur1,2));
-%     Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
-    lambda_i(isnan(lambda_i)) = 0;
-      
-    
-%%%%%%%%%%%%
-        
-        lambda_bar = sum(Pi1 .* lambda_i,2);
-        % divide firing for each position by the overall mean
-        FRratio = lambda_i./repmat(lambda_bar,1,total_grids);
-        % compute first term in SIC
-        SIC1 = Pi1 .* lambda_i; 
-        SIC2 = log2(FRratio);
-        zeros_placing = SIC1==0;  
-        
-        bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-        bits_per_sec(zeros_placing) = NaN;
-        lambda_bar_ok = lambda_bar>0;
-        lambda_bar_bad = ~lambda_bar_ok;
-        sic_out = nansum(bits_per_sec, 2);
-        sic_out(lambda_bar_bad) = NaN;
-        
-%     histogram(sic_out);
-    
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Restrict durations to either 1st or 2nd half if needed
+            if repeat == 1
+                gpdur = nansum(gaz.data.gpDurGaze, 2);
+            elseif repeat == 2
+                gpdur = nansum(gaz.data.gpDurGaze(:,1:midTrial), 2);
+            elseif repeat == 3
+                gpdur = nansum(gaz.data.gpDurGaze(:,midTrial+1:end), 2);
+            end
+        gpdur_s = gpdur;
+        gpdur = gpdur(bins_sieved)'; 
+        Pi = gpdur/sum(gpdur);
 
-    data.SIC = sic_out(1);
-    data.SICsh = sic_out;
+        flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
+        temp = full_arr';
+        flat_spiketimes(1,:) = temp(:);
+        flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
+        edge_end = 0.5+size(full_arr,1);
+        [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), gaz.data.sessionTimeGaze(:,1), 0.5:1:edge_end);
+
+    %     N(zero_indices(1:end-1),:) = [];
+        N = N';
+
+        location = gaz.data.sessionTimeGaze(:,2)';
+    %     location(zero_indices) = [];
+        duration1 = gaz.data.sessionTimeGaze(:,3)';
+    %     duration1(zero_indices) = [];
+
+        grid_numbers = bins_sieved;
+        firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
+
+        non_shuffle_details = NaN(3,size(N,2));
+        non_shuffle_details(2,:) = N(1,:);
+        non_shuffle_details(3,:) = gaz.data.sessionTimeGaze(1:end-1,3)';
+        non_shuffle_details(1,:) = gaz.data.sessionTimeGaze(1:end-1,2)';
+        non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
+        non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
+        non_shuffle_data = sortrows(non_shuffle_details.',1).';
+        non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
+        non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
+        if repeat == 1
+            data.detailed_fr = non_shuffle_data;   
+        end
+
+        for grid_ind = 1:length(grid_numbers)
+
+            tmp = N(:,find(location(1:end-1)==grid_numbers(grid_ind)));
+            firing_counts_full(:,grid_ind) = sum(tmp,2);
+        end   
+
+        firing_counts_full1 = NaN(size(firing_counts_full,1),size(gaz.data.gpDurGaze,1));
+        firing_counts_full1(:,grid_numbers) = firing_counts_full;
+        lin_spikeLoc_Gaze = firing_counts_full1';
+        lin_o_i_Gaze = repmat(gpdur_s,1,Args.NumShuffles+1);
+
+
+        %%%
+                % Restructure bins from linear to separate grids
+            grid_o_i_Gaze = cell(size(gaz.data.binDepths,1),1);
+            grid_spikeBin_Gaze = grid_o_i_Gaze;
+            grid_smoothed_Gaze = grid_o_i_Gaze;
+
+            for jj = 1:size(gaz.data.binDepths,1) % for each grid
+                % Initialise empty matrices
+                o_i = nan(gaz.data.binDepths(jj,1),gaz.data.binDepths(jj,2),Args.NumShuffles+1);
+                spikeBin = o_i;
+                map = o_i;
+                % Assign linear bin to grid bin
+                for mm = 1:gaz.data.binDepths(jj,1)*gaz.data.binDepths(jj,2) % For every point in linear map
+    %                 if mod(mm,gaz.data.binDepths(jj,2)) == 0
+    %                     y = gaz.data.binDepths(jj,2);
+    %                 else
+    %                     y = mod(mm,gaz.data.binDepths(jj,2));
+    %                 end
+    %                 x = gaz.data.binDepths(jj,1) - ceil(mm/gaz.data.binDepths(jj,2)) + 1;
+                    indbins_lin = mm + sum(gaz.data.binDepths(1:jj-1,1).*gaz.data.binDepths(1:jj-1,2));
+                    [x,y] = find(gaz.data.binGridRef{jj} == indbins_lin); 
+                    % Assign
+                    o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
+                    spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
+
+                end
+                % Collect output 
+                grid_o_i_Gaze{jj} = o_i;
+                grid_spikeBin_Gaze{jj} = spikeBin;
+            end
+
+    %%%%%%%%%%%%
+
+            maps_raw1 = cell(size(gaz.data.binDepths,1),1);
+            for jj = 1:size(grid_o_i_Gaze,1)
+                mr1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
+                maps_raw1{jj} = mr1(:,:,1);
+            end
+
+                retrievemap = cell(size(grid_o_i_Gaze,1),1);
+                for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
+
+                    if gaz.data.binDepths(jj,1)*gaz.data.binDepths(jj,2) > 2 % For non-cue/non-hint grids
+                        % Pad each grid map with adjoining bins from other grids
+                        % Pad with <<5>> extra bin rows
+                        n = 5;
+                        [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gaz.data.gazeSections,jj);
+
+                    end
+                end
+
+    %%%%%%%%%%%%                
+
+        if Args.AdaptiveSmooth
+
+            maps_raw = maps_raw1;
+
+            alpha = 1e2;
+    %         alpha = 1;
+            grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
+            grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
+            grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
+            grid_smoothed_dur{1} = grid_o_i_Gaze{1};
+            grid_smoothed_dur{2} = grid_o_i_Gaze{2};
+            grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
+            grid_ad_size{1} = NaN;
+            grid_ad_size{2} = NaN;        
+
+            for jj = 3:size(grid_o_i_Gaze,1) % for each grid
+
+                wip = ones(Args.NumShuffles+1,1);
+                gpdur1 = grid_o_i_Gaze{jj};
+                preset_to_zeros = gpdur1(:,:,1);
+                preset_to_zeros(find(preset_to_zeros>0)) = 1;
+                preset_to_zeros(find(preset_to_zeros~=1)) = 0;
+                preset_to_zeros = ~preset_to_zeros;
+                preset_to_zeros = repmat(preset_to_zeros, [1,1,size(gpdur1,3)]);
+
+                firing_counts_full1 = grid_spikeBin_Gaze{jj};
+                gpdur1(isnan(gpdur1)) = 0;
+                firing_counts_full1(isnan(firing_counts_full1)) = 0;
+
+                to_compute = 1:0.5:20; % was 1
+
+                possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
+                to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill(preset_to_zeros) = 0;
+                to_fill_smoothed_duration = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill_smoothed_duration(preset_to_zeros) = 0;
+                to_fill_size = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill_size(preset_to_zeros) = 0;            
+
+                        for idx = 1:length(to_compute)
+
+                            f=fspecial('disk',to_compute(idx));
+                            f(f>=(max(max(f))/3))=1;
+                            f(f~=1)=0;
+
+                            possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1); 
+                            possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv'); 
+
+                            logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
+
+                            %debug
+    %                         logic1(~logic1) = 1;
+
+                            slice1 = squeeze(possible(1,:,:,:));
+                            slice2 = squeeze(possible(2,:,:,:));
+
+                            to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
+                            to_fill_smoothed_duration(logic1 & isnan(to_fill_smoothed_duration)) = slice2(logic1 & isnan(to_fill_smoothed_duration))./slice1(logic1 & isnan(to_fill_smoothed_duration));
+                            to_fill_size(logic1 & isnan(to_fill_size)) = to_compute(idx);
+
+                            remaining = sum(sum(sum(isnan(to_fill(:,:,:)))));
+                            disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
+
+                            check = squeeze(sum(sum(isnan(to_fill),2),1));
+                            wip(check==0) = 0;
+
+                            if remaining == 0
+                                disp('done');
+                                break;
+                            end
+                        end    
+
+                to_fill(isnan(to_fill)) = 0;
+                to_fill(preset_to_zeros) = NaN;
+                to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_smoothed_Gaze{jj} = to_fill;
+                to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
+                to_fill_smoothed_duration(preset_to_zeros) = NaN;
+                to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_smoothed_dur{jj} = to_fill_smoothed_duration;
+                to_fill_size(preset_to_zeros) = NaN;
+                to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_ad_size{jj} = to_fill_size(:,:,1);
+
+            end
+
+            disp('checkpoint');
+
+            % smoothing part ends
+            
+            non_shuffle_smooth = cell(size(gaz.data.binDepths,1),1);
+            non_shuffle_size = cell(size(gaz.data.binDepths,1),1);
+            for jj = 1:size(grid_o_i_Gaze,1)
+                temp10 = grid_smoothed_Gaze{jj};
+                non_shuffle_smooth{jj} = temp10(:,:,1);
+                temp10 = grid_ad_size{jj};
+                non_shuffle_size{jj} = temp10(:,:,1);
+            end        
+            if repeat == 1
+                data.maps_raw = maps_raw';
+                data.maps_adsmooth = non_shuffle_smooth';
+                data.smoothed_size = non_shuffle_size';
+            elseif repeat == 2
+                data.maps_raw1 = maps_raw';
+                data.maps_adsmooth1 = non_shuffle_smooth';
+                data.smoothed_size1 = non_shuffle_size';
+            elseif repeat == 3
+                data.maps_raw2 = maps_raw';
+                data.maps_adsmooth2 = non_shuffle_smooth';
+                data.smoothed_size2 = non_shuffle_size';
+            end
+        else
+            maps_raw = cell(size(gaz.data.binDepths,1),1);
+            for jj = 1:size(grid_o_i_Gaze,1)
+                temp1 = grid_spikeBin_Gaze{jj}./grid_o_i_Gaze{jj};
+                maps_raw{jj} = temp1(:,:,1);
+            end
+            
+            if repeat == 1
+                data.maps_raw = maps_raw';
+            elseif repeat == 2
+                data.maps_raw1 = maps_raw';
+            elseif repeat == 3
+                data.maps_raw2 = maps_raw';
+            end
+            
+            
+%             % create nptdata so we can inherit from it    
+%             data.numSets = 1;
+%             data.Args = Args;
+%             n = nptdata(1,0,pwd);
+%             d.data = data;
+%             obj = class(d,Args.classname,n);
+%             saveObject(obj,'ArgsC',Args);
+%             return;
+        end
+
+
+
+    %%%%%%%%%%%% new SIC part
+
+        total_grids = 0;
+        for jj = 1:size(grid_smoothed_Gaze,1)
+            total_grids = total_grids + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
+        end
+        gpdur1 = zeros(Args.NumShuffles+1,total_grids);
+        lambda_i = NaN(Args.NumShuffles+1,total_grids);
+        filling_index = 0;
+        for jj = 1:size(grid_o_i_Gaze,1)
+            temp4 = reshape(grid_smoothed_dur{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+            temp3 = reshape(grid_smoothed_Gaze{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+            gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
+            lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
+            filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
+        end    
+
+        Pi1 = gpdur1./repmat(nansum(gpdur1,2), 1, size(gpdur1,2));
+    %     Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
+        lambda_i(isnan(lambda_i)) = 0;
+
+
+    %%%%%%%%%%%%
+
+            lambda_bar = nansum(Pi1 .* lambda_i,2);
+            % divide firing for each position by the overall mean
+            FRratio = lambda_i./repmat(lambda_bar,1,total_grids);
+            % compute first term in SIC
+            SIC1 = Pi1 .* lambda_i; 
+            SIC2 = log2(FRratio);
+            zeros_placing = SIC1==0;  
+
+            bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
+            bits_per_sec(zeros_placing) = NaN;
+            lambda_bar_ok = lambda_bar>0;
+            lambda_bar_bad = ~lambda_bar_ok;
+            sic_out = nansum(bits_per_sec, 2);
+            sic_out(lambda_bar_bad) = NaN;
+
+    %     histogram(sic_out);
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+        if repeat == 1
+            data.SIC = sic_out(1);
+            data.SICsh = sic_out';
+        %     data.median_occ_firings = median_stats';
+        %     data.variance_occ_firings = var_stats';
+        %     data.perc_occ_firings = perc_stats';
+        %     data.occ_data = occ_data;
+        elseif repeat == 2
+            data.SIC1 = sic_out;
+        elseif repeat == 3
+            data.SIC2 = sic_out;
+        end
+
+        
+    end
+    
+    % create nptdata so we can inherit from it 
     data.gridSteps = Args.GridSteps;
-    
-	% create nptdata so we can inherit from it    
-	data.numSets = 1;
-	data.Args = Args;
-	n = nptdata(1,0,pwd);
-	d.data = data;
-	obj = class(d,Args.classname,n);
-	saveObject(obj,'ArgsC',Args);
+    data.numSets = 1;
+    data.Args = Args;
+    n = nptdata(1,0,pwd);
+    d.data = data;
+    obj = class(d,Args.classname,n);
+    saveObject(obj,'ArgsC',Args);
+
+
 else
 	% create empty object
 	obj = createEmptyObject(Args);

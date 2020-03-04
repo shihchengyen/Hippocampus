@@ -39,18 +39,10 @@ else
 		r.data.numSets = p.data.numSets + q.data.numSets;
 
 		% object specific fields
-		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
-        r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
-        r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
-        r.data.maps_adsmooth1 = [p.data.maps_adsmooth1; q.data.maps_adsmooth1];
-        r.data.maps_adsmooth2 = [p.data.maps_adsmooth2; q.data.maps_adsmooth2];
-        r.data.SIC = [p.data.SIC; q.data.SIC];
-        r.data.SIC1 = [p.data.SIC1; q.data.SIC1];
-        r.data.SIC2 = [p.data.SIC2; q.data.SIC2];
-        r.data.SICsh = [p.data.SICsh; q.data.SICsh]; %
-        r.data.origin = [p.data.origin; q.data.origin];
-        
-                
+		r.data.dlist = [p.data.dlist; q.data.dlist];
+		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
+			+ q.data.setIndex(2:end))];
+			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
 	end

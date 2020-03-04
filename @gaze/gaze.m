@@ -5,13 +5,14 @@ function [obj,varargout] = gaze(varargin)
 % smoothing in subsequent @spatialview object
 % 2) Bins data using same grid size as @vmpc object
 % 3) Moves (0,0) of each section to bottom left corner instead of center of
-% object (Unity default)
+% object (Unity default). HM Note: Used to be referenced to top left corner
+% of each object (prior to Dec 2019)
 
 % @gaze Constructor function for gaze class
 %   OBJ = gaze(varargin)
 %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on spatialview %
+%   % Instructions on gaze %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % example [as, Args] = gaze('save','redo')
@@ -84,7 +85,7 @@ if(~isempty(dir(Args.RequiredFile)))
     disp('Splitting gaze data into trials...');
     trialTimestamps = rcdata.trialTimestamps;
     timestamps = rcdata.timestamps;
-    [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,trialTimestamps,index,timestamps,binDepths,binLocLin,gridSteps);
+    [binGazeTrial,gpDurGaze,binLocTrial,gpDurLoc,binLocLin,trialInds,timestampsTrial,tTrial] = splittrial(binGazeLin,trialTimestamps,rcdata.index,timestamps,binDepths,binLocLin,gridSteps);
 
     %%% Output data
     
@@ -99,16 +100,16 @@ if(~isempty(dir(Args.RequiredFile)))
     data.binDepths = binDepths;
     data.binGridRef = binGridRef;
     data.gazeSections = gazeSections;
-    data.gpDurGaze = gpDurGaze;
+    data.gpDurGaze = gpDurGaze/1000;
     data.binLocLin = binLocLin;
     data.binLocTrial = binLocTrial;
-    data.gpDurLoc = gpDurLoc;
+    data.gpDurLoc = gpDurLoc/1000;
     
     % Original raycast-object variables
     data.numTrials = rcdata.numSets;
-    data.timestamps = timestamps;
-    data.timestampsTrial = timestampsTrial;
-    data.tTrial = tTrial;
+    data.timestamps = timestamps/1000;
+    data.timestampsTrial = timestampsTrial/1000;
+    data.tTrial = tTrial/1000;
 %     data.RelativeToFixdObjGaze = rcdata.RelativeToFixdObjGaze;
     data.fixatedObj = rcdata.fixatedObj;
 %     data.index = rcdata.index;
@@ -150,9 +151,23 @@ for ii = 1:size(gazeSections,2)
     switch gazeSections{ii}
         case 'Cue'
             match = ~cellfun(@isempty,regexpi(fixObj,'CueImage'));
+            RelGazeRawAdj(match,1) = RelGazeRaw(match,1) + 0.2;
+            RelGazeRawAdj(match,2) = RelGazeRaw(match,2) + 0.1;
+            % Safeguard for any points exceeding the bounds of object
+            RelGazeRawAdj((RelGazeRawAdj(:,1)>0.4 & match),1) = 0.4;
+            RelGazeRawAdj((RelGazeRawAdj(:,1)<0 & match),1) = 0;
+            RelGazeRawAdj((RelGazeRawAdj(:,2)>0.2 & match),2) = 0.2;
+            RelGazeRawAdj((RelGazeRawAdj(:,2)<0 & match),2) = 0;
             
         case 'Hint'
             match = ~cellfun(@isempty,regexpi(fixObj,'HintImage'));
+            RelGazeRawAdj(match,1) = RelGazeRaw(match,1) + 0.1;
+            RelGazeRawAdj(match,2) = RelGazeRaw(match,2) + 0.05;
+            % Safeguard for any points exceeding the bounds of object
+            RelGazeRawAdj((RelGazeRawAdj(:,1)>0.2 & match),1) = 0.2;
+            RelGazeRawAdj((RelGazeRawAdj(:,1)<0 & match),1) = 0;
+            RelGazeRawAdj((RelGazeRawAdj(:,2)>0.1 & match),2) = 0.1;
+            RelGazeRawAdj((RelGazeRawAdj(:,2)<0 & match),2) = 0;
             
         case 'Ground'
             match = ~cellfun(@isempty,regexpi(fixObj,'Ground'));
@@ -495,38 +510,39 @@ for ii = 1:ntrial
     % Find trial indices from cue offset
 %     inds = find(ismember(timestampsOrigAll,timestampsOrigEvent(ii,2):0.001:timestampsOrigEvent(ii,3)));
     inds = index(ii,2):index(ii,3);
+    inds = inds';
     % get indices for this trial 
-    indsx = inds(2:end-1);
+%     indsx = inds(2:end-1);
     % Adjust trial timestamps to seconds from ms
-    timestampsWithinTrial = (timestampsOrigAll(inds))/1000;
-    timestampsRelStartNav = timestampsWithinTrial(2:end-1)-timestampsWithinTrial(1);
+    timestampsWithinTrial = timestampsOrigAll(inds);
+    timestampsRelStartNav = timestampsWithinTrial-timestampsWithinTrial(1);
     
     % get gaze grid positions for this trial - Remove 1st and last points which
     % correspond to event markers for cue offset and end of trial
-    gaze = binGazeLin(indsx);
-    binGazeTrial(1:size(indsx,1),ii) = gaze;
-    trialInds(ii,:) = [indsx(1) indsx(end)];
+    gaze = binGazeLin(inds);
+    binGazeTrial(1:size(inds,1),ii) = gaze;
+    trialInds(ii,:) = [inds(1) inds(end)];
 %     timestampsTrial(1:size(indsx,1),ii) = timestampsWithinTrial(2:end-1);
-    timestampsTrial(1:size(indsx,1),ii) = timestampsOrigAll(indsx);
-    tTrial(1:size(indsx,1),ii) = timestampsRelStartNav;
+    timestampsTrial(1:size(inds,1),ii) = timestampsWithinTrial;
+    tTrial(1:size(inds,1),ii) = timestampsRelStartNav;
     
     % get unique gaze positions
     ugaze = unique(gaze(~isnan(gaze)));
     if ugaze(end) > sum(binDepths(:,1).*(binDepths(:,2)))
         disp(ii)
     end
-    % Get duration spend in each grid position for this trial
+    % Get duration spent in each grid position for this trial
     for gg = 1:size(ugaze,1)
         tempgp = ugaze(gg);
         % find indices that have this grid position
         utgpidx = find(gaze==tempgp);
-        gpDurGaze(tempgp,ii) = (size(utgpidx,1))/1000;
+        gpDurGaze(tempgp,ii) = size(utgpidx,1);
     end
     
     % get location grid positions for this trial - Remove 1st and last points which
     % correspond to event markers for cue offset and end of trial
-    loc = binLocLin(indsx);
-    binLocTrial(1:size(indsx,1),ii) = loc;
+    loc = binLocLin(inds);
+    binLocTrial(1:size(inds,1),ii) = loc;
     
     % get unique location positions
     uloc = unique(loc(~isnan(loc)));
@@ -535,7 +551,7 @@ for ii = 1:ntrial
         tempgp = uloc(gg);
         % find indices that have this grid position
         utgpidx = find(loc==tempgp);
-        gpDurLoc(tempgp,ii) = (size(utgpidx,1))/1000;
+        gpDurLoc(tempgp,ii) = size(utgpidx,1);
     end
     
 end
