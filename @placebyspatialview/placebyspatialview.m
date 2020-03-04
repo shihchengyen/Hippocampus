@@ -29,16 +29,16 @@ function [obj, varargout] = placebyspatialview(varargin)
 %dependencies: unitymaze, rplparallel
 
 Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Cell', 'RequiredFile','spatialview.mat', ...
+				'ObjectLevel','Cell', 'RequiredFile','vmsv.mat', ...
 				'MaxTimeDiff',0.002,'MinTrials',5, 'GridSteps',40, ...
-                'ShuffleLimits',[0.1 0.9], ...
-                'UseAllTrials',1, 'AdaptiveSmooth',1, 'FiltLowOcc',1);
-Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseAllTrials','UseMedian'};
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
+                'AdaptiveSmooth',1, 'FiltLowOcc',1);
+Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
 Args.DataCheckArgs = {'MinTrials','GridSteps','ShuffleLimits', ...
-	'NumShuffles','UseAllTrials'};
+	'NumShuffles'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -75,8 +75,8 @@ function obj = createObject(Args,varargin)
 if(~isempty(dir(Args.RequiredFile)))
 	% load gaze object
     cwd = pwd;
-	sv = spatialview('auto','NumShuffles',100,'UseAllTrials',1,'FiltLowOcc',1,varargin{:});
-    vp = vmplacecell('auto','SaveLevels',0,'UseAllTrials',1);
+	sv = vmsv('auto');
+    vp = vmpc('auto');
     cd ..; cd ..; cd ..;
     rc = load('raycast.mat');
     cd(cwd);
