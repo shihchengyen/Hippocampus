@@ -42,8 +42,12 @@ else
 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
         r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
+        r.data.maps_adsmooth1 = [p.data.maps_adsmooth1; q.data.maps_adsmooth1];
+        r.data.maps_adsmooth2 = [p.data.maps_adsmooth2; q.data.maps_adsmooth2];
         r.data.SIC = [p.data.SIC; q.data.SIC];
-        r.data.SICsh = [p.data.SICsh q.data.SICsh];
+        r.data.SIC1 = [p.data.SIC1; q.data.SIC1];
+        r.data.SIC2 = [p.data.SIC2; q.data.SIC2];
+        r.data.SICsh = [p.data.SICsh; q.data.SICsh]; %
         r.data.origin = [p.data.origin; q.data.origin];
         
                 
