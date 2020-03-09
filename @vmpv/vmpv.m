@@ -277,6 +277,9 @@ if(~isempty(dir(Args.RequiredFile)))
     data.occur_per_grid = uma.data.occur_per_grid;
     data.well_sampled_grids = uma.data.well_sampled_grids;
     data.dur_per_grid = uma.data.dur_per_grid;
+    data.dur_moving_total = uma.data.dur_moving_total;
+    data.dur_moving_first_half = uma.data.dur_moving_first_half;
+    data.dur_moving_second_half = uma.data.dur_moving_second_half;
 
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
