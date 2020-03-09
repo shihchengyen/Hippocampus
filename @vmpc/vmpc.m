@@ -121,13 +121,16 @@ if(~isempty(dir(Args.RequiredFile)))
             % Restrict durations to either 1st or 2nd half if needed
             if repeat == 1
 %                 gpdur = sum(pv.data.dur_spent_moving_per_grid, 2);
-                gpdur = sum(um.data.gpDurations, 2);
+%                 gpdur = sum(um.data.gpDurations, 2);
+                  gpdur = pv.data.dur_moving_total;
             elseif repeat == 2
 %                 gpdur = sum(pv.data.dur_spent_moving_per_grid(:,1:midTrial), 2);
-                gpdur = sum(um.data.gpDurations(:,1:midTrial), 2);
+%                 gpdur = sum(um.data.gpDurations(:,1:midTrial), 2);
+                  gpdur = pv.data.dur_moving_first_half;
             elseif repeat == 3
 %                 gpdur = sum(pv.data.dur_spent_moving_per_grid(:,midTrial+1:end), 2);
-                gpdur = sum(um.data.gpDurations(:,midTrial+1:end), 2);
+%                 gpdur = sum(um.data.gpDurations(:,midTrial+1:end), 2);
+                  gpdur = pv.data.dur_moving_second_half;
             end
             gpdur = gpdur(bins_sieved)'; 
             Pi = gpdur/sum(gpdur);
