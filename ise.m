@@ -1,4 +1,4 @@
-function [ise_out] = ise(actual_image, shuffled_images)
+function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
 
     % function to calculate image spatial entropy, which builds on shannon's entropy but
     % uses quadrilateral markov random field to take into account spatial
@@ -7,7 +7,11 @@ function [ise_out] = ise(actual_image, shuffled_images)
     % methods for estimation of image spatial entropy (2009)'.
     
     % first input is 1x1600, second input is num_shufflesx1600
-
+    % third input is first reshaped dimension (larger, horizontal length
+    % for pillars and walls)
+    % fourth input is second reshaped dimension (smaller, vertical length
+    % for pillars and walls)
+    
     % parameters to discretize maps
     bin_resolution = 0.05; % 0.005 
 
@@ -16,10 +20,10 @@ function [ise_out] = ise(actual_image, shuffled_images)
     actual_disc(isnan(actual_disc)) = 0;
     shuffled_disc = floor(shuffled_images/bin_resolution)+1;
     shuffled_disc(isnan(shuffled_disc)) = 0;
-    combined_disc = [actual_disc; shuffled_disc];    
+    combined_disc = [actual_disc; shuffled_disc];
     
     % reshaping to 2d structure, stacked by shuffles for 3d result
-    combined_disc = reshape(combined_disc, size(combined_disc,1), floor(sqrt(size(combined_disc,2))), floor(sqrt(size(combined_disc,2))));
+    combined_disc = reshape(combined_disc, size(combined_disc,1), dim1, dim2);
     
     % H(X,Xu) computations
     temp = cat(4, combined_disc(:,1:end-1,:), combined_disc(:,2:end,:));

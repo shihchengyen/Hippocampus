@@ -84,6 +84,7 @@ if(~isempty(dir(Args.RequiredFile)))
     sessionTimeInds = find(um.data.sessionTime(:,2) == 0); % Look for trial end markers
     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
     
+    NumShuffles_saved = Args.NumShuffles;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
         if repeat > 1
@@ -312,12 +313,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
                     data.maps_adsmooth1 = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    data.maps_all1 = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    data.dur_map_all1 = to_save;
+                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+                    %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
+                    %data.maps_all1 = to_save;
+                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+                    %to_save(:,bins_sieved) = to_fill_time(2:end,:);
+                    %data.dur_map_all1 = to_save;
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
                     data.dur_map_actual1 = to_save;
@@ -325,12 +326,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
                     data.maps_adsmooth2 = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    data.maps_all2 = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    data.dur_map_all2 = to_save;
+                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+                    %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
+                    %data.maps_all2 = to_save;
+                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
+                    %to_save(:,bins_sieved) = to_fill_time(2:end,:);
+                    %data.dur_map_all2 = to_save;
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
                     data.dur_map_actual2 = to_save;
@@ -376,6 +377,24 @@ if(~isempty(dir(Args.RequiredFile)))
 
         %     histogram(sic_out);
 
+                % ISE part
+                lambda_i = NaN(Args.NumShuffles+1,Args.GridSteps^2);
+                lambda_i(:,bins_sieved) = firing_rates_full;                
+                
+                if repeat == 1
+                    ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+                    data.ISE = ise_out(1);
+                    data.ISEsh = ise_out(2:end);
+                elseif repeat == 2
+                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    data.ISE1 = ise_out;
+                elseif repeat == 3
+                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    data.ISE2 = ise_out;
+                end
+        
+        
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -403,6 +422,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     % create nptdata so we can inherit from it    
     data.gridSteps = Args.GridSteps;
+    Args.NumShuffles = NumShuffles_saved;
     data.numSets = 1;
     data.Args = Args;
     n = nptdata(1,0,pwd);
