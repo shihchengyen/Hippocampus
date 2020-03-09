@@ -507,6 +507,28 @@ if(dnum>0)
         data.occur_per_grid = occur_per_grid;
         data.well_sampled_grids = well_sampled_grids;
         data.dur_per_grid = dur_per_grid;
+
+    % ported over to settle first half, second half statistics
+    umst = data.sessionTime;
+    data.sessionTime(find(data.sessionTime(:,2)==-1 | data.sessionTime(:,2)==0),2) = 1601;
+    acc = accumarray(data.sessionTime(:,2),data.sessionTime(:,3));
+    rp = rplparallel('auto');
+    rp = rp.data;
+    nt = size(rp.timeStamps,10);
+    nt = size(rp.timeStamps,1);
+    ht = round(nt/2);
+    htt = rp.timeStamps(ht,3);
+    fr = find(data.sessionTime(:,1)>htt);
+    fr = fr(1);
+    acc1 = accumarray(data.sessionTime(1:fr-1,2),data.sessionTime(1:fr-1,3));
+    acc2 = accumarray(data.sessionTime(fr:end,2),data.sessionTime(fr:end,3));
+    acc(end) = [];
+    acc1(end) = [];
+    acc2(end) = [];
+    data.sessionTime = umst;
+    data.dur_moving_total = acc;
+    data.dur_moving_first_half = acc1;
+    data.dur_moving_second_half = acc2;      
         
 %         data.zero_indices = zero_indices;
 %         data.sortedGPindices = sTPi;
