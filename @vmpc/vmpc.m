@@ -244,7 +244,9 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
                 to_fill(preset_to_zeros) = 0;
                 to_fill_time = NaN(size(possible,3), size(possible,4), size(possible,5));
-                to_fill_time(preset_to_zeros) = 0;        
+                to_fill_time(preset_to_zeros) = 0; 
+                to_fill_radius = NaN(size(possible,3), size(possible,4), size(possible,5));
+                to_fill_radius(preset_to_zeros) = 0;
 
                 for idx = 1:length(to_compute)
 
@@ -261,6 +263,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
                     to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
                     to_fill_time(logic1 & isnan(to_fill_time)) = slice1(logic1 & isnan(to_fill_time));
+                    to_fill_radius(logic1 & isnan(to_fill_radius)) = to_compute(idx);
 
                     disp('smoothed with kernel size:');
                     disp(to_compute(idx));
@@ -291,6 +294,9 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_fill_time = permute(to_fill_time, [3 1 2]);
                 to_fill_time = reshape(to_fill_time, Args.NumShuffles + 1, Args.GridSteps^2);
                 to_fill_time = to_fill_time(:,bins_sieved);
+                
+                to_fill_radius = permute(to_fill_radius, [3 1 2]);
+                to_fill_radius = reshape(to_fill_radius, Args.NumShuffles + 1, Args.GridSteps^2);
 
                 firing_rates_full = to_fill;
 
@@ -309,6 +315,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
                     data.dur_map_actual = to_save;
+                    data.radii = to_fill_radius;
                 elseif repeat == 2
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
@@ -322,6 +329,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
                     data.dur_map_actual1 = to_save;
+                    data.radii1 = to_fill_radius;
                 elseif repeat == 3
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
@@ -335,6 +343,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
                     data.dur_map_actual2 = to_save;
+                    data.radii2 = to_fill_radius;
                 end
 
             else
