@@ -335,9 +335,13 @@ if(dnum>0)
 
         for pidx = 1:size(utgp,1)
             tempgp = utgp(pidx);
+            if tempgp == 58
+                disp('test');
+            end
             % find indices that have this grid position
             utgpidx = find(tgp==tempgp);
-            gpDurations(tempgp,a) = sum(unityData(utgpidx,2));
+            utgpidx = uDidx(utgpidx);
+            gpDurations(tempgp,a) = sum(unityData(utgpidx+1,2)); % kw mod to utgpidx+1 was utgpidx alone
         end
         
         % set gridPositions when not navigating to 0
@@ -348,7 +352,9 @@ if(dnum>0)
 
     end % for a = 1:totTrials    
 
+%     save('st_o.mat', 'sessionTime');
     disp('speed thresholding portion');
+    
     
     speeding_checker = [unityTime [0; unityData(:,7)./unityData(:,2)]];
     speeding_checker(:,2) = speeding_checker(:,2) > Args.SpeedLimit;
@@ -378,6 +384,9 @@ if(dnum>0)
             sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [sessionTime(remaining_rows,:)]]; % not finished here
             break;
         end
+%         if block_row > 202
+%             disp('test');
+%         end
         top_limit = find(sessionTime(:,1) > stop_intervals(block_row,1));
         top_limit = top_limit(1) - 1;
         bot_limit = find(sessionTime(:,1) >= stop_intervals(block_row,2));
@@ -386,8 +395,13 @@ if(dnum>0)
         if sum(sessionTime(top_limit+1:bot_limit-1,2)==0)>0
             zero_line = sessionTime(top_limit+find(sessionTime(top_limit+1:bot_limit-1,2)==0),:);
             sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; zero_line; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
+            bot_checker = top_limit + 4;
         else
             sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
+            bot_checker = top_limit + 3;
+        end
+        if sessionTime(bot_checker-1,1) == sessionTime(bot_checker,1)
+            sessionTime(bot_checker-1,:) = [];
         end
     end
     
