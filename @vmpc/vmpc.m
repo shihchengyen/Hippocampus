@@ -71,8 +71,8 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.origin = {pwd}; 
     pv = vmpv('auto', varargin{:});
-	rp = rplparallel('auto',varargin{:});
-    um = umaze('auto',varargin{:});
+% 	rp = rplparallel('auto',varargin{:});
+%     um = umaze('auto',varargin{:});
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
@@ -81,8 +81,8 @@ if(~isempty(dir(Args.RequiredFile)))
 
     nTrials = size(um.data.gpDurations,2);
     midTrial = ceil(nTrials/2);
-    sessionTimeInds = find(um.data.sessionTime(:,2) == 0); % Look for trial end markers
-    sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
+%     sessionTimeInds = find(um.data.sessionTime(:,2) == 0); % Look for trial end markers
+%     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
     
     NumShuffles_saved = Args.NumShuffles;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
@@ -92,7 +92,7 @@ if(~isempty(dir(Args.RequiredFile)))
         end
 
             spiketimes = spiketrain.timestamps/1000; % now in seconds
-            maxTime = rp.data.timeStamps(end,3);
+            maxTime = pv.data.rplmaxtime;
             tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
             full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
             full_arr = full_arr + tShifts';
@@ -103,9 +103,11 @@ if(~isempty(dir(Args.RequiredFile)))
 
             % Restrict spike array to either 1st or 2nd half if needed
             if repeat == 2
-                full_arr( full_arr > um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+%                 full_arr( full_arr > um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+                full_arr( full_arr > pv.data.last_trial_first_half(2) ) = pv.data.sessionTimeC(end,1)+10; % to ensure it doesn't get binned in
             elseif repeat == 3
-                full_arr( full_arr <= um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+%                 full_arr( full_arr <= um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
+                full_arr( full_arr <= pv.data.last_trial_first_half(2) ) = pv.data.sessionTimeC(end,1)+10; % to ensure these spikes don't get binned in later
             end
 
             % calculating proportion of occupied time in each grid position across

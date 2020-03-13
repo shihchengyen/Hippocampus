@@ -280,7 +280,163 @@ if(~isempty(dir(Args.RequiredFile)))
     data.dur_moving_total = uma.data.dur_moving_total;
     data.dur_moving_first_half = uma.data.dur_moving_first_half;
     data.dur_moving_second_half = uma.data.dur_moving_second_half;
+    
+% new part to show intervals for each view bin, ease of use/viewing in following steps.
 
+        max_allo = 5000;
+        view_split1 = nan(5122,max_allo,2);
+        view_split2 = ones(5122,1);
+        view_split3 = zeros(5122,1);
+        idx_tracker = nan(5122,max_allo);
+        stacked = 0;
+
+        stc = cst_full;
+        unique_ts = [1; find(diff(stc(:,1))>0)+1];
+        unique_ts = [stc(unique_ts,1) unique_ts];   
+        last_processed_time = [0 0];
+        for row = 1:size(stc,1)
+            if ~isnan(stc(row,3))
+                if stc(row,1) ~= last_processed_time(2)
+                    last_processed_time = [last_processed_time(2) stc(row,1)];
+                end
+                target = stc(row,3);
+                if view_split3(target) == 0 
+                    if stc(row,2) > 0
+                        view_split1(target,view_split2(target),1) = stc(row,1);
+                        view_split3(target) = stc(row,1);
+                        idx_tracker(target,view_split2(target)) = row;
+                    end
+                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || stc(row,2) < 1
+                    for subr = idx_tracker(target,view_split2(target)):size(stc,1)
+                        if stc(subr,1) > stc(idx_tracker(target,view_split2(target)),1)
+                            view_split1(target,view_split2(target),2) = stc(subr,1);
+                            break;
+                        end
+                    end
+        %             view_split1(target,view_split2(target),2) = view_split3(target);
+        %             idx_tracker(target,view_split2(target)) = row;
+                    if view_split2(target) == size(view_split1,2) - 1
+                        view_split1 = cat(2, view_split1, nan(5122,max_allo,2));
+                        idx_tracker = cat(2, idx_tracker, nan(5122,max_allo));
+                    end
+                    view_split2(target) = view_split2(target) + 1;
+                    if stc(row,2) > 0
+                        view_split3(target) = stc(row,1);
+                        view_split1(target, view_split2(target), 1) = stc(row,1);
+                        idx_tracker(target,view_split2(target)) = row;
+                    else
+                        view_split3(target) = 0;
+                    end
+                else
+                    view_split3(target) = stc(row,1);
+                    idx_tracker(target,view_split2(target)) = row;
+                end  
+            end
+        end
+
+        for view = 1:5122
+%             disp(['view shifting: ' num2str(view)]);
+            if sum(isnan(view_split1(view, view_split2(view),:)))==1
+                found = 0;
+                for subr = idx_tracker(view,view_split2(view)):size(stc,1)
+                    if stc(subr,1) > stc(idx_tracker(view,view_split2(view)),1)
+                        view_split1(view,view_split2(view),2) = stc(subr,1);
+                        found = 1;
+                        break;
+                    end
+                end       
+                if found == 0
+                    view_split1(view, view_split2(view), 2) = stc(end,1);
+                end
+%                 view_split1(view, view_split2(view), 2) = stc(end,1);
+            elseif sum(isnan(view_split1(view, view_split2(view),:)))==2
+                view_split2(view) = view_split2(view) - 1;
+            end
+        end
+
+                view_split1 = view_split1(:,1:min([size(view_split1,2) max(view_split2)+2]),:);
+                data.view_intervals = view_split1;
+                data.view_intervals_count = view_split2;
+
+                
+        max_allo = 5000;
+        view_split1 = nan(5122,max_allo,2);
+        view_split2 = ones(5122,1);
+        view_split3 = zeros(5122,1);
+        idx_tracker = nan(5122,max_allo);
+        stacked = 0;                
+        last_processed_time = [0 0];
+        for row = 1:size(stc,1)
+            if ~isnan(stc(row,3))
+                if stc(row,1) ~= last_processed_time(2)
+                    last_processed_time = [last_processed_time(2) stc(row,1)];
+                end
+                target = stc(row,3);
+                if view_split3(target) == 0 
+                    if stc(row,2) ~= 0 % mod line (was > 0)
+                        view_split1(target,view_split2(target),1) = stc(row,1);
+                        view_split3(target) = stc(row,1);
+                        idx_tracker(target,view_split2(target)) = row;
+                    end
+                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || stc(row,2) == 0 % mod line (was < 1)
+                    for subr = idx_tracker(target,view_split2(target)):size(stc,1)
+                        if stc(subr,1) > stc(idx_tracker(target,view_split2(target)),1)
+                            view_split1(target,view_split2(target),2) = stc(subr,1);
+                            break;
+                        end
+                    end
+        %             view_split1(target,view_split2(target),2) = view_split3(target);
+        %             idx_tracker(target,view_split2(target)) = row;
+                    if view_split2(target) == size(view_split1,2) - 1
+                        view_split1 = cat(2, view_split1, nan(5122,max_allo,2));
+                        idx_tracker = cat(2, idx_tracker, nan(5122,max_allo));
+                    end
+                    view_split2(target) = view_split2(target) + 1;
+                    if stc(row,2) ~= 0 % mod line (was > 0)
+                        view_split3(target) = stc(row,1);
+                        view_split1(target, view_split2(target), 1) = stc(row,1);
+                        idx_tracker(target,view_split2(target)) = row;
+                    else
+                        view_split3(target) = 0;
+                    end
+                else
+                    view_split3(target) = stc(row,1);
+                    idx_tracker(target,view_split2(target)) = row;
+                end  
+            end
+        end
+
+        for view = 1:5122
+            disp(['view shifting: ' num2str(view)]);
+            if sum(isnan(view_split1(view, view_split2(view),:)))==1
+                found = 0;
+                for subr = idx_tracker(view,view_split2(view)):size(stc,1)
+                    if stc(subr,1) > stc(idx_tracker(view,view_split2(view)),1)
+                        view_split1(view,view_split2(view),2) = stc(subr,1);
+                        found = 1;
+                        break;
+                    end
+                end       
+                if found == 0
+                    view_split1(view, view_split2(view), 2) = stc(end,1);
+                end
+%                 view_split1(view, view_split2(view), 2) = stc(end,1);
+            elseif sum(isnan(view_split1(view, view_split2(view),:)))==2
+                view_split2(view) = view_split2(view) - 1;
+            end
+            
+        end
+                view_split1 = view_split1(:,1:min([size(view_split1,2) max(view_split2)+2]),:);
+                data.view_ignore_speed_intervals = view_split1;
+                data.view_ignore_speed_intervals_count = view_split2;                
+                
+    rpts = rp.data.timeStamps;
+    last_trial_first_half = [nan nan];
+    last_trial_first_half(1) = round(size(rpts,1)/2);
+    last_trial_first_half(2) = rpts(last_trial_first_half(1),3);
+    data.last_trial_first_half = last_trial_first_half;    
+    data.rplmaxtime = rp.data.timeStamps(end,3);
+                
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
 	data.Args = Args;

@@ -446,7 +446,7 @@ if(dnum>0)
     sTime(:,3) = [diff(sTime(:,1)); 0];
     sTime(find(sTime(:,2)==0),:) = [];
     sTime = [sTime; [0 Args.GridSteps.^2 0]];
-    occur_per_grid = accumarray(sTime(:,2),ones(size(sTime(:,2))));
+    occur_per_grid = accumarray(sTime(:,2),ones(size(sTime(:,2)))); % treat split by speed gaps as 1 combined occ still
     well_sampled_grids = find(occur_per_grid > Args.MinObs-1);
     dur_per_grid = accumarray(sTime(:,2),sTime(:,3));
     
