@@ -80,11 +80,9 @@ function [entropy_summed] = shuffled_joint_entropy(stacked_input)
     occur_count = diff([1; find(temp(:,4)>0); length(temp(:,4))+1]); % occurrences of the corresponding sequences below
     unique_combi = temp([1; find(temp(:,4)>0)],1:3); % n x 3 (first 2 columns store binned firing rate, last column stores shuffle number)
     total_count = accumarray(unique_combi(:,3), occur_count);
-    if sum(diff(total_count)) ~= 0 % shouldn't happen
-        error('different shuffles have different valid pairs. not supposed to happen');
-    else
-        occur_count = occur_count/total_count(1); % converted to probability
-    end
+    
+    occur_count = occur_count./total_count(unique_combi(:,3)); % converted to probability
+        
     sum_edges = [diff(unique_combi(:,3)); 1];
     entropy_base = -occur_count .* log2(occur_count);
     entropy_summed = cumsum(entropy_base);

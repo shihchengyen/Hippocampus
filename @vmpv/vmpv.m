@@ -367,38 +367,43 @@ if(~isempty(dir(Args.RequiredFile)))
         stacked = 0;                
         last_processed_time = [0 0];
         for row = 1:size(stc,1)
+%             if stc(row,1) > 18
+%                 disp('stopper');
+%             end
             if ~isnan(stc(row,3))
                 if stc(row,1) ~= last_processed_time(2)
                     last_processed_time = [last_processed_time(2) stc(row,1)];
                 end
                 target = stc(row,3);
-                if view_split3(target) == 0 
-                    if stc(row,2) ~= 0 % mod line (was > 0)
+                if view_split3(target) == 0 % && stc(row,2) ~= -1
+                    if stc(row,2) > 0 || stc(row,2) == -1 %~= 0 % mod line (was > 0)
                         view_split1(target,view_split2(target),1) = stc(row,1);
                         view_split3(target) = stc(row,1);
                         idx_tracker(target,view_split2(target)) = row;
                     end
-                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || stc(row,2) == 0 % mod line (was < 1)
-                    for subr = idx_tracker(target,view_split2(target)):size(stc,1)
-                        if stc(subr,1) > stc(idx_tracker(target,view_split2(target)),1)
-                            view_split1(target,view_split2(target),2) = stc(subr,1);
-                            break;
+                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || stc(row,2) == 0 %== 0 % mod line (was < 1) % should be < 1
+
+                        for subr = idx_tracker(target,view_split2(target)):size(stc,1)
+                            if stc(subr,1) > stc(idx_tracker(target,view_split2(target)),1)
+                                view_split1(target,view_split2(target),2) = stc(subr,1);
+                                break;
+                            end
                         end
-                    end
-        %             view_split1(target,view_split2(target),2) = view_split3(target);
-        %             idx_tracker(target,view_split2(target)) = row;
-                    if view_split2(target) == size(view_split1,2) - 1
-                        view_split1 = cat(2, view_split1, nan(5122,max_allo,2));
-                        idx_tracker = cat(2, idx_tracker, nan(5122,max_allo));
-                    end
-                    view_split2(target) = view_split2(target) + 1;
-                    if stc(row,2) ~= 0 % mod line (was > 0)
-                        view_split3(target) = stc(row,1);
-                        view_split1(target, view_split2(target), 1) = stc(row,1);
-                        idx_tracker(target,view_split2(target)) = row;
-                    else
-                        view_split3(target) = 0;
-                    end
+            %             view_split1(target,view_split2(target),2) = view_split3(target);
+            %             idx_tracker(target,view_split2(target)) = row;
+                        if view_split2(target) == size(view_split1,2) - 1
+                            view_split1 = cat(2, view_split1, nan(5122,max_allo,2));
+                            idx_tracker = cat(2, idx_tracker, nan(5122,max_allo));
+                        end
+                        view_split2(target) = view_split2(target) + 1;
+                        if stc(row,2) > 0 || stc(row,2) == -1 %~= 0 % mod line (was > 0)
+                            view_split3(target) = stc(row,1);
+                            view_split1(target, view_split2(target), 1) = stc(row,1);
+                            idx_tracker(target,view_split2(target)) = row;
+                        else
+                            view_split3(target) = 0;
+                        end
+
                 else
                     view_split3(target) = stc(row,1);
                     idx_tracker(target,view_split2(target)) = row;
