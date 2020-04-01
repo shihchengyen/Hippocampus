@@ -363,6 +363,7 @@ if(~isempty(dir(Args.RequiredFile)))
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             if repeat == 1
+                data.linear_map = firing_rates(1,:);
                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC = sic_out(1);
                 data.SICsh = sic_out';
