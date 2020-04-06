@@ -37,7 +37,7 @@ function refinement_OpeningFcn(hObject, eventdata, handles, varargin)
         figure1_CloseRequestFcn(hObject, eventdata, handles);
         return;
     end
-    time_series = readmda('dataset/raw_data.mda');
+    time_series = readmda('dataset/raw_data.mda'); % move back to dataset/raw_data.mda after debugging
 
     unique_cells_here = unique(rough(3,:));
     handles.cell_count = length(unique_cells_here);
@@ -105,7 +105,7 @@ function [handles] = update_plot(hObject, eventdata, handles)
             possible_waves(:,temp_index) = handles.full_data(3:152,col);
             link_subset_to_full(1,temp_index) = col;
             amp_with_indices(1,temp_index) = handles.full_data(1,col);
-            amp_with_indices(2,temp_index) = handles.full_data(77,col);
+            amp_with_indices(2,temp_index) = handles.full_data(78,col); % used to be 77
             temp_index = temp_index + 1;
         end
     end
