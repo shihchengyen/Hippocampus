@@ -154,6 +154,8 @@ if(~isempty(dir(Args.RequiredFile)))
             % rows with [0 -1] mark spikes that fired before the first sessionTimeC
             % timestamp, or after the last.
 
+            stc3 = uint16(pv.data.sessionTimeC(:,3));
+            
             dstc = diff(pv.data.sessionTimeC(:,1));
             stc_changing_ind = [1; find(dstc>0)+1; size(pv.data.sessionTimeC,1)];
             bin_limits = pv.data.sessionTimeC(stc_changing_ind,1);
@@ -173,19 +175,24 @@ if(~isempty(dir(Args.RequiredFile)))
             % view bin for each shuffle. note that bin 5123 is allocated for nan view
             % bins, and will be discarded as it gets set into the spike_count variable.
 
-            fleshed_out = nan(sum(rows_to_attribute(:,3)),2);
+            fleshed_out = zeros(sum(rows_to_attribute(:,3)),2,'uint16');
+            fleshed_out1 = zeros(sum(rows_to_attribute(:,3)),1,'uint32');
+            
             starter = 1;
             for row = 1:size(rows_to_attribute,1)
                 if rows_to_attribute(row,1) ~= 0
                     ender = rows_to_attribute(row,3)-1+starter;
-                    fleshed_out(starter:ender,1) = [rows_to_attribute(row,1):rows_to_attribute(row,2)]';
+                    fleshed_out1(starter:ender) = [rows_to_attribute(row,1):rows_to_attribute(row,2)]';
                     fleshed_out(starter:ender,2) = repelem(full_arr(row,2),ender-starter+1,1);
                     starter = ender + 1;
                 end
             end
-            fleshed_out(:,1) = pv.data.sessionTimeC(fleshed_out(:,1),3);
-            fleshed_out(isnan(fleshed_out(:,1)),1) = 5123;
-            aa = accumarray(fleshed_out, ones(size(fleshed_out,1),1));
+            disp(toc);
+            fleshed_out(:,1) = stc3(fleshed_out1);
+            disp(toc);
+            fleshed_out(fleshed_out(:,1)==0,1) = 5123;
+            disp(toc);
+            aa = accumarray(fleshed_out, ones(size(fleshed_out1,1),1));
             spike_count = aa(1:5122,:);
 
             disp(['time taken to bin spikes: ' num2str(toc)]);
