@@ -275,6 +275,9 @@ if(~isempty(dir(Args.RequiredFile)))
 
             dt = dt > Args.MinOccDur;
             valid_bins = sum(dt,2)>Args.MinOcc;
+            if repeat == 1
+                data.valid_bins_based_on_minocc = valid_bins;
+            end
             dur_lengths(~valid_bins) = 0;
             spike_count(~valid_bins,:) = 0;
 
