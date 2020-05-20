@@ -441,6 +441,7 @@ if(~isempty(dir(Args.RequiredFile)))
     last_trial_first_half(2) = rpts(last_trial_first_half(1),3);
     data.last_trial_first_half = last_trial_first_half;    
     data.rplmaxtime = rp.data.timeStamps(end,3);
+    data.good_trials = uma.data.processTrials;
                 
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
