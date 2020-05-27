@@ -79,8 +79,9 @@ if(~isempty(dir(Args.RequiredFile)))
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    nTrials = size(um.data.gpDurations,2);
-    midTrial = ceil(nTrials/2);
+%     nTrials = size(pv.trial_intervals,1);
+% %     midTrial = ceil(nTrials/2);
+%     midTrial = pv.last_trial_first_half(1);
 %     sessionTimeInds = find(um.data.sessionTime(:,2) == 0); % Look for trial end markers
 %     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
     

@@ -1,330 +1,444 @@
-function [obj, varargout] = placebyspatialview(varargin)
-%@vmplacecell Constructor function for placebyspatialview class
-%   OBJ = spatialview(varargin)
-%
-%   OBJ = spatialview('auto') attempts to create a spatialview object
-%   using an unitymaze object, a rplparallel object, and the spiketrain.mat
-%   in a Cell directory.
-%   
-%Example, to create a spatialview object in a cell directory:
-%   sv = spatialview('auto');
-%
-%To look at the fields in the object:
-%   sv.data
-%
-%To create a spatialview object, and save it in the current directory:
-%   sv = spatialview('auto','save');
-%
-%To create a spatialview object with different GridSteps, which will be
-%passed to the unitymaze object, and to save both the new unitymaze object
-%and the spatialview objects:
-%   sv = spatialview('auto','GridSteps',10,'SaveLevels',2);
-%
-%To create spatialview from a channel directory:
-%   sv = ProcessLevel(vmplacecell,'Levels','Channel','save');
-%
-%To create spatialview from an array directory:
-%   sv = ProcessLevel(spatialview,'Levels','Array','save');
-%
-%dependencies: unitymaze, rplparallel
+function [obj, varargout] = placebyspatialview(objtype)
 
-Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Cell', 'RequiredFile','vmsv.mat', ...
-				'MaxTimeDiff',0.002,'MinTrials',5, 'GridSteps',40, ...
-                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
-                'AdaptiveSmooth',1, 'FiltLowOcc',1);
-Args.flags = {'Auto','ArgsOnly','HPC','FRSIC','UseMedian'};
-% Specify which arguments should be checked when comparing saved objects
-% to objects that are being asked for. Only arguments that affect the data
-% saved in objects should be listed here.
-Args.DataCheckArgs = {'MinTrials','GridSteps','ShuffleLimits', ...
-	'NumShuffles'};
+% Load vmpc object
+pc = vmpc('auto');
+pc = pc.data;
+% 
+% Load vmsv object
+% sv = vmsv('auto');
+sv = vmsv('auto','MinOccDur',0,'MinOcc',0);
+sv = sv.data;
 
-[Args,modvarargin] = getOptArgs(varargin,Args, ...
-	'subtract',{'RedoLevels','SaveLevels'}, ...
-	'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
-	'remove',{'Auto'});
+% Load spike train
+spiketrain = load('spiketrain.mat');
+spiketrain = spiketrain.timestamps ./ 1000; % in seconds
 
-% variable specific to this class. Store in Args so they can be easily
-% passed to createObject and createEmptyObject
-Args.classname = 'placebyspatialview';
-Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'psv';
+% Combine place and view info with spikes and make rate maps
+pv = vmpv('auto');
+pv = pv.data.sessionTimeC;
+pv(:,4) = [0; diff(pv(:,1))];
+binned = histcounts(spiketrain, pv(:,1))';
+pv(:,5) = [binned; 0];
 
-% To decide the method to create or load the object
-[command, robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
+pv(pv(:,2)==-1,:) = [];
+pv(pv(:,2)==0,:) = [];
 
-if(strcmp(command,'createEmptyObjArgs'))
-    varargout{1} = {'Args',Args};
-    obj = createEmptyObject(Args);
-elseif(strcmp(command,'createEmptyObj'))
-    obj = createEmptyObject(Args);
-elseif(strcmp(command,'passedObj'))
-    obj = varargin{1};
-elseif(strcmp(command,'loadObj'))
-	obj = robj;
-elseif(strcmp(command,'createObj'))
-    % IMPORTANT NOTICE!!! 
-    % If there is additional requirements for creating the object, add
-    % whatever needed here
-    obj = createObject(Args,modvarargin{:});
+full_durations = NaN(5122,1600);
+full_spikes = NaN(5122,1600);
+
+for i = 1:1600
+
+    disp(i);
+    subsample = [pv(pv(:,2)==i, [3 4 5])];
+
+    % filling spikes
+    subsample(subsample(:,3)==0,3) = nan;
+    subsample(:,4) = circshift(subsample(:,2)~=0 ,-1);
+    subsample(isnan(subsample(:,3)) & subsample(:,4), 3) = 0;
+    subsample(:,4) = [];
+    subsample(:,3) = fillmissing(subsample(:,3), 'next');
+
+    % filling time
+    subsample(subsample(:,2)==0,2) = nan;
+    subsample(:,2) = fillmissing(subsample(:,2), 'previous');
+
+    % padding with 5122 bin
+    subsample = [subsample; [5122 0 0]];
+
+    % remove bad view spots
+    subsample(isnan(subsample(:,1)),:) = [];
+
+    % sum durations
+    full_durations(:,i) = accumarray(subsample(:,1), subsample(:,2),[],[],NaN);
+
+    % sum spikes
+    full_spikes(:,i) = accumarray(subsample(:,1), subsample(:,3),[],[],NaN);
+
+end
+full_rate = full_spikes ./ full_durations;
+
+% Plot full place maps
+h = figure(11);
+ax = gca;
+h.Name = 'vmpvRawPlaceMap';
+emptyplacegrids = all(isnan(full_rate),1);
+rawplacemap1 = nansum(full_rate,1);
+rawplacemap1(1,emptyplacegrids) = NaN;
+plotplacemap(rawplacemap1);
+ax.Title.String = 'vmpvRawPlaceMap';
+set(ax,'CLim',[0 max(rawplacemap1)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    'XColor','none','YColor','none','ZColor','none',...
+    'FontSize',14,'GridLineStyle','none','Color','none');
+patchenvbounds('place');
+
+
+h = figure(12);
+ax = gca;
+h.Name = 'vmpcRawPlaceMap';
+rawplacemap2 = pc.maps_raw;
+plotplacemap(rawplacemap2);
+ax.Title.String = 'vmpcRawPlaceMap';
+set(ax,'CLim',[0 max(rawplacemap2)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    'XColor','none','YColor','none','ZColor','none',...
+    'FontSize',14,'GridLineStyle','none','Color','none');
+patchenvbounds('place');
+
+
+h = figure(13);
+ax = gca;
+h.Name = 'vmpcSmoothPlaceMap';
+smoothplacemap = pc.maps_adsmooth;
+smoothplacemapG = plotplacemap(smoothplacemap); % Do not use grid output as input for another plot as it will turn out rotated 90deg CCW
+ax.Title.String = 'vmpcSmoothPlaceMap';
+set(ax,'CLim',[0 max(smoothplacemap)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    'XColor','none','YColor','none','ZColor','none',...
+    'FontSize',14,'GridLineStyle','none','Color','none');
+patchenvbounds('place');
+
+
+% Plot full view maps
+h = figure(21); 
+ax = gca;
+h.Name = 'vmpvRawViewMap';
+emptyviewgrids = all(isnan(full_rate),2);
+rawviewmap = nansum(full_rate,2);
+rawviewmap(emptyviewgrids,1) = NaN;
+plotviewmap(rawviewmap);
+ax.Title.String = 'vmpvRawViewMap';
+set(ax,'CLim',[0 max(rawviewmap)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    'XColor','none','YColor','none','ZColor','none',...
+    'FontSize',14,'GridLineStyle','none','Color','none');
+patchenvbounds('spatialview');
+
+smoothviewmap = sv.linear_map;
+h = figure(23);
+ax = gca;
+h.Name = 'vmsvSmoothViewMap';
+smoothviewmapG = plotviewmap(smoothviewmap); % Do not use grid output as input for another plot as it will turn out rotated 90deg CCW
+ax.Title.String = 'vmsvSmoothViewMap';
+set(ax,'CLim',[0 max(smoothviewmap)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    'XColor','none','YColor','none','ZColor','none',...
+    'FontSize',14,'GridLineStyle','none','Color','none');
+patchenvbounds('spatialview');
+
+% Find 3 maxima of rate maps
+switch objtype
+    case 'place'
+        basemap = smoothplacemap;
+        basemapG = smoothplacemapG;
+        SIthr = prctile(pc.SICsh(1,2:end),95);
+        SI = pc.SIC;
+        pv_base = pv(:,2);
+        pv_sec = pv(:,3);
+    case 'spatialview'
+        basemap = smoothviewmap;
+        basemapG = smoothviewmapG;
+        SIthr = prctile(sv.SICsh(1,2:end),95);
+        SI = sv.SIC;
 end
 
-function obj = createObject(Args,varargin)
-
-if(~isempty(dir(Args.RequiredFile)))
-	% load gaze object
-    cwd = pwd;
-	sv = vmsv('auto');
-    vp = vmpc('auto');
-    cd ..; cd ..; cd ..;
-    rc = load('raycast.mat');
-    cd(cwd);
-%     st = load('spiketrain.mat');
-%     ufile = unityfile('auto',varargin{:});
-    um = umaze('auto','GridSteps',40,varargin{:});
-    cd(cwd);
+dummygrid = flipud(reshape((1:1600),40,40)'); % TEST VIEW GRIDS! 
+if SI > SIthr
+    % Find fields with at least 1 pixel of > half peak rate
+    peakrate = max(max((basemapG)));
+    threshrate = peakrate/2;
+    ind_fields = basemapG > threshrate;
+    % Find separate fields
+    [fieldlabel,fieldcount] = bwlabel(ind_fields,8);
+    % Find fields that are big enough (i.e. > 6 bins around peak)
+    count = 0;
+    for ii = 1:fieldcount
+        inds = fieldlabel == ii;
+        % Find peak of this field in grid matrix coords
+        [xmapG,ymapG] = find( (basemapG == max(basemapG(inds))) ,1); 
+        xbounds_mapG = [xmapG+1 xmapG xmapG-1]; % Plotting coords (x is left to right, y is bottom to top)
+        ybounds_mapG = [ymapG-1 ymapG ymapG+1];
+        xbounds_mapG(xbounds_mapG > 40 | xbounds_mapG < 1) = [];
+        ybounds_mapG(ybounds_mapG > 40 | ybounds_mapG < 1) = [];
+        % Find the pixels surrounding peak of this field, starting from bottom left to top right, moving left to right
+        xbounds_plot = ybounds_mapG;
+        ybounds_plot = size(basemapG,1)-xbounds_mapG+1;
+        % Make sure at least 6 joined pixels
+        if sum(sum(inds(sort(xbounds_mapG), ybounds_mapG))) >= 6
+            count = count + 1;
+            fieldmaxrate(count) = basemapG(xmapG,ymapG);
+            linbin = dummygrid(sort(xbounds_mapG),ybounds_mapG);
+            linbin(inds(sort(xbounds_mapG), ybounds_mapG)<1) = nan;
+            linearobjbin(count) = {linbin};
+            fieldbounds_plot(count,1:2) = {xbounds_plot ybounds_plot};
+            fieldbounds_mat(count,1:2) = {xbounds_mapG ybounds_mapG};
+        end
+    end
+    % Sort fields
+    [fieldmaxrate,I] = sort(fieldmaxrate,'descend');
+    fieldbounds_plot = fieldbounds_plot(I,:);
+    fieldbounds_mat = fieldbounds_mat(I,:);
+    linearobjbin = linearobjbin(I);
     
-    % Find place SI
-    vpSI = vp.data.SIC;
-    % Find place SI threshold
-    vpSIthresh = prctile(vp.data.SICsh(2:end,1),95);
-    % Find spatialview SI
-    svSI = sv.data.SIC;
-    % Find spatialview SI threshold
-    siSIthresh = prctile(sv.data.SICsh(2:end,1),95);
-    binDepths = sv.data.binDepths;
-    % Find 
-    % if place SI cross the SI threshold, analyse for spatial
-    count = 1;
-    count_i = [];
-    if vpSI > 0 % vpSIthresh
+    for ii = 1:3 % Plot only for first 3 fields per map
         
-%         sessionTime = um.data.sessionTime(:,1);
-%         sessionTime(um.data.zero_indices,1) = [];
-        [~,~,binrc] = histcounts((rc.el.data.timestamps/1000),um.data.sessionTime(:,1));
-        uniquepos = unique(binrc(binrc~=0));
-        pospersample = zeros(size(rc.el.data.timestamps,1),1);
-        for ii = 1:size(uniquepos,1)
-           ind = binrc == uniquepos(ii);
-           pospersample(ind) = um.data.sessionTime(uniquepos(ii),2);
+        if ii > size(fieldbounds_plot,1)
+            break;
         end
-        
-%         % Bin spike trains by location
-%         data.horGridBound = um.data.horGridBound;
-%         data.vertGridBound = um.data.vertGridBound;
-%         sTime = um.data.sessionTime;
-%         sortedGPindinfo = um.data.sortedGPindinfo;
-%         unityTime = ufile.data.unityTime;
-% 
-%         % load spike train
-%         ts1 = (st.timestamps/1000)';
-%         % remove any spike times before Unity started and after Unity ended
-%         ts = ts1(ts1<sTime(end,1) & ts1>unityTime(1));
-% 
-%         % find spikes that occurred during navigation
-%         % e.g.
-%     %	row		sessionTime			ts		bins	zero_indices
-%     %	1	0		0		7.8217	6.7649	1	1
-%     %	2	7.8217	3.0000	3.6656	6.7917	1	6
-%     %	3	11.4873	4.0000	1.5644	8.1015	2	14
-%     %	4	13.0517	5.0000	0.3790	9.3976	2	20
-%     %	5	13.4307	10.0000	1.1994	16.4411	6	26
-%     %	6	14.6301	0		3.1062	16.4855	6	34
-%     %	7	17.7363	10.0000	2.4343	16.5127	6	40
-%     %	8	20.1706	15.0000	0.4862	16.5400	6	46
-%     %	9	20.6568	14.0000	1.7571	16.8922	6	54
-%     %	10	22.4139	13.0000	0.8260	16.9383	6	61
-%         % value in bins match up with the values in zero_indices, so we can just find the values
-%         % in bins that are not members of zero_indices
-%         [~,~,bins] = histcounts(ts,sTime(:,1));
-%         % compute the repetition number within each grid position each spike occurs in
-%         % first find the row in sortedGPindices that corresponds to the occurence of the grid
-%         % position that the spike occurred in
-%         [~, spike_index] = ismember(bins,um.data.sortedGPindices);
-%         % get indices that correspond to non-zero grid positions
-%         n0bins = spike_index>sortedGPindinfo(1,2);
-%         % get the grid position for each spike in non-zero grid positions
-%         spike_gridposition = sTime(bins(n0bins),2);
-%         % compute the repetition number for each spike by finding the row that corresponds to
-%         % the start of the appropriate grid position
-%         rep_num = mod(spike_index(n0bins),sortedGPindinfo(um.data.gp2ind(spike_gridposition),2)) + 1;
-% 
-%         % perform histogram on spike times that don't correspond to zero bins using unity time 
-%         % bins in order to get the closest xy position
-%         [~,~,ubin] = histcounts(ts(n0bins),ufile.data.unityTime);
-%         spike_xy = ufile.data.unityData(ubin,3:4);
-        
-        % Find fields with at least 1 pixel of > half peak rate
-        peakrate = max(vp.data.maps_adsmooth);
-        threshrate = peakrate/2;
-        % Restructure linear map into grid map 
-        mapadsmLin = vp.data.maps_adsmooth;
-        maprawLin = vp.data.maps_raw;
-        binNumLin = 1:Args.GridSteps*Args.GridSteps;
-        mapadsmGrid = nan(Args.GridSteps);
-        maprawGrid = nan(Args.GridSteps);
-        binNumGrid = nan(Args.GridSteps);
-        for ii = 1:Args.GridSteps
-            mapadsmGrid(ii,:) = mapadsmLin( ((ii-1)*Args.GridSteps)+1:ii*Args.GridSteps );
-            maprawGrid(ii,:) = maprawLin( ((ii-1)*Args.GridSteps)+1:ii*Args.GridSteps );
-            binNumGrid(Args.GridSteps-(ii-1),:) = binNumLin( ((ii-1)*Args.GridSteps)+1:ii*Args.GridSteps );
+            
+        % Plot base map and outline field
+        fignum = str2double(['10' num2str(ii)]);
+        h = figure(fignum);
+        ax = gca;
+        h.Name = ['BaseMap: Pixel ' num2str(ii)];
+        switch objtype
+            case 'place'
+                plotplacemap(smoothplacemap);
+                ax = gca;
+                set(ax,'CLim',[0 max(smoothplacemap)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                    'XColor','none','YColor','none','ZColor','none',...
+                    'FontSize',14,'GridLineStyle','none','Color','none');
+                % Patch environment boundaries
+                patchenvbounds('place');
+                % Patch field of interest
+                patch([fieldbounds_plot{ii,1}(1)-1 fieldbounds_plot{ii,1}(1)-1 fieldbounds_plot{ii,1}(end) fieldbounds_plot{ii,1}(end)],[fieldbounds_plot{ii,2}(1)-1 fieldbounds_plot{ii,2}(end) fieldbounds_plot{ii,2}(end) fieldbounds_plot{ii,2}(1)-1], [0 0 0 0] ,'EdgeColor','k','FaceColor','none');
+            case 'spatialview'
+                plotviewmap(smoothviewmap);
         end
+        ax.Title.String = 'BaseMap';
         
-        ind_fields = mapadsmGrid > threshrate;
-        % Find separate fields
-        fieldlabel = bwlabel(ind_fields,8);
-        fieldcount = max(max(fieldlabel));
-        
-%         % Sanity check for map orientation
-%         binLocGrid = sv.data.binLocGrid;
-%         locmapGrid = nan(vp.data.Args.GridSteps);
-%         ratemapGrid = nan(vp.data.Args.GridSteps);
-%         for pp = 1:vp.data.Args.GridSteps
-%             for ppp = 1:vp.data.Args.GridSteps
-%                 inds = binLocGrid(:,1)==pp & binLocGrid(:,2)==ppp;
-%                 spikesGrid = sum(sv.data.spikepersample(inds));
-%                 locmapGrid(pp,ppp) = sum(inds);
-%                 ratemapGrid(pp,ppp) = spikesGrid/locmapGrid(pp,ppp);
-%             end
-%         end
-%         locmapGrid = locmapGrid/(max(max(locmapGrid)));
-%         locmapGrid(locmapGrid == 0) = nan;
-%         figure(888);
-%         ax = gca;
-%         colormap(jet);
-%         surfx = repmat((0:40)',1,41);
-%         surfy = repmat(0:40,41,1);
-%         surfz = zeros(41);
-%         surf(surfx,surfy,surfz,ratemapGrid);
-%         shading flat;
-%         set(ax,'CLim',[0 max(max(ratemapGrid))]);
-%         view(-60,90);
-        
-        % For each field, look at spatial view for the 8 px around max px
-        
-        for ii = 1:fieldcount
-            % Find local peak rate
-            localpeakrate = max(max(mapadsmGrid(fieldlabel == ii)));
-            ind_localpeak = mapadsmGrid == localpeakrate;
-            xlocalpeak = find(sum(ind_localpeak,2) > 0,1);
-            ylocalpeak = find(sum(ind_localpeak,1) > 0,1);
-            % Find field boundary 
-            xfieldpx = xlocalpeak-1:xlocalpeak+1;
-            yfieldpx = ylocalpeak-1:ylocalpeak+1;
-            % Initialize storage for view rate maps for each of 9 place px
-            ratemapsG = cell(3,3);
-            ratemapsL = nan(sum(binDepths(:,1).*binDepths(:,2)),9);
-            % For each of 9 bins within boundary
-            for xx = 1:size(xfieldpx,2)
-                for yy = 1:size(yfieldpx,2)
-                    placeBin = binNumGrid(xfieldpx(xx),yfieldpx(yy));
-                    % Find which samples match this place bin
-%                     tt = sv.data.binLocLin == placeBin;
-                    tt = pospersample == placeBin;
-                    % Find viewed locations from this place bin
-                    if sum(tt) > 0
-%                         tts;
-                        viewedLin = sv.data.binGazeLin(tt);
-                        viewedGrid = sv.data.binGazeGrid(tt,:);
-                        [uviewedLin,i] = unique(viewedLin);
-                        uviewedLin = uviewedLin(~isnan(uviewedLin));
-                        i = i(~isnan(uviewedLin));
-                        spikes = sv.data.spikepersample(tt);
-                        fixObjNum = sv.data.fixObjNum(tt);
-                        % Compute spike rates per view
-                        rateview = nan(size(uviewedLin,1),1);
-                        fixObj = nan(size(uviewedLin,1),1);
-                        for kk = 1:size(uviewedLin,1)
-                            ind = viewedLin == uviewedLin(kk); % s
-                            rateview(kk) = sum(spikes(ind))/sum(ind);
-                            fixObj(kk) = fixObjNum(find(ind,1));
-                        end
-                        % Convert lin rate map to grid
-                        mapGrid = cell(size(binDepths,1),1);
-                        mapL = nan(sum(binDepths(:,1).*binDepths(:,2)),1);
-                        for bb = 1:size(binDepths,1)
-                            mapG = nan(binDepths(bb,1),binDepths(bb,2));
-                            ind_obj = fixObj == bb;
-                            if sum(ind_obj) > 0
-                                binLin = uviewedLin(ind_obj);
-                                binGrid = viewedGrid(i(ind_obj),:);
-                                rates = rateview(ind_obj);
-                                for cc = 1:size(rates,1)
-                                   mapG(binGrid(cc,1),binGrid(cc,2)) = rates(cc);
-                                end
-                                mapL(binLin) = rates; %%%??????
-                            end
-                            mapGrid{bb} = mapG;
-                        end
-                        
-                    % Store for plotting later
-                    ratemapsG{xx,yy} = mapGrid;
-                    ratemapsL(:, yy+(xx-1)*yy) = mapL;
-                    
-                    h1 = figure(ii);
-                    ax = gca;
-                    % Plot main map
-                    plotratemaps('Place',0,0,'adaptive',cwd,mapadsmGrid,ax,mapadsmLin,binDepths,ii,[40-xlocalpeak ylocalpeak]);
-                    h2 = figure(ii+100);
-                    % Plot spatialview maps per pixel
-                    ax = subplot(3,3,(xx-1)*3+yy);
-                    plotratemaps('Spatialview',0,0,'adaptive',cwd,mapGrid,ax,mapL,binDepths,ii,[40-xlocalpeak ylocalpeak]);
-                    end
+        maxrate_px = 0;
+        for yy = 1:size(fieldbounds_plot{ii,2},2) % Going left to right, bottom to top
+            for xx = 1:size(fieldbounds_plot{ii,1},2)
+                % Get base pixel
+                if isnan(fieldbounds_plot{ii,1}(xx)) || isnan(fieldbounds_plot{ii,2}(yy)) || isnan(linearobjbin{ii}(size(linearobjbin{ii},1)-yy+1,xx))
+                    continue;
                 end
+                
+                % Get corresponding secondary pixels from pv object
+                ind_pv = pv_base == linearobjbin{ii}(size(linearobjbin{ii},1)-yy+1,xx);
+                sec = [];
+                sec(:,1) = pv(ind_pv,3); % view px
+                sec(:,2) = pv(ind_pv,4); % dur
+                sec(:,3) = pv(ind_pv,5); % spikes
+                % Get firing rates 
+                usecpx = unique(sec(:,1));
+                usecpx(isnan(usecpx)) = [];
+                rate_components_px = nan(length(usecpx),4); % Collect dur and spikes for secondary pixels for calculating firing rates
+                rate_components_px(:,1) = usecpx;
+                ind_timechange = find(sec(:,2) > 0);
+                for pp = 1:size(ind_timechange,1) % For each instance of being in this base pixel
+                    linbin = nan(size(usecpx,1),2); % Temp dur and spikes for this secondary pixel(s)
+                    if pp == size(ind_timechange,1)
+                        newind = ind_timechange(pp):size(sec,1);
+                    else
+                        newind = ind_timechange(pp):ind_timechange(pp+1)-1; % index into secondary pixel(s) for this instance
+                    end
+                    newview = sec(newind,1); 
+                    newset = ismember(usecpx,newview);
+                    linbin(newset,1) = sec(newind(1),2); % duration for this instance listed with first secondary pixel
+                    linbin(newset,2) = sec(newind(end),3); % spikes for this instance listed with last secondary pixel
+                    rate_components_px(:,2) = nansum( [rate_components_px(:,2) linbin(:,1)] ,2); % Sum duration for this sec pixel across instances
+                    rate_components_px(:,3) = nansum( [rate_components_px(:,3) linbin(:,2)] ,2); % Sum spikes for this sec pixel across instances
+                end
+                rightfulnans = rate_components_px(:,2) == 0;
+                rate_components_px(rightfulnans,:) = nan;
+                rate_components_px(:,4) = rate_components_px(:,3)./rate_components_px(:,2);
+                
+                % Collect all sec rate information for the 9 base pixels
+                rate_components(3-yy+1,xx) = { rate_components_px };
+                if max(rate_components_px(:,4)) > maxrate_px 
+                    maxrate_px = max(rate_components_px(:,4));
+                end
+                
             end
-            % 
-            
-%             cwd = pwd;
-%             h = figure(1);
-%             for xx = 1:3
-%                 for yy = 1:3
-%                     ax = subplot(3,3,(xx-1)*3+yy);
-%                     plotratemaps('Place',0,0,'adaptive',cwd,ratemapsG,ax,ratemapsL,binDepths,ii,[40-xlocalpeak ylocalpeak]);
-%                     plotratemaps('Spatialview',0,0,'adaptive',cwd,ratemapsG{xx,yy},ax,ratemapsL((xx-1)*3+yy),binDepths,ii,[40-xlocalpeak ylocalpeak]);
-%                 end
-%             end
-
-            
         end
+        disp(ii);
         
-        
-        
-        
-        
+        % Plot secondary maps by base pixel
+        fignum = str2double(['10' num2str(ii) '1']);
+        h = figure(fignum);
+        h.Name = ['SecondaryMaps: Pixel ' num2str(ii)];
+        for yy = 1:size(fieldbounds_plot{ii,2},2) % Going left to right, bottom to top
+            for xx = 1:size(fieldbounds_plot{ii,1},2)
+                if isempty(rate_components{3-yy+1,xx})
+                    continue;
+                end
+                % Plot secondary map for each base pixel in field
+                switch objtype
+                    case 'place'
+                        tempsecmap = nan(size(smoothviewmap));
+                        tempsecmap(1,rate_components{3-yy+1,xx}(:,1)) = rate_components{3-yy+1,xx}(:,4);
+                        ax = subplot('Position',[ 0.05+(xx-1)*(0.9/3) 0.05+(yy-1)*(0.9/3) 0.8/3 0.8/3 ]);
+                        plotviewmap(tempsecmap);
+                        ax.Title.String = horzcat('x',num2str(xx),'y',num2str(yy));
+                        set(ax,'CLim',[0 max(maxrate_px)],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        % Patch environment boundaries
+                        patchenvbounds('spatialview');
+                        % Patch basemap pixel
+                        patch([fieldbounds_plot{ii,1}(xx)-1 fieldbounds_plot{ii,1}(xx)-1 fieldbounds_plot{ii,1}(xx) fieldbounds_plot{ii,1}(xx)],[fieldbounds_plot{ii,2}(yy)-1 fieldbounds_plot{ii,2}(yy) fieldbounds_plot{ii,2}(yy) fieldbounds_plot{ii,2}(yy)-1], [0 0 0 0] ,'EdgeColor','k','FaceColor','r');
+                        % Patch environment boundaries
+                        patchenvbounds('spatialview');
+                    case 'spatialview'
+                        
+                end
+                disp(ii);
+            end
+        end
         
         
         
         
     end
-    
-    % Find max 
-    
+    disp(ii);
 
-	% create nptdata so we can inherit from it    
-	data.numSets = 1;
-	data.Args = Args;
-	n = nptdata(1,0,pwd);
-	d.data = data;
-	obj = class(d,Args.classname,n);
-	saveObject(obj,'ArgsC',Args);
-
-else
-	obj = createEmptyObject(Args);
 end
 
-function obj = createEmptyObject(Args)
 
-% useful fields for most objects
-data.numSets = 0;
-data.gridSteps = [];
-data.meanFRs = [];
-data.semFRs = [];
-data.SIC = [];
-data.SICsh = [];
 
-% create nptdata so we can inherit from it
-data.Args = Args;
-n = nptdata(0,0);
-d.data = data;
-obj = class(d,Args.classname,n);
+% Plot place map
+function [placemapG] = plotplacemap(placemapL)
+
+% Set up surf frame for plotting
+floor_x = repmat(0:40, 41, 1);
+floor_y = flipud(repmat([0:40]', 1, 41));
+floor_z = zeros(41,41);
+
+placemapG = flipud(reshape(placemapL, 40, 40)');
+surf(floor_x, floor_y, floor_z, placemapG);
+alpha 1; shading flat;
+colormap jet;
+view(-35,20);
+
+% Plot view map
+function [viewmapG]= plotviewmap(viewmapL)
+
+% Set up surf frame for plotting
+floor_x = repmat(0:40, 41, 1);
+floor_y = flipud(repmat([0:40]', 1, 41));
+floor_z = zeros(41,41);
+
+ceiling_x = floor_x;
+ceiling_y = floor_y;
+ceiling_z = 40.*ones(41,41);
+
+walls_x = repmat([0.*ones(1,40) 0:39 40.*ones(1,40) 40:-1:0], 9, 1);
+walls_y = repmat([0:39 40.*ones(1,40) 40:-1:1 0.*ones(1,41)], 9, 1);
+walls_z = repmat([24:-1:16]', 1, 40*4 + 1);
+
+P1_x = repmat([24.*ones(1,8) 24:31 32.*ones(1,8) 32:-1:24], 6, 1);
+P1_y = repmat([8:15 16.*ones(1,8) 16:-1:9 8.*ones(1,9)], 6, 1);
+PX_z = repmat([21:-1:16]', 1, 8*4 + 1);
+
+P2_x = repmat([8.*ones(1,8) 8:15 16.*ones(1,8) 16:-1:8], 6, 1);
+P2_y = P1_y;
+
+P3_x = P1_x;
+P3_y = repmat([24:31 32.*ones(1,8) 32:-1:25 24.*ones(1,9)], 6, 1);
+
+P4_x = P2_x;
+P4_y = P3_y;
+
+floor = flipud(reshape(viewmapL(3:3+1600-1), 40, 40)');
+% ceiling follows floor mapping, top down view
+ceiling = flipud(reshape(viewmapL(1603:1603+1600-1), 40, 40)');
+% from top down, slit walls at bottom left corner, open outwards.
+% start from row closest to ground, rightwards, then climb rows
+walls = flipud(reshape(viewmapL(3203:3203+1280-1), 40*4, 8)');
+% BL - bottom left, and so on, from top view, same slicing as walls
+% pillar width 8, height 5
+P1_BR = flipud(reshape(viewmapL(4483:4483+160-1), 8*4, 5)');
+P1_BR = [P1_BR; nan(1,size(P1_BR,2))];
+P1_BR = [P1_BR nan(size(P1_BR,1),1)];
+P2_BL = flipud(reshape(viewmapL(4643:4643+160-1), 8*4, 5)');
+P2_BL = [P2_BL; nan(1,size(P2_BL,2))];
+P2_BL = [P2_BL nan(size(P2_BL,1),1)];        
+P3_TR = flipud(reshape(viewmapL(4803:4803+160-1), 8*4, 5)');
+P3_TR = [P3_TR; nan(1,size(P3_TR,2))];
+P3_TR = [P3_TR nan(size(P3_TR,1),1)];                
+P4_TL = flipud(reshape(viewmapL(4963:4963+160-1), 8*4, 5)');
+P4_TL = [P4_TL; nan(1,size(P4_TL,2))];
+P4_TL = [P4_TL nan(size(P4_TL,1),1)];
+
+viewmapG = { NaN; NaN; floor; ceiling; walls; P1_BR; P2_BL; P3_TR; P4_TL };
+
+% floor
+surf(floor_x, floor_y, floor_z, floor);
+alpha 1; shading flat;
+colormap jet;
+hold on;
+
+% ceiling and walls
+surf(ceiling_x, ceiling_y, ceiling_z, ceiling);
+alpha 1; shading flat;
+surf(walls_x, walls_y, walls_z, walls);      
+alpha 1; shading flat;
+
+disp(sum(sum(find(ceiling==0))) + sum(sum(find(floor==0))) + sum(sum(find(P4_TL==0))));
+
+% pillars
+surf(P1_x, P1_y, PX_z, P1_BR);
+alpha 1; shading flat;
+surf(P2_x, P2_y, PX_z, P2_BL);
+alpha 1; shading flat;
+surf(P3_x, P3_y, PX_z, P3_TR);
+alpha 1; shading flat;
+surf(P4_x, P4_y, PX_z, P4_TL);
+alpha 1; shading flat; 
+view(-35,20);
+
+% Patch environment boundaries
+function patchenvbounds(objtype)
+
+switch objtype
+    case 'place'
+        
+        % Floor outer bounds
+        patch([0 0 40 40],[0 40 40 0],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        % Floor Pillar edges
+        patch([8 8 16 16],[8 16 16 8],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([8 8 16 16],[24 32 32 24],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[24 32 32 24],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[8 16 16 8],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        
+    case 'spatialview'
+        
+        % Floor outer bounds
+        patch([0 0 40 40],[0 40 40 0],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        % Floor Pillar edges
+        patch([8 8 16 16],[8 16 16 8],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([8 8 16 16],[24 32 32 24],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[24 32 32 24],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[8 16 16 8],[0 0 0 0],[1 1 1 1],'FaceColor','none');
+        % Wall outer bounds
+        patch([0 0 40 40],[0 0 0 0],[16 24 24 16],[1 1 1 1],'FaceColor','none');
+        patch([0 0 0 0],[0 0 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
+        patch([0 0 40 40], [40 40 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
+        patch([40 40 40 40],[0 0 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
+        % Pillar 1
+        patch([24 24 32 32],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 24 24],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([32 32 32 32],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([26.88 26.88 29.12 29.12],[32 32 32 32],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Rabbit Poster on m_wall_25
+        % Pillar 2
+        patch([24 24 32 32],[8 8 8 8],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 24 24],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[16 16 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([32 32 32 32],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([32 32 32 32],[10.88 10.88 13.12 13.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Cat poster on m_wall_10
+        patch([24 24 24 24],[10.88 10.88 13.12 13.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Pig poster on m_wall_29
+        % Pillar 3
+        patch([8 8 16 16],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 8 8],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 16 16],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([16 16 16 16],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([16 16 16 16],[26.88 26.88 29.12 29.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Croc poster on m_wall_4
+        patch([8 8 8 8],[26.88 26.88 29.12 29.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Donkey poster on m_wall_15
+        % Pillar 4
+        patch([8 8 16 16],[8 8 8 8],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 8 8],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 16 16],[16 16 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([16 16 16 16],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([10.88 10.88 13.12 13.12],[8 8 8 8],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Camel poster on m_wall_20
+        % Ceiling
+        patch([0 0 40 40],[0 40 40 0],[40 40 40 40],[1 1 1 1],'FaceColor','none');
+        
+end
