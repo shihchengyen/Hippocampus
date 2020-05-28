@@ -15,13 +15,13 @@ function [obj, varargout] = vmpv(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session','RequiredFile','binData.hdf', ...
 				'GridSteps',40, 'overallGridSize',25, ...
-                'MinObs',5,'SpeedLimit',1);
+                'MinObsPlace',5,'MinObsView',25,'MinDurPlace',0.1,'MinDurView',0.01);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps', 'MinObs', 'overallGridSize','SpeedLimit'};                         
+Args.DataCheckArgs = {'GridSteps', 'MinObsPlace','MinObsView','overallGridSize','MinDurPlace','MinDurView'};                         
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -73,6 +73,8 @@ if(~isempty(dir(Args.RequiredFile)))
     size(viewdata)
     cd(ori);
 
+    % major section 1 - getting combined sessiontime
+    
     pst = uma.data.sessionTime;
     vst = viewdata';
     vst(:,1) = vst(:,1)/1000;
@@ -273,26 +275,28 @@ if(~isempty(dir(Args.RequiredFile)))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     data.sessionTimeC = cst_full;
-    data.dur_spent_moving_per_grid = uma.data.dur_spent_moving_per_grid;
-    data.occur_per_grid = uma.data.occur_per_grid;
-    data.well_sampled_grids = uma.data.well_sampled_grids;
-    data.dur_per_grid = uma.data.dur_per_grid;
-    data.dur_moving_total = uma.data.dur_moving_total;
-    data.dur_moving_first_half = uma.data.dur_moving_first_half;
-    data.dur_moving_second_half = uma.data.dur_moving_second_half;
+    data.SpeedLimit = uma.data.SpeedLimit;
+%     data.dur_spent_moving_per_grid = uma.data.dur_spent_moving_per_grid;
+%     data.occur_per_grid = uma.data.occur_per_grid;
+%     data.well_sampled_grids = uma.data.well_sampled_grids;
+%     data.dur_per_grid = uma.data.dur_per_grid;
+%     data.dur_moving_total = uma.data.dur_moving_total;
+%     data.dur_moving_first_half = uma.data.dur_moving_first_half;
+%     data.dur_moving_second_half = uma.data.dur_moving_second_half;
     
-% new part to show intervals for each view bin, ease of use/viewing in following steps.
+    % major section 2 - getting view intervals, accounting and not
+    % accounting for speed thresholding
 
         max_allo = 5000;
         view_split1 = nan(5122,max_allo,2);
         view_split2 = ones(5122,1);
         view_split3 = zeros(5122,1);
         idx_tracker = nan(5122,max_allo);
-        stacked = 0;
+        %stacked = 0;
 
         stc = cst_full;
-        unique_ts = [1; find(diff(stc(:,1))>0)+1];
-        unique_ts = [stc(unique_ts,1) unique_ts];   
+        %unique_ts = [1; find(diff(stc(:,1))>0)+1];
+        %unique_ts = [stc(unique_ts,1) unique_ts];   
         last_processed_time = [0 0];
         for row = 1:size(stc,1)
             if ~isnan(stc(row,3))
@@ -355,16 +359,16 @@ if(~isempty(dir(Args.RequiredFile)))
         end
 
                 view_split1 = view_split1(:,1:min([size(view_split1,2) max(view_split2)+2]),:);
-                data.view_intervals = view_split1;
-                data.view_intervals_count = view_split2;
+                data.thres_vel.view_intervals = view_split1;
+                data.thres_vel.view_intervals_count = view_split2;
 
                 
-        max_allo = 5000;
+        %max_allo = 5000;
         view_split1 = nan(5122,max_allo,2);
         view_split2 = ones(5122,1);
         view_split3 = zeros(5122,1);
         idx_tracker = nan(5122,max_allo);
-        stacked = 0;                
+        %stacked = 0;                
         last_processed_time = [0 0];
         for row = 1:size(stc,1)
 %             if stc(row,1) > 18
@@ -432,17 +436,269 @@ if(~isempty(dir(Args.RequiredFile)))
             
         end
                 view_split1 = view_split1(:,1:min([size(view_split1,2) max(view_split2)+2]),:);
-                data.view_ignore_speed_intervals = view_split1;
-                data.view_ignore_speed_intervals_count = view_split2;                
-                
+                data.all_vel.view_intervals = view_split1;
+                data.all_vel.view_intervals_count = view_split2;                
+            
+    % major section 3 - getting place intervals, with and without
+    % thresholding speed
+    
+    sessionTimeC = stc;
+    
+    preallo = 150;
+    place_intervals = nan(1600, preallo, 2);
+    place_intervals_count = ones(1600,1);
+
+    curr_place = 0;
+    curr_start_time = 0;
+
+    for row = 1:size(sessionTimeC,1)
+
+        if sessionTimeC(row,2) ~= curr_place
+            interval = [curr_start_time; sessionTimeC(row,1)];
+            if curr_place ~= 0 && curr_place ~= -1
+                place_intervals(curr_place, place_intervals_count(curr_place), 1) = interval(1);
+                place_intervals(curr_place, place_intervals_count(curr_place), 2) = interval(2);
+                place_intervals_count(curr_place) = place_intervals_count(curr_place) + 1;
+                if place_intervals_count(curr_place) == size(place_intervals,1) - 5
+                    place_intervals = cat(2,place_intervals,nan(1600, preallo, 2));
+                end
+            end
+            curr_place = sessionTimeC(row,2);
+            curr_start_time = sessionTimeC(row,1);
+        end
+
+    end
+
+    place_intervals_count = place_intervals_count - 1;
+    place_intervals = place_intervals(:,1:max(place_intervals_count),:); 
+    
+    data.thres_vel.place_intervals = place_intervals;
+    data.all_vel.place_intervals_count = place_intervals_count;
+    
+    
+    place_ignore_speed_intervals = nan(1600, preallo, 2);
+    place_ignore_speed_intervals_count = ones(1600,1);
+
+    curr_place = 0;
+    curr_start_time = 0;
+
+    for row = 1:size(sessionTimeC,1)
+
+        if sessionTimeC(row,2) ~= curr_place && sessionTimeC(row,2) ~= -1
+            interval = [curr_start_time; sessionTimeC(row,1)];
+            if curr_place ~= 0 && curr_place ~= -1
+                place_ignore_speed_intervals(curr_place, place_ignore_speed_intervals_count(curr_place), 1) = interval(1);
+                place_ignore_speed_intervals(curr_place, place_ignore_speed_intervals_count(curr_place), 2) = interval(2);
+                place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+                if place_ignore_speed_intervals_count(curr_place) == size(place_ignore_speed_intervals,1) - 5
+                    place_ignore_speed_intervals = cat(2,place_ignore_speed_intervals,nan(1600, preallo, 2));
+                end
+            end
+            curr_place = sessionTimeC(row,2);
+            curr_start_time = sessionTimeC(row,1);
+        end
+
+    end
+
+    place_ignore_speed_intervals_count = place_ignore_speed_intervals_count - 1;    
+    place_ignore_speed_intervals = place_ignore_speed_intervals(:,1:max(place_ignore_speed_intervals_count),:);
+    data.all_vel.place_intervals = place_ignore_speed_intervals;
+    data.all_vel.place_intervals_count = place_ignore_speed_intervals_count;
+    
+    % major section 4 - labeling instance by instance validity for view
+    % domain
+    
+        view_intervals = data.thres_vel.view_intervals;
+        view_intervals_count = data.thres_vel.view_intervals_count;
+        view_ignore_speed_intervals = data.all_vel.view_intervals;
+        view_ignore_speed_intervals_count = data.all_vel.view_intervals_count;
+
+        long_interval_cutoff = Args.MinDurView;
+
+        view_good = zeros(size(sessionTimeC,1),1);
+        view_good_ignore_speed = zeros(size(sessionTimeC,1),1);
+
+        curr_int = ones(5122,1); % track the last used interval per bin
+        curr_int_ignore_speed = ones(5122,1);
+
+        for strow = 1:size(sessionTimeC,1)
+
+            timestamp = sessionTimeC(strow,1);
+            view_bin = sessionTimeC(strow,3);
+
+            if isnan(view_bin)
+                continue;
+            end
+
+            % accounting for speed
+            while timestamp > view_intervals(view_bin,curr_int(view_bin),2) && curr_int(view_bin) <= view_intervals_count(view_bin) % pan through intervals
+                curr_int(view_bin) = curr_int(view_bin) + 1;
+            end
+            if curr_int(view_bin) <= view_intervals_count(view_bin) % still have possible intervals
+                if timestamp >= view_intervals(view_bin,curr_int(view_bin),1) % within current interval
+                    if view_intervals(view_bin,curr_int(view_bin),2) - view_intervals(view_bin,curr_int(view_bin),1) >= long_interval_cutoff
+                        view_good(strow) = 1; % resides in long interval
+                    else
+                        view_good(strow) = 0.5; % in short interval
+                    end
+                end
+            end
+
+            % ignoring speed requirement
+            while timestamp > view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),2) && curr_int_ignore_speed(view_bin) <= view_ignore_speed_intervals_count(view_bin) % pan through intervals
+                curr_int_ignore_speed(view_bin) = curr_int_ignore_speed(view_bin) + 1;
+            end
+            if curr_int_ignore_speed(view_bin) <= view_ignore_speed_intervals_count(view_bin) % still have possible intervals
+                if timestamp >= view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),1) % within current interval
+                    if view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),2) - view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),1) >= long_interval_cutoff
+                        view_good_ignore_speed(strow) = 1; % resides in long interval
+                    else
+                        view_good_ignore_speed(strow) = 0.5; % in short interval
+                    end
+                end
+            end
+
+            if rem(strow,10000000) == 0
+                disp(['view instance: ' num2str(strow)]);
+            end
+
+        end
+        
+        data.thres_vel.view_good_rows = view_good;
+        data.all_vel.view_good_rows = view_good_ignore_speed;
+
+        
+    % major section 5 - row by row filtering for intervals in place domain
+
+        long_interval_cutoff = Args.MinDurPlace;
+
+        place_good = zeros(size(sessionTimeC,1),1);
+        place_good_ignore_speed = zeros(size(sessionTimeC,1),1);
+
+        curr_int = ones(1600,1); % track the last used interval per bin
+        curr_int_ignore_speed = ones(1600,1);
+
+        for strow = 1:size(sessionTimeC,1)
+
+            timestamp = sessionTimeC(strow,1);
+            place_bin = sessionTimeC(strow,2);
+
+            if isnan(place_bin) || place_bin == -1 || place_bin == 0
+                continue;
+            end
+
+            % accounting for speed
+            while timestamp > place_intervals(place_bin,curr_int(place_bin),2) && curr_int(place_bin) <= place_intervals_count(place_bin) % pan through intervals
+                curr_int(place_bin) = curr_int(place_bin) + 1;
+            end
+            if curr_int(place_bin) <= place_intervals_count(place_bin) % still have possible intervals
+                if timestamp >= place_intervals(place_bin,curr_int(place_bin),1) % within current interval
+                    if place_intervals(place_bin,curr_int(place_bin),2) - place_intervals(place_bin,curr_int(place_bin),1) >= long_interval_cutoff
+                        place_good(strow) = 1; % resides in long interval
+                    else
+                        place_good(strow) = 0.5; % in short interval
+                    end
+                end
+            end
+            
+            if rem(strow,10000000) == 0
+                disp(['place instance: ' num2str(strow)]);
+            end
+
+        end
+        
+        hist_bin = 0;
+        for strow = 1:size(sessionTimeC,1)
+        
+            timestamp = sessionTimeC(strow,1);
+            place_bin = sessionTimeC(strow,2);
+
+            if place_bin == -1
+                place_bin = hist_bin;
+            end
+            
+            if isnan(place_bin) || place_bin == 0
+                continue;
+            end
+
+            
+            % ignoring speed requirement
+            while timestamp > place_ignore_speed_intervals(place_bin,curr_int_ignore_speed(place_bin),2) && curr_int_ignore_speed(place_bin) <= place_ignore_speed_intervals_count(place_bin) % pan through intervals
+                curr_int_ignore_speed(place_bin) = curr_int_ignore_speed(place_bin) + 1;
+            end
+            if curr_int_ignore_speed(place_bin) <= place_ignore_speed_intervals_count(place_bin) % still have possible intervals
+                if timestamp >= place_ignore_speed_intervals(place_bin,curr_int_ignore_speed(place_bin),1) % within current interval
+                    if place_ignore_speed_intervals(place_bin,curr_int_ignore_speed(place_bin),2) - place_ignore_speed_intervals(place_bin,curr_int_ignore_speed(place_bin),1) >= long_interval_cutoff
+                        place_good_ignore_speed(strow) = 1; % resides in long interval
+                    else
+                        place_good_ignore_speed(strow) = 0.5; % in short interval
+                    end
+                end
+            end
+            
+            hist_bin = place_bin;
+            
+            if rem(strow,10000000) == 0
+                disp(['place instance ignore_speed: ' num2str(strow)]);
+            end
+
+        end    
+    
+        data.thres_vel.place_good_rows = place_good;
+        data.all_vel.place_good_rows = place_good_ignore_speed;
+    
+        
+    % minor section 1 - thresholding minobs long duration    
+        
+    dur_pn = data.thres_vel.place_intervals(:,:,2) - data.thres_vel.place_intervals(:,:,1);
+    dur_pi = data.all_vel.place_intervals(:,:,2) - data.all_vel.place_intervals(:,:,1);
+    dur_vn = data.thres_vel.view_intervals(:,:,2) - data.thres_vel.view_intervals(:,:,1);
+    dur_vi = data.all_vel.view_intervals(:,:,2) - data.all_vel.view_intervals(:,:,1);
+    
+    count_pn = sum(dur_pn > Args.MinDurPlace,2);
+    count_pi = sum(dur_pi > Args.MinDurPlace,2);
+    count_vn = sum(dur_vn > Args.MinDurView,2);
+    count_vi = sum(dur_vi > Args.MinDurView,2);
+    
+    data.thres_vel.place_good_bins = find(count_pn > Args.MinObsPlace);
+    data.all_vel.place_good_bins = find(count_pi > Args.MinObsPlace);
+    data.thres_vel.view_good_bins = find(count_vn > Args.MinObsView);
+    data.all_vel.view_good_bins = find(count_vi > Args.MinObsView);
+        
+    % minor section 2 - marking out first half second half of session
+
     rpts = rp.data.timeStamps;
-    last_trial_first_half = [nan nan];
-    last_trial_first_half(1) = round(size(rpts,1)/2);
-    last_trial_first_half(2) = rpts(last_trial_first_half(1),3);
-    data.last_trial_first_half = last_trial_first_half;    
+    last_row = round(size(rpts,1)/2);
+    last_half_timing = rpts(last_row,3);
+    halving_markers = double(sessionTimeC(:,1) > last_half_timing) + 1;
+    data.halving_markers = halving_markers;
+    
+    % minor section 3 - marking out good trial rows
+    
+    good_trials = uma.data.processTrials;
+    good_trial_markers = zeros(size(sessionTimeC,1),1);
+
+    possible_int = 1;
+    for row = 1:length(good_trial_markers)    
+        for idx = possible_int:length(good_trials)
+            if sessionTimeC(row,1) >= rpts(good_trials(idx),1)
+                if sessionTimeC(row,1) < rpts(good_trials(idx),3)
+                    good_trial_markers(row) = 1;
+                    possible_int = idx;
+                    break;
+                end
+            end
+        end
+        if rem(row,10000000)==0
+            disp(['good trials: ' num2str(row)]);
+        end
+    end    
+    data.good_trial_markers = good_trial_markers;
+    
+    % misc section, for shuffling and stuff
+    
     data.rplmaxtime = rp.data.timeStamps(end,3);
-    data.good_trials = uma.data.processTrials;
-                
+    
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
 	data.Args = Args;
