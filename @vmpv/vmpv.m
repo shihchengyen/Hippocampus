@@ -473,7 +473,7 @@ if(~isempty(dir(Args.RequiredFile)))
     place_intervals = place_intervals(:,1:max(place_intervals_count),:); 
     
     data.thres_vel.place_intervals = place_intervals;
-    data.all_vel.place_intervals_count = place_intervals_count;
+    data.thres_vel.place_intervals_count = place_intervals_count;
     
     
     place_ignore_speed_intervals = nan(1600, preallo, 2);
