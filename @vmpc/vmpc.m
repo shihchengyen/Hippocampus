@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',1);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltOption',1, 'ThresVel',0, 'UseAllTrials',1);
             
-Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
+Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltLowOcc','AdaptiveSmooth'};                           
+Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltOption','AdaptiveSmooth','ThresVel','UseAllTrials'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -71,8 +71,6 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.origin = {pwd}; 
     pv = vmpv('auto', varargin{:});
-% 	rp = rplparallel('auto',varargin{:});
-%     um = umaze('auto',varargin{:});
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
@@ -92,108 +90,106 @@ if(~isempty(dir(Args.RequiredFile)))
             Args.NumShuffles = 0;
         end
 
-            spiketimes = spiketrain.timestamps/1000; % now in seconds
-            maxTime = pv.data.rplmaxtime;
-            tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-            full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
-            full_arr = full_arr + tShifts';
-            keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
-            for row = 2:size(full_arr,1)
-                full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
-            end
+        if repeat == 1
+            stc = pv.data.sessionTimeC;
+        end
+        
+        % spike shuffling
 
-            % Restrict spike array to either 1st or 2nd half if needed
-            if repeat == 2
-%                 full_arr( full_arr > um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
-                full_arr( full_arr > pv.data.last_trial_first_half(2) ) = pv.data.sessionTimeC(end,1)+10; % to ensure it doesn't get binned in
-            elseif repeat == 3
-%                 full_arr( full_arr <= um.data.sessionTime(sessionTimeInds(midTrial),1) ) = [];
-                full_arr( full_arr <= pv.data.last_trial_first_half(2) ) = pv.data.sessionTimeC(end,1)+10; % to ensure these spikes don't get binned in later
-            end
+        spiketimes = spiketrain.timestamps/1000; % now in seconds
+        maxTime = pv.data.rplmaxtime;
+        tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+        full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
+        full_arr = full_arr + tShifts';
+        keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
+        for row = 2:size(full_arr,1)
+            full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime full_arr(row,1:keepers(row))];
+        end
+        flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
+        temp = full_arr';
+        flat_spiketimes(1,:) = temp(:);
+        flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
+        flat_spiketimes = flat_spiketimes'; 
+        flat_spiketimes = sortrows(flat_spiketimes);
 
-            % calculating proportion of occupied time in each grid position across
-            % entire session.
+        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
+        
+        % selecting rows from sessionTimeC
+        if repeat == 1
+            stc(:,4) = [diff(stc(:,1)); 0];
+        end
+        
+        conditions = ones(size(stc,1),1);
 
-            if Args.FiltLowOcc
-                bins_sieved = pv.data.well_sampled_grids;
-                data.MinTrials = pv.data.Args.MinObs;
+        if Args.UseAllTrials == 0
+            conditions = conditions & pv.data.good_trial_markers;
+        end
+        
+        if repeat == 2
+            conditions = conditions & (pv.data.halving_markers==1);
+        elseif repeat == 3
+            conditions = conditions & (pv.data.halving_markers==2);
+        end
+
+        if Args.ThresVel == 1
+            if Args.FiltOption == 0
+                conditions = conditions & (pv.data.thres_vel.place_good_rows > 0);
+            elseif Args.FiltOption == 1
+                conditions = conditions & (pv.data.thres_vel.place_good_rows > 0.5);
             else
-                bins_sieved = 1:(Args.GridSteps*Args.GridSteps);
-                data.MinTrials = NaN;
+                conditions = conditions & ismember(stc(:,2), pv.data.thres_vel.place_good_bins);
+            end
+        else
+            if Args.FiltOption == 0
+                conditions = conditions & (pv.data.all_vel.place_good_rows > 0);
+            elseif Args.FiltOption == 1
+                conditions = conditions & (pv.data.all_vel.place_good_rows > 0.5);
+            else
+                conditions = conditions & ismember(stc(:,2), pv.data.all_vel.place_good_bins);
+            end    
+        end
+
+
+        disp('conditioning done');
+        if repeat == 1
+            dstc = diff(stc(:,1));
+            stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+            stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+            stc_changing_ind = stc_changing_ind(1:end-1,:);
+        end
+
+        consol_arr = zeros(Args.GridSteps * Args.GridSteps,Args.NumShuffles + 1);
+
+        interval = 1;
+
+        for sp = 1:size(flat_spiketimes,1)
+
+            if rem(sp, 10000000) == 0
+                disp(100*sp/size(flat_spiketimes,1))
             end
 
-            % Restrict durations to either 1st or 2nd half if needed
-            if repeat == 1
-%                 gpdur = sum(pv.data.dur_spent_moving_per_grid, 2);
-%                 gpdur = sum(um.data.gpDurations, 2);
-                  gpdur = pv.data.dur_moving_total;
-            elseif repeat == 2
-%                 gpdur = sum(pv.data.dur_spent_moving_per_grid(:,1:midTrial), 2);
-%                 gpdur = sum(um.data.gpDurations(:,1:midTrial), 2);
-                  gpdur = pv.data.dur_moving_first_half;
-            elseif repeat == 3
-%                 gpdur = sum(pv.data.dur_spent_moving_per_grid(:,midTrial+1:end), 2);
-%                 gpdur = sum(um.data.gpDurations(:,midTrial+1:end), 2);
-                  gpdur = pv.data.dur_moving_second_half;
-            end
-            gpdur = gpdur(bins_sieved)'; 
-            Pi = gpdur/sum(gpdur);
-
-            pv2 = pv.data.sessionTimeC;
-            pv2 = pv2([1; find(diff(pv2(:,2)))+1], :);
-            pv2(:,3) = [diff(pv2(:,1)); 0];
-            uma.data.sessionTime = pv2;
-            uma.data.zero_indices = find(pv2(:,2)==0 | pv2(:,2)==-1);
-
-            flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
-            temp = full_arr';
-            flat_spiketimes(1,:) = temp(:);
-            flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
-            edge_end = 0.5+size(full_arr,1);
-            [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), uma.data.sessionTime(:,1), 0.5:1:edge_end);
-            size(full_arr)
-            N1 = N';
-            N(uma.data.zero_indices(1:end-1),:) = [];
-            N = N';
-
-            non_shuffle_details = NaN(3,size(N1,2));
-            non_shuffle_details(2,:) = N1(1,:);
-            non_shuffle_details(3,:) = uma.data.sessionTime(1:end-1,3)';
-            non_shuffle_details(3,:) = uma.data.sessionTime(1:end-1,3)';
-            non_shuffle_details(1,:) = uma.data.sessionTime(1:end-1,2)';
-            non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
-            non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
-            non_shuffle_data = sortrows(non_shuffle_details.',1).';
-            non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
-            non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:); 
-            if repeat == 1
-                data.detailed_fr = {non_shuffle_data};   
-            end
-
-            location = uma.data.sessionTime(:,2)';
-            location(uma.data.zero_indices) = [];
-            duration1 = uma.data.sessionTime(:,3)';
-            duration1(uma.data.zero_indices) = [];
-
-            grid_numbers = bins_sieved;
-            firing_counts_full = NaN(size(full_arr,1), length(grid_numbers));
-
-        %     median_stats = NaN(Args.GridSteps^2,1);
-        %     var_stats = NaN(Args.GridSteps^2,1);
-        %     perc_stats = NaN(Args.GridSteps^2,5);
-            occ_data = cell(length(grid_numbers), 2);
-
-            for grid_ind = 1:length(grid_numbers)
-                tmp = N(:,location==grid_numbers(grid_ind));
-                tmp1 = N(1,location==grid_numbers(grid_ind));
-                tmp2 = duration1(location==grid_numbers(grid_ind));
-                tmp3 = tmp1./tmp2;
-                occ_data(grid_ind,:) = {grid_numbers(grid_ind), tmp3};
-        %         var_stats(grid_numbers(grid_ind)) = var(tmp3);
-        %         median_stats(grid_numbers(grid_ind)) = median(tmp3);
-        %         perc_stats(grid_numbers(grid_ind),:) = prctile(tmp3, [2.5 25 50 75 97.5]);
-                firing_counts_full(:,grid_ind) = sum(tmp,2);
+            while interval < size(stc_changing_ind,1)
+                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+                    break;
+                end
+                interval = interval + 1;
             end   
+
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2);
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
+
+            bins_hit(~(bins_hit>0)) = [];
+
+            consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
+
+        end        
+        
+        firing_counts_full = consol_arr';
+        stc_ss = stc(conditions,[2 4]);
+        stc_ss(~(stc_ss(:,1) > 0),:) = [];
+        stc_ss = [stc_ss; [1600 0]];
+        gpdur = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
 
             if Args.AdaptiveSmooth
 
@@ -203,10 +199,6 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.maps_raw = to_save;
 
                 alpha = 1e3;
-        %         valid = zeros(1,Args.GridSteps^2);
-        %         valid(bins_sieved) = 1;
-        %         valid = reshape(valid, Args.GridSteps,Args.GridSteps);
-
 
                 % smoothing part here, need to reshape to 3d matrix
                 % 1. add in nan values for pillar positions (variables with ones suffix)
@@ -268,23 +260,18 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_fill_time(logic1 & isnan(to_fill_time)) = slice1(logic1 & isnan(to_fill_time));
                     to_fill_radius(logic1 & isnan(to_fill_radius)) = to_compute(idx);
 
-                    disp('smoothed with kernel size:');
-                    disp(to_compute(idx));
-                    disp('grids left');
-                    disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
+%                     disp('smoothed with kernel size:');
+%                     disp(to_compute(idx));
+%                     disp('grids left');
+%                     disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
 
                     check = squeeze(sum(sum(isnan(to_fill),2),1));
                     wip(check==0) = 0;
 
-                    if sum(sum(sum(isnan(to_fill(:,:,:))))) == 0
-                        disp('breaking');
-                        break;
-                    end
-
-        %             if sum(sum(sum(isnan(to_fill(:,:,:))))) <= 0.05*(Args.GridSteps^2)*Args.NumShuffles % engage secondary mode of calculating
-        %                 to_fill = fill_remainder(to_fill, gpdur1, firing_counts_full1, to_compute(idx)+0.5, round(max(to_compute)), alpha);
-        %                 break;
-        %             end
+%                     if sum(sum(sum(isnan(to_fill(:,:,:))))) == 0
+%                         disp('breaking');
+%                         break;
+%                     end
 
                 end
 
