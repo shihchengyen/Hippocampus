@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4, 'UseAllTrials', 1, 'MinOccDur', 0.01, 'MinOcc', 10);
+                'NumFRBins',4, 'FiltOption',1, 'ThresVel',0, 'UseAllTrials',1);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','UseAllTrials','MinOccDur','MinOcc'};                           
+Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltOption','AdaptiveSmooth','ThresVel','UseAllTrials'};                          
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -67,10 +67,12 @@ dnum = size(dlist,1);
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
     
-    data.origin = {pwd};
-    
-    st = load(Args.RequiredFile);
-    pv = vmpv('auto');    
+    ori = pwd;
+
+    data.origin = {pwd}; 
+    pv = vmpv('auto', varargin{:});
+    cd(ori);
+    spiketrain = load(Args.RequiredFile);   
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -79,213 +81,116 @@ if(~isempty(dir(Args.RequiredFile)))
         
         if repeat > 1
             Args.NumShuffles = 0;
-        else
-            Args.NumShuffles = NumShuffles_saved;
         end
 
+        if repeat == 1
+            stc = pv.data.sessionTimeC;
+        end
+        
+        % spike shuffling
+
+        spiketimes = spiketrain.timestamps/1000; % now in seconds
+        maxTime = pv.data.rplmaxtime;
+        tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+        full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
+        full_arr = full_arr + tShifts';
+        keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
+        for row = 2:size(full_arr,1)
+            full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime full_arr(row,1:keepers(row))];
+        end
+        flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
+        temp = full_arr';
+        flat_spiketimes(1,:) = temp(:);
+        flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
+        flat_spiketimes = flat_spiketimes'; 
+        flat_spiketimes = sortrows(flat_spiketimes);
+
+        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
+        
+        % selecting rows from sessionTimeC
+        if repeat == 1
+            stc(:,4) = [diff(stc(:,1)); 0];
+        end
+        
+        conditions = ones(size(stc,1),1);
+
+        if Args.UseAllTrials == 0
+            conditions = conditions & pv.data.good_trial_markers;
+        end
+        
+        if repeat == 2
+            conditions = conditions & (pv.data.halving_markers==1);
+        elseif repeat == 3
+            conditions = conditions & (pv.data.halving_markers==2);
+        end
+
+        if Args.ThresVel == 1
+            if Args.FiltOption == 0
+                conditions = conditions & (pv.data.thres_vel.view_good_rows > 0);
+            elseif Args.FiltOption == 1
+                conditions = conditions & (pv.data.thres_vel.view_good_rows > 0.5);
+            else
+                conditions = conditions & ismember(stc(:,2), pv.data.thres_vel.view_good_bins);
+            end
+        else
+            if Args.FiltOption == 0
+                conditions = conditions & (pv.data.all_vel.view_good_rows > 0);
+            elseif Args.FiltOption == 1
+                conditions = conditions & (pv.data.all_vel.view_good_rows > 0.5);
+            else
+                conditions = conditions & ismember(stc(:,2), pv.data.all_vel.view_good_bins);
+            end    
+        end
+
+
+        disp('conditioning done');
+        if repeat == 1
+            dstc = diff(stc(:,1));
+            stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+            stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+            stc_changing_ind = stc_changing_ind(1:end-1,:);
+        end
+
+        consol_arr = zeros(5122,Args.NumShuffles + 1);
+
+        interval = 1;
+
+        for sp = 1:size(flat_spiketimes,1)
+
+%             if rem(sp, 10000000) == 0
+%                 disp(100*sp/size(flat_spiketimes,1))
+%             end
+
+            while interval < size(stc_changing_ind,1)
+                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+                    break;
+                end
+                interval = interval + 1;
+            end   
+
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),3);
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
+
+            bins_hit(~(bins_hit>0)) = [];
+
+            consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
+
+        end        
+
+        spike_count = consol_arr;
+        
+        stc(stc(:,4)==0,4) = nan;
+        stc(:,4) = fillmissing(stc(:,4),'next');
+        stc_ss = stc(conditions,[3 4]);
+        stc_ss(~(stc_ss(:,1) > 0),:) = [];
+        stc_ss(isnan(stc_ss(:,2)),:) = [];
+        stc_ss = [stc_ss; [5122 0]];
+        
+        gpdur1 = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        
             tic;
-            % generates circularly shifted spike times
-            spiketimes = st.timestamps/1000; % now in seconds
-            maxTime = pv.data.rplmaxtime;
-            tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-            full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
-            full_arr = full_arr + tShifts';
-            keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
-            for row = 2:size(full_arr,1)
-                full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
-            end
-
-            % Restrict spike array to either 1st or 2nd half if needed
-            exceeded_value = pv.data.sessionTimeC(end,1)+10;
-            if repeat == 2
-                full_arr( full_arr > pv.data.last_trial_first_half(2) ) = exceeded_value;
-            elseif repeat == 3
-                full_arr( full_arr <= pv.data.last_trial_first_half(2) ) = exceeded_value;
-            end
-
-            % Removes spike times that are in bad trials if needed (trial sieving)
-            if ~Args.UseAllTrials
-                temp_t = ones(1,size(pv.data.trial_intervals,1));
-                temp_t(pv.data.good_trials) = 0;
-                temp_t = find(temp_t);
-                for tidx = 1:length(temp_t)
-                    full_arr(full_arr>pv.data.trial_intervals(temp_t(tidx),1) & full_arr<pv.data.trial_intervals(temp_t(tidx),2)) = exceeded_value;
-                end
-            end
-            full_arr = full_arr';
-            full_arr = [full_arr(:) repelem([1:size(full_arr,2)]',size(full_arr,1),1)];
-
-            % We first bin spikes into valid speed intervals from good trials, and then remove those
-            % that failed that criteria (speed sieving)
-            good_intervals = pv.data.trial_intervals(pv.data.good_trials,:)';
-            good_intervals = good_intervals(:);
-            [~, ~, ~, xbin, ybin] = histcounts2(full_arr(:,1), full_arr(:,2), good_intervals, 0.5:1:(0.5+Args.NumShuffles+1));
-            xy = [xbin ybin];
-            xy(:,3) = xy(:,1)~=0 & rem(xy(:,1),2)==1;
-            full_arr = full_arr(xy(:,3)==1,:);
-
-            disp(['time taken to generate correct spikes: ' num2str(toc)]);
-            tic;
-
-            % We then bin the valid spikes into each view-bin's intervals.
-            % After this step, spike counts will reflect all options (good/all trials,
-            % first/second/full trials).
-            spike_count = NaN(5122,Args.NumShuffles+1);
-
-            % % Old Method, iterate though each bin, and do hist-binning on pre-computed
-            % % intervals for each bin (~40-50 min)
-            % tic;
-            % for vb = 1:5122
-            %     if rem(vb,100) == 0
-            %         disp([num2str(vb) ' ' num2str(toc)]);
-            %         tic;
-            %     end
-            %     intervals = squeeze(pv.data.view_intervals(vb,1:pv.data.view_intervals_count(vb),:))';
-            %     intervals = intervals(:);
-            %     [N, ~, ~] = histcounts2(full_arr(:,1), full_arr(:,2), intervals, 0.5:1:(0.5+Args.NumShuffles+1));
-            %     spike_count(vb,:) = sum(N(1:2:size(N,1),:),1);
-            % end
-
-            % New Method, spikes for all shuffles are binned directly into the full
-            % 600-700M sessionTimeC. After first few steps, full_arr will store all
-            % spikes, with the timings and respective shuffle numbers, and
-            % rows_to_attribute will store the row ranges (2-way inclusive) in stc
-            % allocated to it, along with the number of bins hit per spike.
-            % rows with [0 -1] mark spikes that fired before the first sessionTimeC
-            % timestamp, or after the last.
-
-            stc3 = uint16(pv.data.sessionTimeC(:,3));
-            
-            dstc = diff(pv.data.sessionTimeC(:,1));
-            stc_changing_ind = [1; find(dstc>0)+1; size(pv.data.sessionTimeC,1)];
-            bin_limits = pv.data.sessionTimeC(stc_changing_ind,1);
-            [~, ~, bin] = histcounts(full_arr(:,1), bin_limits);
-            stc_changing_ind(end+1:end+2) = [0; 0];
-
-            bin(bin==0) = length(stc_changing_ind)-1;
-            rows_to_attribute = nan(size(bin,1),3);
-            rows_to_attribute(:,1) = stc_changing_ind(bin);
-            rows_to_attribute(:,2) = stc_changing_ind(bin+1)-1;
-            rows_to_attribute(:,3) = rows_to_attribute(:,2) - rows_to_attribute(:,1) + 1;
-
-            % the next variable fleshed_out will store row every row index and the
-            % spike to attribute it to, instead of the above condensed (ranging)
-            % storage. after the loop, we change the row indices to the corresponding
-            % view bins. lastly, we accumulate and count the number of spikes for each
-            % view bin for each shuffle. note that bin 5123 is allocated for nan view
-            % bins, and will be discarded as it gets set into the spike_count variable.
-
-            cs = cumsum(rows_to_attribute(:,3));
-            part_limits = 0:5e9:cs(end);
-            if part_limits(end) ~= cs(end)
-                part_limits = [part_limits cs(end)];
-            end
-            for p = 2:length(part_limits)
-               cs1 = cs - part_limits(p);
-               f1 = find(cs1 >= 0);
-               part_limits(p) = f1(1);
-            end
-            
-            for p = 1:length(part_limits)-1
-            
-                fleshed_out = zeros(sum(rows_to_attribute(part_limits(p)+1:part_limits(p+1),3)),2,'uint16');
-                fleshed_out1 = zeros(sum(rows_to_attribute(part_limits(p)+1:part_limits(p+1),3)),1,'uint32');
-                
-                starter = 1;
-                for row = part_limits(p)+1:part_limits(p+1)
-                    if rows_to_attribute(row,1) ~= 0
-                        ender = rows_to_attribute(row,3)-1+starter;
-                        fleshed_out1(starter:ender) = [rows_to_attribute(row,1):rows_to_attribute(row,2)]';
-                        fleshed_out(starter:ender,2) = repelem(full_arr(row,2),ender-starter+1,1);
-                        starter = ender + 1;
-                    end
-                end
-                disp(toc);
-                fleshed_out(:,1) = stc3(fleshed_out1);
-                disp(toc);
-                fleshed_out(fleshed_out(:,1)==0,1) = 5123;
-                disp(toc);
-                aa = accumarray([fleshed_out; [5123 Args.NumShuffles+1]], ones(size(fleshed_out1,1)+1,1));
-                if p == 1
-                    spike_count = aa(1:5122,:);
-                else
-                    spike_count = spike_count + aa(1:5122,:);
-                end
-            end
-
-            disp(['time taken to bin spikes: ' num2str(toc)]);
-            tic;
-
-            % Might need to recompute per view total duration, depending on halves and
-            % UseAllTrials (note that dt variable is used in following section as
-            % well)
-            if Args.UseAllTrials
-                if repeat == 1
-                    dt = pv.data.view_intervals(:,:,2) - pv.data.view_intervals(:,:,1);
-                    dur_lengths = nansum(dt,2);
-                elseif repeat == 2
-                    temp = pv.data.view_intervals;
-                    temp(temp(:,:,1) > pv.data.last_trial_first_half(2)) = nan;
-                    dt = temp(:,:,2) - temp(:,:,1);
-                    dur_lengths = nansum(dt,2);        
-                elseif repeat == 3
-                    temp = pv.data.view_intervals;
-                    temp(temp(:,:,2) <= pv.data.last_trial_first_half(2)) = nan;
-                    dt = temp(:,:,2) - temp(:,:,1);
-                    dur_lengths = nansum(dt,2);        
-                end
-            else % if Args.UseAllTrials
-                % we need to catch and modify several cases here
-                % 1. when the view intervals (for each view bin) falls totally out of
-                % the intervals for good trials, remove them
-                % 2. when the view intervals fall intersect with good trials, modify
-                % timings to be within good trials
-                % 3. usually the above cases will be 1 edge modification, special cases
-                % see below:
-                % a) interval starts at one trial, continues over invalid trial, ends
-                % at next valid trial - take the interval from start of interval to end
-                % of first valid trial as approximation.
-                % b) interval starts at invalid trial, continues over valid trial, ends
-                % at next invalid trial - discount this interval
-                % case 3a) is fixable, but rare enough to ignore for now, 3b) not
-                % fixable with current strategy.
-                temp = pv.data.view_intervals;
-                good_intervals2 = reshape(good_intervals,2,[])';
-                valid_loc = zeros(size(temp)); % tracks which good interval did it fall under
-                for view = 1:5122
-                    [x, y] = find(temp(view,:,1) > good_intervals2(:,1) & temp(view,:,1) < good_intervals2(:,2));
-                    valid_loc(view,y,1) = x;
-                    [x, y] = find(temp(view,:,2) > good_intervals2(:,1) & temp(view,:,2) < good_intervals2(:,2));
-                    valid_loc(view,y,2) = x;
-                    temp2 = squeeze(valid_loc(view,:,:));
-                    temp2 = [temp2 sum(temp2==0,2)];
-                    temp(view,temp2(:,3)==2,:) = NaN; % started and stopped in bad trials (we do no check if they are the same bad trial here)
-                    temp(view,temp2(:,2)>0 & temp2(:,1)==0,1) = good_intervals2(temp2(temp2(:,2)>0 & temp2(:,1)==0,2),1); % started too early
-                    temp(view,temp2(:,1)>0 & temp2(:,2)==0,2) = good_intervals2(temp2(temp2(:,1)>0 & temp2(:,2)==0,2),2); % ended too late
-                    temp(view,temp2(:,3)==0 & temp2(:,1)~=temp2(:,2),:) = NaN; % started in one trial, ended in another (discard entire interval)
-                end
-                dt = temp(:,:,2) - temp(:,:,1);
-                dur_lengths = nansum(dt,2); 
-            end % if Args.UseAllTrials -> else
-
-            % by this segment, we have duration spent looking at each grid
-            % (dur_lengths) and spikes for each grid, for each shuffle (spike_count)
-            % we isolate view bins that should be removed based on MinOccDur and MinOcc
-            % thresholds, setting duration and spikes both to 0.
-
-            dt = dt > Args.MinOccDur;
-            valid_bins = sum(dt,2)>Args.MinOcc;
-            if repeat == 1
-                data.valid_bins_based_on_minocc = valid_bins;
-            end
-            dur_lengths(~valid_bins) = 0;
-            spike_count(~valid_bins,:) = 0;
-
-            disp(['time taken to calculate and curate duration per bin: ' num2str(toc)]);
-            tic;
-
             % SIC portion
-            gpdur1 = dur_lengths';
+            % gpdur1 = dur_lengths';
             gpdur1 = repmat(gpdur1, Args.NumShuffles+1, 1);
             Pi1 = gpdur1./sum(gpdur1,2);
             lambda_i = spike_count'./ gpdur1;
