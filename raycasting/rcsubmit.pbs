@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #PBS -P raycasting
-#PBS -q parallel8
-#PBS -l select=1:ncpus=8:mem=15GB
+#PBS -q serial
+#PBS -l select=1:ncpus=1:mem=15GB:host=atlas5-c74
 #PBS -j oe 
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
-~/VirtualMazeExe/VirtualMaze.x86_64 -screen-height 1080 -screen-width 1920 -batchmode -sessionlist batch.txt -density 100 -radius 10 -logfile logs.txt
+~/VirtualMazeExe/VirtualMaze.x86_64 -screen-height 1080 -screen-width 1920 -batchmode -sessionlist batch.txt -density 220 -radius 500 -logfile logs.txt
 
 curr=$(pwd)
 target=${curr#*hpctmp}

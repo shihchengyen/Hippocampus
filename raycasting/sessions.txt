@@ -1,2 +1,1 @@
-/volume1/Hippocampus/Data/picasso-misc/20181101/session01
-/volume1/Hippocampus/Data/picasso-misc/20181105/session01
+/volume1/Hippocampus/Data/picasso-misc/20180827/session01

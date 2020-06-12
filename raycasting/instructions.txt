@@ -19,6 +19,6 @@ Files will be sequentially transferred in and passed as jobs with the command:
 Optional:
 Update sessions in trackerlist.txt (for tracking purposes)
 To get a live update of progress, run:
-	watch -n 1 'qlist; sh jobtracker.sh; clear'
+	watch -n 1 'qlist; sh jobtracker.sh'
 
 
