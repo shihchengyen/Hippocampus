@@ -120,7 +120,7 @@ if( dnum>0 && ~isempty(um) && ~isempty(ufile) )
     % in order to extract the number of observations for the grid positions
     % that have spikes, we find the indices for the grid positions that
     % have spikes
-    lia = ismember(sortedGPindinfo(:,1),sorted_sgpi_info);
+    lia = ismember(sortedGPindinfo(:,1),sorted_sgpi_info(:,1));
 
 	data.spike_xy = {spike_xy};
 	data.sorted_sgpi = {sorted_sgpi};
