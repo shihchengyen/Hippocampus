@@ -591,6 +591,9 @@ else
 	obj = createEmptyObject(Args);
 end
 
+% move back to previous directory
+cd(cwd)
+
 function obj = createEmptyObject(Args)
 
 % these are object specific fields
