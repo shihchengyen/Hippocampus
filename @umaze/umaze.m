@@ -280,7 +280,7 @@ if(dnum>0)
         tindices = 1:(numUnityFrames+1);
         tempTrialTime = [0; cumsum(unityData(uDidx,2))]; 
         tstart = unityTime(uDidx(1));
-        tend = unityTime(uDidx(end));
+        tend = unityTime(uDidx(end)+1); % new mod 12062020
 
 %             disp('trial:');
 %             disp(a);
@@ -351,7 +351,8 @@ if(dnum>0)
         gpreseti = unityTriggers(a,3)+1;
 
     end % for a = 1:totTrials    
-
+    sto = sessionTime;
+    
 %     save('st_o.mat', 'sessionTime');
     disp('speed thresholding portion');
     
@@ -405,6 +406,16 @@ if(dnum>0)
         end
     end
     
+    % preserve 0, -1 structure for later
+    
+    for r = 1:size(sessionTime,1)-1
+        if sessionTime(r,2) == 0 && sessionTime(r+1,2) == -1
+            if sessionTime(r,1) == sessionTime(r+1,1)
+                sessionTime(r+1,1) = sessionTime(r,1) + 0.00001;
+            end
+        end
+    end
+    
     % removing duplicate timings - sort and keep first (smallest, preserving
     % any potential zeros)
     
@@ -452,49 +463,53 @@ if(dnum>0)
     
     sTime = sTime_backup;
     
-%     % sort the 2nd column so we can extract the firing rates by position
-%     [sTP,sTPi] = sort(sTime(:,2));
-%     % ad hoc change
-%     sorted_dur = sortrows(sTime, 2);
-% %     sorted_dur = sorted_dur(:,3);
-%     % find the number of observations per position by looking for 
-%     % the indices when position changes. The first change should be from
-%     % position 0 to 1st non-zero position. Add 1 to adjust for the change
-%     % in index when using diff. These will be the starting indices for 
-%     % the unique positions not including 0.
-%     sTPsi = find(diff(sTP)~=0) + 1;
-%     % find the ending indices by subtracting 1 from sTPsi, and adding
-%     % snum at the end
-%     sTPind = [sTPsi [ [sTPsi(2:end)-1]; size(sTP,1)]];
-%     % compute the number of observations per position
-%     sTPin = diff(sTPind,1,2) + 1;
-%     % arrange the information into a matrix for easier access
-%     sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
-%     % set up the conversion from grid position to index to make accessing the information
-%     % easier
-%     [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
-%     % find positions (excluding 0) with more than MinReps observations
-%     sTPinm = find(sTPin>(Args.MinObs-1));
+    % sort the 2nd column so we can extract the firing rates by position
+    [sTP,sTPi] = sort(sTime(:,2));
+    
+    % ad hoc change
+    sorted_dur = sortrows(sTime, 2);
+%     sorted_dur = sorted_dur(:,3);
+    % find the number of observations per position by looking for 
+    % the indices when position changes. The first change should be from
+    % position 0 to 1st non-zero position. Add 1 to adjust for the change
+    % in index when using diff. These will be the starting indices for 
+    % the unique positions not including 0.
+    sTPsi = find(diff(sTP)~=0) + 1;
+    if sTP(1) == -1
+        sTPsi = sTPsi(2:end);
+    end
+    % find the ending indices by subtracting 1 from sTPsi, and adding
+    % snum at the end
+    sTPind = [sTPsi [ [sTPsi(2:end)-1]; size(sTP,1)]];
+    % compute the number of observations per position
+    sTPin = diff(sTPind,1,2) + 1;
+    % arrange the information into a matrix for easier access
+    sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
+    % set up the conversion from grid position to index to make accessing the information
+    % easier
+    [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
+    % find positions (excluding 0) with more than MinReps observations
+    sTPinm = find(sTPin>(Args.MinObs-1));
     
     
     
-%     % create temporary variable that will be used for calculations below
-%     % this is not a variable that we will save
-%     sTPsi2 = sTPsi(sTPinm);
-%     % save the number of observations for the positions that exceed the
-%     % minimum number of observations
-%     sTPin2 = sTPin(sTPinm);
-%     % save the position numbers
-%     sTPu = sTP(sTPsi2);
-%     % find number of positions
-%     nsTPu = size(sTPu,1);	
-%     % save the subset of starting and ending indices for sTime
-%     sTPind2 = sTPind(sTPinm,:);
-%     % compute occupancy proportion
-%     ou_i = zeros(nsTPu,1);
-%     for pi = 1:nsTPu
-%         ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
-%     end    
+    % create temporary variable that will be used for calculations below
+    % this is not a variable that we will save
+    sTPsi2 = sTPsi(sTPinm);
+    % save the number of observations for the positions that exceed the
+    % minimum number of observations
+    sTPin2 = sTPin(sTPinm);
+    % save the position numbers
+    sTPu = sTP(sTPsi2);
+    % find number of positions
+    nsTPu = size(sTPu,1);	
+    % save the subset of starting and ending indices for sTime
+    sTPind2 = sTPind(sTPinm,:);
+    % compute occupancy proportion
+    ou_i = zeros(nsTPu,1);
+    for pi = 1:nsTPu
+        ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
+    end    
     
 %     zero_indices = find(sTime(:,2)==0);
     
@@ -545,18 +560,21 @@ if(dnum>0)
     data.dur_moving_second_half = acc2;      
         
 %         data.zero_indices = zero_indices;
-%         data.sortedGPindices = sTPi;
-%         data.sortedGPindinfo = sortedGPindinfo;
-%         data.sGPi_minobs = sTPinm;
-%         data.sTPu = sTPu;
-%         data.nsTPu = nsTPu;
-%         data.ou_i = ou_i;
-%         data.P_i = ou_i / sum(ou_i); 
-%         data.gp2ind = gp2ind;
+        data.sortedGPindices = sTPi;
+        data.sortedGPindinfo = sortedGPindinfo;
+        data.sGPi_minobs = sTPinm;
+        data.sTPu = sTPu;
+        data.nsTPu = nsTPu;
+        data.ou_i = ou_i;
+        data.P_i = ou_i / sum(ou_i); 
+        data.gp2ind = gp2ind;
         
         %%% temporary, for sfn generation %%%
-%         data.unityTriggers = ufdata.data.unityTriggers;
-%         data.unityTrialTime = ufdata.data.unityTrialTime;
+        data.unityTriggers = ufdata.data.unityTriggers;
+        data.unityTrialTime = ufdata.data.unityTrialTime;
+
+    data.unityData = unityData;
+    data.unityTime = unityTime;
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
