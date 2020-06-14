@@ -52,12 +52,14 @@ if(~isempty(Args.NumericArguments))
     
     horGridBound = obj.data.horGridBound;
     vertGridBound = obj.data.vertGridBound;
+    hsize = length(horGridBound);
+    vsize = length(vertGridBound);
     
     % plot grid
     % line(repmat(um.data.horGridBound,2,1),ylim,'k:')
     % line(repmat(um.data.vertGridBound,2,1),'k:')
-    line( [repmat(horGridBound,2,1) repmat(horGridBound([1 end])',1,6)], ...
-        [repmat(vertGridBound([1 end])',1,6) repmat(vertGridBound,2,1)], ...
+    line( [repmat(horGridBound,2,1) repmat(horGridBound([1 end])',1,vsize)], ...
+        [repmat(vertGridBound([1 end])',1,hsize) repmat(vertGridBound,2,1)], ...
         'Color','k','LineStyle',':')
 
     hold off
