@@ -296,7 +296,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 if repeat == 1
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(isnan(nan_track)) = nan;
+                    to_save(nan_track) = nan;
                     data.maps_adsmooth = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     to_save(:,bins_sieved) = firing_rates_full(2:end,:);
@@ -311,6 +311,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 elseif repeat == 2
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
+                    to_save(nan_track) = nan;
                     data.maps_adsmooth1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
@@ -325,6 +326,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 elseif repeat == 3
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
+                    to_save(nan_track) = nan;
                     data.maps_adsmooth2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
