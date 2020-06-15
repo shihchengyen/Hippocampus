@@ -8,6 +8,7 @@ function [obj, varargout] = vmpv(varargin)
 %   % Instructions on vmpv %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%
 %example [as, Args] = vmpv('save','redo')
 %
 %dependencies: 
@@ -366,7 +367,7 @@ if(~isempty(dir(Args.RequiredFile)))
         %max_allo = 5000;
         view_split1 = nan(5122,max_allo,2);
         view_split2 = ones(5122,1);
-        view_split3 = zeros(5122,1);
+        view_split3 = zeros(5122,1); % tracks starting time of this bin's interval if active, 0 if not.
         idx_tracker = nan(5122,max_allo);
         %stacked = 0;                
         last_processed_time = [0 0];
@@ -436,7 +437,7 @@ if(~isempty(dir(Args.RequiredFile)))
             
         end
                 view_split1 = view_split1(:,1:min([size(view_split1,2) max(view_split2)+2]),:);
-                data.all_vel.view_intervals = view_split1;
+                data.all_vel.view_intervals = view_split1; % upper bound for intervals is the first timestamp where it is no longer seen
                 data.all_vel.view_intervals_count = view_split2;                
             
     % major section 3 - getting place intervals, with and without
@@ -496,6 +497,10 @@ if(~isempty(dir(Args.RequiredFile)))
             end
             curr_place = sessionTimeC(row,2);
             curr_start_time = sessionTimeC(row,1);
+        elseif row == size(sessionTimeC,1)
+            place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
+            place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = sessionTimeC(end,1);
+            place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
         end
 
     end
@@ -535,7 +540,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 curr_int(view_bin) = curr_int(view_bin) + 1;
             end
             if curr_int(view_bin) <= view_intervals_count(view_bin) % still have possible intervals
-                if timestamp >= view_intervals(view_bin,curr_int(view_bin),1) % within current interval
+                if timestamp >= view_intervals(view_bin,curr_int(view_bin),1) && timestamp < view_intervals(view_bin,curr_int(view_bin),2) % within current interval
                     if view_intervals(view_bin,curr_int(view_bin),2) - view_intervals(view_bin,curr_int(view_bin),1) >= long_interval_cutoff
                         view_good(strow) = 1; % resides in long interval
                     else
@@ -549,7 +554,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 curr_int_ignore_speed(view_bin) = curr_int_ignore_speed(view_bin) + 1;
             end
             if curr_int_ignore_speed(view_bin) <= view_ignore_speed_intervals_count(view_bin) % still have possible intervals
-                if timestamp >= view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),1) % within current interval
+                if timestamp >= view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),1) && timestamp < view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),2) % within current interval
                     if view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),2) - view_ignore_speed_intervals(view_bin,curr_int_ignore_speed(view_bin),1) >= long_interval_cutoff
                         view_good_ignore_speed(strow) = 1; % resides in long interval
                     else
