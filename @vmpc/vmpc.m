@@ -196,7 +196,14 @@ if(~isempty(dir(Args.RequiredFile)))
                 firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
                 to_save = NaN(1,Args.GridSteps^2);
                 to_save(bins_sieved) = firing_rates_full_raw(1,:);
-                data.maps_raw = to_save;
+                
+                if repeat == 1
+                    data.maps_raw = to_save;
+                elseif repeat == 2
+                    data.maps_raw1 = to_save;
+                elseif repeat == 3
+                    data.maps_raw2 = to_save;
+                end
                 nan_track = isnan(to_save);
 
                 alpha = 1e3;
