@@ -408,6 +408,8 @@ if(dlsize>0)
                 data.noOfTrials= noOfTrials(1, idx);
                 data.expTime =  edfdata.FEVENT(1).sttime;
                 
+                data.session_start = edfdata.FEVENT(messageEvent(sessionIndex(idx))).sttime;
+                
                 % create nptdata so we can inherit from it
                 data.numSets = 1;    %eyelink is a session object = each session has only object
                 data.Args = Args;
