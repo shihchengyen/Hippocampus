@@ -39,8 +39,10 @@ else
 		r.data.numSets = p.data.numSets + q.data.numSets;
 
 		% object specific fields
-		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
+% 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
+        r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
+        r.data.maps_raw2 = [p.data.maps_raw2; q.data.maps_raw];
         r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
         r.data.maps_adsmooth1 = [p.data.maps_adsmooth1; q.data.maps_adsmooth1];
         r.data.maps_adsmooth2 = [p.data.maps_adsmooth2; q.data.maps_adsmooth2];
@@ -48,9 +50,13 @@ else
         r.data.SIC1 = [p.data.SIC1; q.data.SIC1];
         r.data.SIC2 = [p.data.SIC2; q.data.SIC2];
         r.data.SICsh = [p.data.SICsh; q.data.SICsh]; %
+        r.data.ISE = [p.data.ISE; q.data.ISE];
+        r.data.ISE1 = [p.data.ISE1; q.data.ISE1];
+        r.data.ISE2 = [p.data.ISE2; q.data.ISE2];
+        r.data.ISEsh = [p.data.ISEsh; q.data.ISEsh];
+        r.data.radii = [p.data.radii(1,:); q.data.radii(1,:)];
         r.data.origin = [p.data.origin; q.data.origin];
-        
-                
+             
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
 	end
