@@ -40,10 +40,17 @@ else
 
 		% object specific fields
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
-        r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
-        r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
+        r.data.linear_map = [p.data.linear_map; q.data.linear_map];
+%         r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
         r.data.SIC = [p.data.SIC; q.data.SIC];
+        r.data.ISE = [p.data.ISE; q.data.ISE];
         r.data.SICsh = [p.data.SICsh; q.data.SICsh];
+        r.data.ISEsh = [p.data.ISEsh; q.data.ISEsh];
+        r.data.SIC1 = [p.data.SIC1; q.data.SIC1];
+        r.data.SIC2 = [p.data.SIC2; q.data.SIC2];
+        r.data.ISE1 = [p.data.ISE1; q.data.ISE1];
+        r.data.ISE2 = [p.data.ISE2; q.data.ISE2];
+        
         r.data.origin = [p.data.origin; q.data.origin];
 			
 		% add nptdata objects as well
