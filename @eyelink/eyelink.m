@@ -398,6 +398,13 @@ if(dlsize>0)
                 data.trial_timestamps = trialTimestamps(:, l:u); %contains all start, cue and and times for all the trials
                 data.trial_timestamps = data.trial_timestamps(any(data.trial_timestamps,2),:);
                 
+                rpl = rplparallel('auto');
+                if size(rpl.data.markers) == size(data.trial_timestamps)
+                    data.trial_codes = uint32(rpl.data.markers);
+                else
+                    error('markers not consistent');
+                end
+                
                 data.sacc_event = sacc;
                 data.fix_event = fix;
                 data.fix_times = fixTimes;
