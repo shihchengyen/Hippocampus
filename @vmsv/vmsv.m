@@ -17,7 +17,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4, 'FiltOption',1, 'ThresVel',0, 'UseAllTrials',1);
+                'NumFRBins',4, 'FiltOption',0, 'ThresVel',0, 'UseAllTrials',1);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -296,12 +296,12 @@ if(~isempty(dir(Args.RequiredFile)))
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             if repeat == 1
-                data.linear_map = firing_rates(1,:);
+                data.maps_raw = firing_rates(1,:);
                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC = sic_out(1);
                 data.SICsh = sic_out';
                 data.ISE = ise_out(1);
-                data.ISEsh = ise_out;
+                data.ISEsh = ise_out';
             elseif repeat == 2
                 data.SIC1 = sic_out;
                 data.ISE1 = ise_out;
