@@ -303,9 +303,11 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.ISE = ise_out(1);
                 data.ISEsh = ise_out';
             elseif repeat == 2
+                data.maps_raw1 = firing_rates(1,:);
                 data.SIC1 = sic_out;
                 data.ISE1 = ise_out;
             elseif repeat == 3
+                data.maps_raw2 = firing_rates(1,:);
                 data.SIC2 = sic_out;
                 data.ISE2 = ise_out;
             end            
