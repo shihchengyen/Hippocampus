@@ -299,8 +299,8 @@ if(dnum>0)
 		data.gpDurations = gpDurations;
 		data.setIndex = [0; totTrials];
 
-        %data.processTrials = ufdata.data.sumCost(:,6)==1;
-        data.processTrials = ones(totTrials,1); % should be top, but now unityfile.m still doesn't do shortest path calculation, placeholder variable
+        %data.processTrials = find(ufdata.data.sumCost(:,6)==1);
+        data.processTrials = 1:totTrials; % should be top, but now unityfile.m still doesn't do shortest path calculation, placeholder variable
         
         data.sessionTime = sTime;
         data.sortedGPindices = sTPi;
