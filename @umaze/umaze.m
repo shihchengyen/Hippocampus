@@ -298,13 +298,14 @@ if(dnum>0)
         % by setting timestamps in the trial to the initial timestamp.
 
         if tempTrialTime(end)-tempTrialTime(1) ~= 0
+
             sessionTime(sTi,1:3) = [tstart tgp(1) 0];
             sTi = sTi + 1;
 
             % find the timepoints where grid positions changed
             gpc = find(diff(tgp)~=0);
             ngpc = size(gpc,1);
-
+            
             % add the Unity frame intervals to the starting timestamp to
             % create corrected version of unityTime, which will also be the
             % bin limits for the histogram function call
@@ -335,9 +336,6 @@ if(dnum>0)
 
         for pidx = 1:size(utgp,1)
             tempgp = utgp(pidx);
-            if tempgp == 58
-                disp('test');
-            end
             % find indices that have this grid position
             utgpidx = find(tgp==tempgp);
             utgpidx = uDidx(utgpidx);
@@ -351,83 +349,11 @@ if(dnum>0)
         gpreseti = unityTriggers(a,3)+1;
 
     end % for a = 1:totTrials    
-    sto = sessionTime;
-    
-%     save('st_o.mat', 'sessionTime');
-    disp('speed thresholding portion');
-    
-    
-    speeding_checker = [unityTime [0; unityData(:,7)./unityData(:,2)]];
-    speeding_checker(:,2) = speeding_checker(:,2) > Args.SpeedLimit;
-    speeding_checker(:,3) = [0; diff(speeding_checker(:,2))];
-    if speeding_checker(1,2) == 0
-        speeding_checker(1,3) = -1;
-    else
-        speeding_checker(1,3) = 1;
-    end
-    stop_intervals = nan(max([sum(speeding_checker(:,3)==1) sum(speeding_checker(:,3)==-1)]), 2);
-
-    % storing portions of session that is invalid due to lower speeds
-    stop_intervals(1:sum(speeding_checker(:,3)==-1),1) = speeding_checker(find(speeding_checker(:,3)==-1),1);
-    stop_intervals(1:sum(speeding_checker(:,3)==1),2) = speeding_checker(find(speeding_checker(:,3)==1),1);
-    stop_intervals(find((stop_intervals(:,2)-stop_intervals(:,1))==0),:) = [];
-    
-    for block_row = 1:size(stop_intervals,1)
-        if isnan(stop_intervals(block_row,2)) % last part, edge case
-            remaining_rows = find(sessionTime(:,1) > stop_intervals(block_row,1));
-            if isempty(remaining_rows)
-                top_limit = size(sessionTime,1);
-            else
-                top_limit = remaining_rows(1) - 1;
-            end
-            subrows_to_discard = find(sessionTime(remaining_rows,2)~=0);
-            remaining_rows(subrows_to_discard) = [];
-            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [sessionTime(remaining_rows,:)]]; % not finished here
-            break;
-        end
-%         if block_row > 202
-%             disp('test');
-%         end
-        top_limit = find(sessionTime(:,1) > stop_intervals(block_row,1));
-        top_limit = top_limit(1) - 1;
-        bot_limit = find(sessionTime(:,1) >= stop_intervals(block_row,2));
-        bot_limit = bot_limit(1);
-%         disp([top_limit bot_limit]);
-        if sum(sessionTime(top_limit+1:bot_limit-1,2)==0)>0
-            zero_line = sessionTime(top_limit+find(sessionTime(top_limit+1:bot_limit-1,2)==0),:);
-            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; zero_line; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
-            bot_checker = top_limit + 4;
-        else
-            sessionTime = [sessionTime(1:top_limit,:); [stop_intervals(block_row,1) -1 0]; [stop_intervals(block_row,2) sessionTime(bot_limit-1,2:3)]; sessionTime(bot_limit:end,:)];
-            bot_checker = top_limit + 3;
-        end
-        if sessionTime(bot_checker-1,1) == sessionTime(bot_checker,1)
-            sessionTime(bot_checker-1,:) = [];
-        end
-    end
-    
-    % preserve 0, -1 structure for later
-    
-    for r = 1:size(sessionTime,1)-1
-        if sessionTime(r,2) == 0 && sessionTime(r+1,2) == -1
-            if sessionTime(r,1) == sessionTime(r+1,1)
-                sessionTime(r+1,1) = sessionTime(r,1) + 0.00001;
-            end
-        end
-    end
-    
-    % removing duplicate timings - sort and keep first (smallest, preserving
-    % any potential zeros)
-    
-    sessionTime(find(sessionTime(:,2)==-1),2) = 0.5; % prioritize zeros, then neg ones, temp change only
-    sessionTime = sortrows(sessionTime, [1 2]);
-    sessionTime(find(sessionTime(:,2)==0.5),2) = -1; % swap back;
-    to_remove = find(diff(sessionTime(:,1))==0)+1;
-    if to_remove(end) > size(sessionTime,1)
-        to_remove = to_remove(1:end-1);
-    end
-    sessionTime(to_remove,:) = [];    
-
+ 
+    % get number of rows in sessionTime
+    snum = sTi - 1;
+    % reduce memory for sessionTime
+    sTime = sessionTime(1:snum,:);    
     
     % Calculate performance
     errorInd = find(sumCost(:,5) == 40); 
@@ -437,38 +363,13 @@ if(dnum>0)
     disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
     processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
 
-    % reduce memory for sessionTime
-    snum = size(sessionTime,1);
-    sTime = sessionTime;
     % fill in 3rd column with time interval so it will be easier to compute
     % firing rate
     sTime(1:(snum-1),3) = diff(sTime(:,1));
     
-    sTime_backup = sTime; 
-    % following few lines used to calculate decent speed duration and number of times entered each grid
-    
-    sTime(find(sTime(:,2)==-1),:) = [];
-    sTime_temp2 = sTime;
-    sTime_temp2(find(sTime_temp2(:,2)==0),:) = [];
-    sTime_temp2 = [sTime_temp2; [0 Args.GridSteps.^2 0]];
-    dur_spent_moving_per_grid = accumarray(sTime_temp2(:,2),sTime_temp2(:,3));
-    
-    sTime(find(diff(sTime(:,2))==0)+1,:) = [];
-    sTime(:,3) = [diff(sTime(:,1)); 0];
-    sTime(find(sTime(:,2)==0),:) = [];
-    sTime = [sTime; [0 Args.GridSteps.^2 0]];
-    occur_per_grid = accumarray(sTime(:,2),ones(size(sTime(:,2)))); % treat split by speed gaps as 1 combined occ still
-    well_sampled_grids = find(occur_per_grid > Args.MinObs-1);
-    dur_per_grid = accumarray(sTime(:,2),sTime(:,3));
-    
-    sTime = sTime_backup;
-    
     % sort the 2nd column so we can extract the firing rates by position
     [sTP,sTPi] = sort(sTime(:,2));
     
-    % ad hoc change
-    sorted_dur = sortrows(sTime, 2);
-%     sorted_dur = sorted_dur(:,3);
     % find the number of observations per position by looking for 
     % the indices when position changes. The first change should be from
     % position 0 to 1st non-zero position. Add 1 to adjust for the change
@@ -511,8 +412,6 @@ if(dnum>0)
         ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
     end    
     
-%     zero_indices = find(sTime(:,2)==0);
-    
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
 		data.oGS2 = oGS2;
@@ -529,37 +428,8 @@ if(dnum>0)
 		data.gridPosition = gridPosition;
 		data.gpDurations = gpDurations;
 		data.setIndex = [0; totTrials];
-        data.SpeedLimit = Args.SpeedLimit;
 
         data.sessionTime = sTime;
-        data.dur_spent_moving_per_grid = dur_spent_moving_per_grid;
-        data.occur_per_grid = occur_per_grid;
-        data.well_sampled_grids = well_sampled_grids;
-        data.dur_per_grid = dur_per_grid;
-
-    % ported over to settle first half, second half statistics
-    umst = data.sessionTime;
-    data.sessionTime(find(data.sessionTime(:,2)==-1 | data.sessionTime(:,2)==0),2) = 1601;
-    acc = accumarray(data.sessionTime(:,2),data.sessionTime(:,3));
-    rp = rplparallel('auto');
-    rp = rp.data;
-    nt = size(rp.timeStamps,10);
-    nt = size(rp.timeStamps,1);
-    ht = round(nt/2);
-    htt = rp.timeStamps(ht,3);
-    fr = find(data.sessionTime(:,1)>htt);
-    fr = fr(1);
-    acc1 = accumarray(data.sessionTime(1:fr-1,2),data.sessionTime(1:fr-1,3));
-    acc2 = accumarray(data.sessionTime(fr:end,2),data.sessionTime(fr:end,3));
-    acc(end) = [];
-    acc1(end) = [];
-    acc2(end) = [];
-    data.sessionTime = umst;
-    data.dur_moving_total = acc;
-    data.dur_moving_first_half = acc1;
-    data.dur_moving_second_half = acc2;      
-        
-%         data.zero_indices = zero_indices;
         data.sortedGPindices = sTPi;
         data.sortedGPindinfo = sortedGPindinfo;
         data.sGPi_minobs = sTPinm;
