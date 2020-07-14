@@ -104,49 +104,6 @@ if(dnum>0)
 	% will be filled with duration spent in each bin, for each trial
 	gpDurations = zeros(gridBins,totTrials);
         
-    
-    % DIJKSTRA 
-    % Initialize adjacency matrix for graph (21 vertices, distance weights)
-    A = [0 5 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
-         5 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
-         0 5 0 5 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
-         0 0 5 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
-         0 0 0 5 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0;
-         5 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0;
-         0 0 5 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 0 0 0;
-         0 0 0 0 5 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 0;
-         0 0 0 0 0 5 0 0 0 5 0 0 0 5 0 0 0 0 0 0 0;
-         0 0 0 0 0 0 0 0 5 0 5 0 0 0 0 0 0 0 0 0 0;
-         0 0 0 0 0 0 5 0 0 5 0 5 0 0 5 0 0 0 0 0 0;
-         0 0 0 0 0 0 0 0 0 0 5 0 5 0 0 0 0 0 0 0 0;
-         0 0 0 0 0 0 0 5 0 0 0 5 0 0 0 5 0 0 0 0 0;
-         0 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 5 0 0 0 0;
-         0 0 0 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 5 0 0;
-         0 0 0 0 0 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 5;
-         0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 0 0 5 0 0 0;
-         0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 5 0 0;
-         0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 0 5 0 5 0;
-         0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 5;
-         0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 0 0 5 0;
-         ];
-
-    % Vertices coordinates: 
-    vertices = [-10 10; -5 10; 0 10; 5 10; 10 10; -10 5; 0 5; 10 5; -10 0; -5 0; 0 0; 5 0; 10 0; -10 -5; 0 -5; 10 -5; -10 -10; -5 -10; 0 -10; 5 -10; 10 -10;];
-
-    % Poster coordinates
-    posterpos = [-5 -7.55; -7.55 5; 7.55 -5; 5 7.55; 5 2.45; -5 -2.45]; % Posters 1 to 6 respectively
-
-    % Plot boundaries
-    xBound = [-12.5,12.5,12.5,-12.5,-12.5]; % (clockwise from top-left corner) outer maze wall
-    zBound = [12.5,12.5,-12.5,-12.5,12.5];
-    x1Bound =[-7.5,-2.5,-2.5,-7.5,-7.5]; % yellow pillar 
-    z1Bound =[7.5,7.5,2.5,2.5,7.5];
-    x2Bound =[2.5,7.5,7.5,2.5,2.5]; % red pillar
-    z2Bound =[7.5,7.5,2.5,2.5,7.5];
-    x3Bound =[-7.5,-2.5,-2.5,-7.5,-7.5]; % blue pillar
-    z3Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
-    x4Bound =[2.5,7.5,7.5,2.5,2.5]; % green pillar
-    z4Bound =[-2.5,-2.5,-7.5,-7.5,-2.5];
 
     trialCounter = 0; % set up trial counter
     % initialize index for setting non-navigating gridPositions to 0
@@ -194,77 +151,6 @@ if(dnum>0)
     for a = 1:totTrials
         trialCounter = trialCounter + 1;
 
-        % get target identity
-        target = rem(unityData(unityTriggers(a,3),1),10); % target identity coded by digit in ones position  
-
-        % (starting position) get nearest neighbour vertex
-        S = pdist2(vertices,unityData(unityTriggers(a,2),3:4),'euclidean'); % get distance from all vertices
-        [M1,I1] = min(S); % M is the minimum value, I is the index of the minimum value
-        startPos = I1;
-
-        % (destination, target) get nearest neighbour vertex
-        D = pdist2(vertices,posterpos(target,:),'euclidean'); % get distance from all vertices
-        [M2,I2] = min(D); % M is the minimum value, I is the index of the minimum value
-        destPos = I2;
-
-        % get least distance (ideal route)
-        [idealCost,idealroute] = dijkstra(A,destPos,startPos);
-
-        % get actual route taken (match to vertices)
-        for b = 0:unityTriggers(a,3)-unityTriggers(a,2), % go through unity file line by line
-            currPos = unityData(unityTriggers(a,2)+b,3:4);
-
-            % (current position) get nearest neighbour vertex
-            CP = pdist2(vertices,currPos,'euclidean'); % get distance from all vertices
-            [M3,I3] = min(CP); % M is the minimum value, I is the index of the minimum value
-            mpath(b+1,1) = I3; % store nearest vertice for each location (per frame) into matrix 'mpath'
-        end
-
-        pathdiff = diff(mpath); 
-        change = [1; pathdiff(:)]; 
-        index = find(abs(change)>0); % get index of vertex change
-        actualRoute = mpath(index); % get actual route
-        actualCost = (size(actualRoute,1)-1)*5; % get cost of actual route
-        actualTime = index; 
-        actualTime(end+1) = size(mpath,1); 
-        actualTime = diff(actualTime)+1; % get time in each space bin
-        % clear mpath; 
-        clear pathdiff; 
-        clear change; 
-        clear index;         
-
-        % Store summary
-        sumCost(a,1) = idealCost; 
-        sumCost(a,2) = actualCost; 
-        sumCost(a,3) = actualCost - idealCost; % get difference between least cost and actual cost incurred        
-        sumCost(a,4) = target; % mark out current target identity
-        sumCost(a,5) = unityData(unityTriggers(a,3),1)-target; % mark out correct/incorrect trials        
-        sumRoute(a,1:size(idealroute,2)) = idealroute; % store shortest route
-        sumActualRoute(a,1:size(actualRoute,1)) = actualRoute; % store actual route
-        sumActualTime(a,1:size(actualTime,1)) = actualTime; % store actual time spent in each space bin
-
-        if sumCost(a,3) <= 0, % least distance taken
-            sumCost(a,6) = 1; % mark out trials completed via shortest route
-        elseif sumCost(a,3) > 0 && sumCost(a,5) == 30, 
-            pathdiff = diff(actualRoute); % check if there's a one grid change of mind. If so, enable user to inspect trajectory 
-
-            for c = 1:size(pathdiff,1)-1,
-                if pathdiff(c) == pathdiff(c+1)*(-1);
-                    timeingrid = size(find(mpath == actualRoute(c+1)),1);
-
-                    if timeingrid > 165, % greater than 5 seconds spent in grid (unlikely to have entered by accident due to poor steering)
-                        break
-                    else
-                        % disp('im here');
-                        sumCost(a,6) = 1;
-                    end
-                else                
-                end
-            end
-
-            clear mpath pathdiff 
-        end % if sumCost(a,3) <= 0,
-
         % unityTriggers(a,2) will be the index where the 2nd marker was found
         % and the time recorded on that line should be time since the last update
         % so we really want the time for the next update instead
@@ -288,9 +174,6 @@ if(dnum>0)
 
         % get grid positions for this trial
         tgp = gridPosition(uDidx);
-        binHt = binH(uDidx);
-        binVt = binV(uDidx);
-
 
         % if tempTrialTime's last-first is 0, it means that the discrepency between
         % unity trial duration and ripple trial duration was too large,
@@ -355,14 +238,6 @@ if(dnum>0)
     % reduce memory for sessionTime
     sTime = sessionTime(1:snum,:);    
     
-    % Calculate performance
-    errorInd = find(sumCost(:,5) == 40); 
-    sumCost(errorInd,6) = 0; 
-    sumCost(errorInd+1,6) = 0; % exclude rewarded trials that were preceded by a timeout
-    perf = sum(sumCost(:,6))/50; 
-    disp(strcat('% trials completed via shortest path = ', num2str(perf))); % get percentage of correct trials completed via the shortest route (calculate as a percentage of correct trials preceded by a correct trial)
-    processTrials = find(sumCost(:,6) == 1); % Analyse only one-hit trials (comment out to plot all trials indiscriminately)
-
     % fill in 3rd column with time interval so it will be easier to compute
     % firing rate
     sTime(1:(snum-1),3) = diff(sTime(:,1));
@@ -419,16 +294,14 @@ if(dnum>0)
 		data.horGridBound = horGridBound;
 		data.vertGridBound = vertGridBound;
 		data.gpEdges = gpEdges;
-		data.sumCost = sumCost;
-		data.sumRoute = sumRoute;
-		data.sumActualRoute = sumActualRoute;
-        data.sumActualTime = sumActualTime;
-		data.perf = perf;
-		data.processTrials = processTrials;
+
 		data.gridPosition = gridPosition;
 		data.gpDurations = gpDurations;
 		data.setIndex = [0; totTrials];
 
+        %data.processTrials = ufdata.data.sumCost(:,6)==1;
+        data.processTrials = ones(totTrials,1); % should be top, but now unityfile.m still doesn't do shortest path calculation, placeholder variable
+        
         data.sessionTime = sTime;
         data.sortedGPindices = sTPi;
         data.sortedGPindinfo = sortedGPindinfo;
