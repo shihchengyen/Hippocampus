@@ -15,7 +15,7 @@ function [obj, varargout] = umaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', ...
 				'GridSteps',40, 'overallGridSize',25, ...
-                'MinObs',5,'SpeedLimit',1);
+                'MinObs',5);
             
 % GridSteps: number of bins to cut the maze into
 % overallGridSize: length/width of entire maze
@@ -24,7 +24,7 @@ Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps', 'MinObs', 'overallGridSize','SpeedLimit'};                            
+Args.DataCheckArgs = {'GridSteps', 'MinObs', 'overallGridSize'};                            
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
