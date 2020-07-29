@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4, 'FiltOption',0, 'ThresVel',0, 'UseAllTrials',1);
+                'NumFRBins',4, 'ThresVel',0, 'UseMinObs', 1, 'AdaptiveSmooth', 1, 'UseAllTrials',1,'Alpha',1000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltOption','AdaptiveSmooth','ThresVel','UseAllTrials'};                          
+Args.DataCheckArgs = {'GridSteps','NumShuffles','AdaptiveSmooth','UseMinObs','ThresVel','UseAllTrials','Alpha'};                          
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -124,22 +124,8 @@ if(~isempty(dir(Args.RequiredFile)))
             conditions = conditions & (pv.data.halving_markers==2);
         end
 
-        if Args.ThresVel == 1
-            if Args.FiltOption == 0
-                conditions = conditions & (pv.data.thres_vel.view_good_rows > 0);
-            elseif Args.FiltOption == 1
-                conditions = conditions & (pv.data.thres_vel.view_good_rows > 0.5);
-            else
-                conditions = conditions & ismember(stc(:,2), pv.data.thres_vel.view_good_bins);
-            end
-        else
-            if Args.FiltOption == 0
-                conditions = conditions & (pv.data.all_vel.view_good_rows > 0);
-            elseif Args.FiltOption == 1
-                conditions = conditions & (pv.data.all_vel.view_good_rows > 0.5);
-            else
-                conditions = conditions & ismember(stc(:,2), pv.data.all_vel.view_good_bins);
-            end    
+        if Args.ThresVel > 0
+            conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
         end
 
 
@@ -181,19 +167,210 @@ if(~isempty(dir(Args.RequiredFile)))
         
         stc(stc(:,4)==0,4) = nan;
         stc(:,4) = fillmissing(stc(:,4),'next');
-        stc_ss = stc(conditions,[3 4]);
+        stc_ss = stc(find(conditions==1),[3 4]);
         stc_ss(~(stc_ss(:,1) > 0),:) = [];
         stc_ss(isnan(stc_ss(:,2)),:) = [];
         stc_ss = [stc_ss; [5122 0]];
         
         gpdur1 = accumarray(stc_ss(:,1),stc_ss(:,2))';
         
-            tic;
-            % SIC portion
-            % gpdur1 = dur_lengths';
-            gpdur1 = repmat(gpdur1, Args.NumShuffles+1, 1);
-            Pi1 = gpdur1./sum(gpdur1,2);
+        if Args.UseMinObs
+            bins_sieved = pv.data.view_good_bins;
+        else
+            bins_sieved = 1:5122;
+        end
+        
+        if Args.AdaptiveSmooth
+            
+            gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
+            binDepths = [1 1;
+                1 1;
+                40 40;
+                40 40;
+                8 160;
+                5 32;
+                5 32;
+                5 32;
+                5 32];
+            
+            lin_o_i_Gaze = repmat(gpdur1', 1, Args.NumShuffles + 1);
+            lin_spikeLoc_Gaze = spike_count;
+            maps_raw = lin_spikeLoc_Gaze./lin_o_i_Gaze;
+            if Args.NumShuffles > 0
+                maps_raw = maps_raw(:,1);
+            end
+            maps_raw_out = nan(size(maps_raw));
+            maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+            if repeat == 1
+                data.maps_raw = maps_raw_out';
+            elseif repeat == 2
+                data.maps_raw1 = maps_raw_out';
+            else
+                data.maps_raw2 = maps_raw_out';
+            end
+                
+            grid_o_i_Gaze = cell(size(binDepths,1),1);
+            grid_spikeBin_Gaze = grid_o_i_Gaze;
+            grid_smoothed_Gaze = grid_o_i_Gaze;
+            
+            for jj = 1:size(binDepths,1) % for each grid
+                % Initialise empty matrices
+                o_i = nan(binDepths(jj,1),binDepths(jj,2),Args.NumShuffles+1);
+                spikeBin = o_i;
+                map = o_i;
+                % Assign linear bin to grid bin
+                for mm = 1:binDepths(jj,1)*binDepths(jj,2) % For every point in linear map
+                    if mod(mm,binDepths(jj,2)) == 0
+                        y = binDepths(jj,2);
+                    else
+                        y = mod(mm,binDepths(jj,2));
+                    end
+                    x = ceil(mm/binDepths(jj,2));
+                    indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
+                    % Assign
+                    o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
+                    spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
+                    
+                end
+                % Collect output
+                grid_o_i_Gaze{jj} = o_i;
+                grid_spikeBin_Gaze{jj} = spikeBin;
+            end
+            
+            
+            retrievemap = cell(size(grid_o_i_Gaze,1),1);
+            for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
+                
+                if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
+                    % Pad each grid map with adjoining bins from other grids
+                    % Pad with <<5>> extra bin rows
+                    n = 5;
+                    [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gazeSections,jj);
+                    
+                end
+            end
+            
+            
+            alpha = Args.Alpha;
+            %         alpha = 1;
+            grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
+            grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
+            grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
+            grid_smoothed_dur{1} = grid_o_i_Gaze{1};
+            grid_smoothed_dur{2} = grid_o_i_Gaze{2};
+            grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
+            grid_ad_size{1} = NaN;
+            grid_ad_size{2} = NaN;
+            
+            for jj = 3:size(grid_o_i_Gaze,1) % for each grid
+                
+                wip = ones(Args.NumShuffles+1,1);
+                gpdur1 = grid_o_i_Gaze{jj};
+                preset_to_zeros = gpdur1(:,:,1);
+                preset_to_zeros(find(preset_to_zeros>0)) = 1;
+                preset_to_zeros(find(preset_to_zeros~=1)) = 0;
+                preset_to_zeros = ~preset_to_zeros;
+                preset_to_zeros = repmat(preset_to_zeros, [1,1,size(gpdur1,3)]);
+                
+                firing_counts_full1 = grid_spikeBin_Gaze{jj};
+                gpdur1(isnan(gpdur1)) = 0;
+                firing_counts_full1(isnan(firing_counts_full1)) = 0;
+                
+                to_compute = 1:0.5:Args.GridSteps/2;
+                
+                possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
+                to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill(preset_to_zeros) = 0;
+                to_fill_smoothed_duration = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill_smoothed_duration(preset_to_zeros) = 0;
+                to_fill_size = NaN(size(possible,2), size(possible,3), size(possible,4));
+                to_fill_size(preset_to_zeros) = 0;
+                
+                for idx = 1:length(to_compute)
+                    
+                    f=fspecial('disk',to_compute(idx));
+                    f(f>=(max(max(f))/3))=1;
+                    f(f~=1)=0;
+                    
+                    possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);
+                    possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv');
+                    
+                    logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
+                    
+                    %debug
+                    %                         logic1(~logic1) = 1;
+                    
+                    slice1 = squeeze(possible(1,:,:,:));
+                    slice2 = squeeze(possible(2,:,:,:));
+                    
+                    to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
+                    to_fill_smoothed_duration(logic1 & isnan(to_fill_smoothed_duration)) = slice1(logic1 & isnan(to_fill_smoothed_duration));
+                    to_fill_size(logic1 & isnan(to_fill_size)) = to_compute(idx);
+                    
+                    
+                    remaining = sum(sum(sum(isnan(to_fill(:,:,:)))));
+                    disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
+                    
+                    check = squeeze(sum(sum(isnan(to_fill),2),1));
+                    wip(check==0) = 0;
+                    
+                    if remaining == 0
+                        disp('done');
+                        break;
+                    end
+                end
+                
+                to_fill(isnan(to_fill)) = 0;
+                to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_smoothed_Gaze{jj} = to_fill;
+                to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
+                to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_smoothed_dur{jj} = to_fill_smoothed_duration;
+                to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                grid_ad_size{jj} = to_fill_size;
+                
+            end
+            
+            
+            total_grids = 0;
+            for jj = 1:size(grid_smoothed_Gaze,1)
+                total_grids = total_grids + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
+            end
+            gpdur1 = zeros(Args.NumShuffles+1,total_grids);
+            lambda_i = NaN(Args.NumShuffles+1,total_grids);
+            radii = zeros(Args.NumShuffles+1,total_grids);
+            filling_index = 0;
+            for jj = 1:size(grid_o_i_Gaze,1)
+                temp4 = reshape(grid_smoothed_dur{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                temp3 = reshape(grid_smoothed_Gaze{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
+                lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
+                
+                if jj > 2
+                    temp5 = reshape(grid_ad_size{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                    radii(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp5';
+                end
+                filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
+            end
+            lambda_i(gpdur1==0) = nan;
+            
+            if repeat == 1
+                data.radii = radii;
+                data.dur_map_all = gpdur1;
+            end            
+            
+        else
+            
+            gpdur1 = repmat(gpdur1, Args.NumShuffles + 1, 1);
             lambda_i = spike_count'./ gpdur1;
+            
+        end
+
+  
+            
+            % SIC portion
+            
+            Pi1 = gpdur1./sum(gpdur1,2);
             lambda_bar = nansum(Pi1 .* lambda_i,2);
             % divide firing for each position by the overall mean
             FRratio = lambda_i./repmat(lambda_bar,1,5122);
@@ -209,7 +386,6 @@ if(~isempty(dir(Args.RequiredFile)))
             sic_out = nansum(bits_per_sec, 2);
             sic_out(lambda_bar_bad) = NaN;
 
-            disp(['time taken to calculate SIC: ' num2str(toc)]);
             tic;
 
             % ISE portion
@@ -296,18 +472,77 @@ if(~isempty(dir(Args.RequiredFile)))
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             if repeat == 1
-                data.maps_raw = firing_rates(1,:);
+                if ~Args.AdaptiveSmooth
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_raw = maps_raw_out;
+                else
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_adsmooth = maps_raw_out;                    
+                end
+                maps_all = firing_rates(2:end,:);
+                maps_all_out = nan(size(maps_all));
+                maps_all_out(:,bins_sieved) = maps_all(:,bins_sieved);
+                data.maps_all = maps_all_out;
+                
                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC = sic_out(1);
-                data.SICsh = sic_out';
+                data.SICsh = sic_out;
                 data.ISE = ise_out(1);
-                data.ISEsh = ise_out';
+                data.ISEsh = ise_out;
             elseif repeat == 2
-                data.maps_raw1 = firing_rates(1,:);
+                if ~Args.AdaptiveSmooth
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_raw1 = maps_raw_out;
+                else
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_adsmooth1 = maps_raw_out;                    
+                end
                 data.SIC1 = sic_out;
                 data.ISE1 = ise_out;
             elseif repeat == 3
-                data.maps_raw2 = firing_rates(1,:);
+                if ~Args.AdaptiveSmooth
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_raw2 = maps_raw_out;
+                else
+                    if Args.NumShuffles > 0
+                        maps_raw = firing_rates(1,:);
+                    else
+                        maps_raw = firing_rates;
+                    end
+                    maps_raw_out = nan(size(maps_raw));
+                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+                    data.maps_adsmooth2 = maps_raw_out;                    
+                end
                 data.SIC2 = sic_out;
                 data.ISE2 = ise_out;
             end            

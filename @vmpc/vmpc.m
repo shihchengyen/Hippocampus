@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltOption',1, 'ThresVel',0, 'UseAllTrials',1);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',0, 'UseAllTrials',1, 'Alpha', 1000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','FiltOption','AdaptiveSmooth','ThresVel','UseAllTrials'};                           
+Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','AdaptiveSmooth','ThresVel','UseAllTrials', 'Alpha'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -131,24 +131,9 @@ if(~isempty(dir(Args.RequiredFile)))
             conditions = conditions & (pv.data.halving_markers==2);
         end
 
-        if Args.ThresVel == 1
-            if Args.FiltOption == 0
-                conditions = conditions & (pv.data.thres_vel.place_good_rows > 0);
-            elseif Args.FiltOption == 1
-                conditions = conditions & (pv.data.thres_vel.place_good_rows > 0.5);
-            else
-                conditions = conditions & ismember(stc(:,2), pv.data.thres_vel.place_good_bins);
-            end
-        else
-            if Args.FiltOption == 0
-                conditions = conditions & (pv.data.all_vel.place_good_rows > 0);
-            elseif Args.FiltOption == 1
-                conditions = conditions & (pv.data.all_vel.place_good_rows > 0.5);
-            else
-                conditions = conditions & ismember(stc(:,2), pv.data.all_vel.place_good_bins);
-            end    
+        if Args.ThresVel > 0
+            conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
         end
-
 
         disp('conditioning done');
         if repeat == 1
@@ -185,17 +170,21 @@ if(~isempty(dir(Args.RequiredFile)))
         end        
         
         firing_counts_full = consol_arr';
-        stc_ss = stc(conditions,[2 4]);
+        stc_ss = stc(find(conditions==1),[2 4]);
         stc_ss(~(stc_ss(:,1) > 0),:) = [];
         stc_ss = [stc_ss; [1600 0]];
         gpdur = accumarray(stc_ss(:,1),stc_ss(:,2))';
-        bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
-
+        if Args.UseMinObs
+            bins_sieved = pv.data.place_good_bins;
+        else
+            bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
+        end
+            
             if Args.AdaptiveSmooth
 
                 firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
                 to_save = NaN(1,Args.GridSteps^2);
-                to_save(bins_sieved) = firing_rates_full_raw(1,:);
+                to_save(bins_sieved) = firing_rates_full_raw(1,bins_sieved);
                 
                 if repeat == 1
                     data.maps_raw = to_save;
@@ -206,7 +195,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
                 nan_track = isnan(to_save);
 
-                alpha = 1e3;
+                alpha = Args.Alpha;
 
                 % smoothing part here, need to reshape to 3d matrix
                 % 1. add in nan values for pillar positions (variables with ones suffix)
@@ -226,7 +215,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 wip = ones(Args.NumShuffles+1,1);
 
                 gpdur1 = zeros(1,Args.GridSteps^2);
-                gpdur1(bins_sieved) = gpdur;
+                gpdur1(bins_sieved) = gpdur(bins_sieved);
 
                 preset_to_zeros = reshape(gpdur1, Args.GridSteps, Args.GridSteps); % will be set to nans afterwards, just swapped to zero to quickly cut 'done' shuffles
                 preset_to_zeros(find(preset_to_zeros>0)) = 1;
@@ -238,7 +227,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 gpdur1 = permute(gpdur1,[2,3,1]);
 
                 firing_counts_full1 = zeros(Args.NumShuffles + 1, Args.GridSteps^2);
-                firing_counts_full1(:,bins_sieved) = firing_counts_full;
+                firing_counts_full1(:,bins_sieved) = firing_counts_full(:,bins_sieved);
                 firing_counts_full1 = reshape(firing_counts_full1, Args.NumShuffles + 1, Args.GridSteps,Args.GridSteps);
                 firing_counts_full1 = permute(firing_counts_full1,[2,3,1]);
 
@@ -303,7 +292,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 if repeat == 1
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(nan_track) = nan;
+                    to_save(find(nan_track==1)) = nan;
                     data.maps_adsmooth = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     to_save(:,bins_sieved) = firing_rates_full(2:end,:);
@@ -318,7 +307,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 elseif repeat == 2
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(nan_track) = nan;
+                    to_save(find(nan_track==1)) = nan;
                     data.maps_adsmooth1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
@@ -333,7 +322,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 elseif repeat == 3
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(nan_track) = nan;
+                    to_save(find(nan_track==1)) = nan;
                     data.maps_adsmooth2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
@@ -394,7 +383,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 if repeat == 1
                     ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
                     data.ISE = ise_out(1);
-                    data.ISEsh = ise_out(2:end);
+                    data.ISEsh = ise_out;
                 elseif repeat == 2
                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE1 = ise_out;
@@ -410,7 +399,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
         if repeat == 1
             data.SIC = sic_out(1);
-            data.SICsh = sic_out';
+            data.SICsh = sic_out;
         %     data.median_occ_firings = median_stats';
         %     data.variance_occ_firings = var_stats';
         %     data.perc_occ_firings = perc_stats';
