@@ -276,7 +276,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 gpdur1(isnan(gpdur1)) = 0;
                 firing_counts_full1(isnan(firing_counts_full1)) = 0;
                 
-                to_compute = 1:0.5:Args.GridSteps/2;
+                to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
                 
                 possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
                 to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
@@ -341,13 +341,13 @@ if(~isempty(dir(Args.RequiredFile)))
             radii = zeros(Args.NumShuffles+1,total_grids);
             filling_index = 0;
             for jj = 1:size(grid_o_i_Gaze,1)
-                temp4 = reshape(grid_smoothed_dur{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                temp3 = reshape(grid_smoothed_Gaze{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                temp4 = reshape(permute(grid_smoothed_dur{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                temp3 = reshape(permute(grid_smoothed_Gaze{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
                 gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
                 lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
                 
                 if jj > 2
-                    temp5 = reshape(grid_ad_size{jj}, [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                    temp5 = reshape(permute(grid_ad_size{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
                     radii(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp5';
                 end
                 filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
