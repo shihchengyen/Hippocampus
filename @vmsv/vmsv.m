@@ -355,8 +355,10 @@ if(~isempty(dir(Args.RequiredFile)))
             lambda_i(gpdur1==0) = nan;
             
             if repeat == 1
-                data.radii = radii;
-                data.dur_map_all = gpdur1;
+                data.radii = radii(1,:);
+                data.radiish = radii(2:end,:);
+                data.dur_adsm = gpdur1(1,:);
+                data.dur_adsmsh = gpdur1(2:end,:);
             end            
             
         else
@@ -489,18 +491,18 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                     maps_raw_out = nan(size(maps_raw));
                     maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsmooth = maps_raw_out;                    
+                    data.maps_adsm = maps_raw_out;                    
                 end
                 maps_all = firing_rates(2:end,:);
                 maps_all_out = nan(size(maps_all));
                 maps_all_out(:,bins_sieved) = maps_all(:,bins_sieved);
-                data.maps_all = maps_all_out;
+                data.maps_adsmsh = maps_all_out;
                 
                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC = sic_out(1);
-                data.SICsh = sic_out;
+                data.SICsh = sic_out(2:end,1);
                 data.ISE = ise_out(1);
-                data.ISEsh = ise_out;
+                data.ISEsh = ise_out(2:end,1);
             elseif repeat == 2
                 if ~Args.AdaptiveSmooth
                     if Args.NumShuffles > 0
@@ -519,7 +521,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                     maps_raw_out = nan(size(maps_raw));
                     maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsmooth1 = maps_raw_out;                    
+                    data.maps_adsm1 = maps_raw_out;                    
                 end
                 data.SIC1 = sic_out;
                 data.ISE1 = ise_out;
@@ -541,7 +543,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                     maps_raw_out = nan(size(maps_raw));
                     maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsmooth2 = maps_raw_out;                    
+                    data.maps_adsm2 = maps_raw_out;                    
                 end
                 data.SIC2 = sic_out;
                 data.ISE2 = ise_out;
