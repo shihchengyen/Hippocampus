@@ -40,7 +40,15 @@ else
 
 		% object specific fields
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
-        r.data.linear_map = [p.data.linear_map; q.data.linear_map];
+        r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
+        r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
+        r.data.maps_raw2 = [p.data.maps_raw2; q.data.maps_raw2];
+        r.data.maps_adsm = [p.data.maps_adsm; q.data.maps_adsm];
+        r.data.maps_adsm1 = [p.data.maps_adsm1; q.data.maps_adsm1];
+        r.data.maps_adsm2 = [p.data.maps_adsm2; q.data.maps_adsm2];
+        r.data.dur_adsm = [p.data.dur_adsm; q.data.dur_adsm];
+        r.data.radii = [p.data.radii; q.data.radii];
+        r.data.radiish = [p.data.radiish; q.data.radiish];
 %         r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
         r.data.SIC = [p.data.SIC; q.data.SIC];
         r.data.ISE = [p.data.ISE; q.data.ISE];

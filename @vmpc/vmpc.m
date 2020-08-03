@@ -293,46 +293,47 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.maps_adsmooth = to_save;
+                    data.maps_adsm = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    data.maps_all = to_save;
+                    data.maps_adsmsh = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    data.dur_map_all = to_save;
+                    data.dur_adsmsh = to_save;
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_map_actual = to_save;
-                    data.radii = to_fill_radius;
+                    data.dur_adsm = to_save;
+                    data.radii = to_fill_radius(1,:);
+                    data.radiish = to_fill_radius(2:end,:);
                 elseif repeat == 2
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.maps_adsmooth1 = to_save;
+                    data.maps_adsm1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    %data.maps_all1 = to_save;
+                    %data.maps_adsmsh1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    %data.dur_map_all1 = to_save;
+                    %data.dur_adsmsh1 = to_save;
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_map_actual1 = to_save;
+                    data.dur_adsm1 = to_save;
                     data.radii1 = to_fill_radius;
                 elseif repeat == 3
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.maps_adsmooth2 = to_save;
+                    data.maps_adsm2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    %data.maps_all2 = to_save;
+                    %data.maps_adsmsh2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
                     %to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    %data.dur_map_all2 = to_save;
+                    %data.dur_adsmsh2 = to_save;
                     to_save = NaN(1,Args.GridSteps^2);
                     to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_map_actual2 = to_save;
+                    data.dur_adsm2 = to_save;
                     data.radii2 = to_fill_radius;
                 end
 
@@ -383,7 +384,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 if repeat == 1
                     ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
                     data.ISE = ise_out(1);
-                    data.ISEsh = ise_out;
+                    data.ISEsh = ise_out(2:end,1);
                 elseif repeat == 2
                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE1 = ise_out;
@@ -399,7 +400,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
         if repeat == 1
             data.SIC = sic_out(1);
-            data.SICsh = sic_out;
+            data.SICsh = sic_out(2:end,1);
         %     data.median_occ_firings = median_stats';
         %     data.variance_occ_firings = var_stats';
         %     data.perc_occ_firings = perc_stats';
