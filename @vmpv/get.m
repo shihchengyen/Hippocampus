@@ -38,7 +38,13 @@ elseif(Args.SpeedLimit)
     % stores intervals that have low speed
     stop_intervals(1:sum(speeding_checker(:,3)==-1),1) = speeding_checker(find(speeding_checker(:,3)==-1),1);
     stop_intervals(1:sum(speeding_checker(:,3)==1),2) = speeding_checker(find(speeding_checker(:,3)==1),1);
+    % remove intervals with same time stamp
     stop_intervals(find((stop_intervals(:,2)-stop_intervals(:,1))==0),:) = [];
+    stop_intervals(:,3) = [stop_intervals(2:end,1) ;NaN];
+    nextrowsame = find(stop_intervals(:,2) == stop_intervals(:,3));
+    stop_intervals(nextrowsame,2) = stop_intervals(nextrowsame+1,2);
+    stop_intervals(nextrowsame+1,:) = [];
+    stop_intervals(:,3) = [];
     
     stc = obj.data.sessionTimeC;
     
@@ -48,7 +54,12 @@ elseif(Args.SpeedLimit)
 
     histbins = stop_intervals';
     histbins = histbins(:);
-    histbins(isnan(histbins)) = max([stc(end,1) delta_t(end,3)]);
+    % Remove intervals outside of end of sessionTimeC
+    if histbins(find(isnan(histbins))-1,1) > max([stc(end,1) delta_t(end,3)])
+        histbins(find(isnan(histbins))-1:find(isnan(histbins))) = [];
+    else
+        histbins(isnan(histbins)) = max([stc(end,1) delta_t(end,3)]);
+    end
 
     [~,~,binned] = histcounts(delta_t(:,3), histbins);
 
