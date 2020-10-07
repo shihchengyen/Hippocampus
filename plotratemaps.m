@@ -35,16 +35,16 @@ pix = 1;
 
 cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
 
-if nargin > 5 % If plotting a single cell and map is already given as input (only used in placebyspatialview.m) 
+if nargin > 4 % If plotting a single cell and map is already given as input (only used in placebyspatialview.m) 
     % Load cell list
     cellList = varargin(1);
-    mapGrid = varargin{2};
-    ax = varargin{3};
-    mapLin = varargin{4};
-    binDepths = varargin{5};
-    fieldCount = varargin{6};
-    fieldCoords = varargin{7};
-    cd(cellList{1});
+%     mapGrid = varargin{2};
+%     ax = varargin{3};
+%     mapLin = varargin{4};
+%     binDepths = varargin{5};
+%     fieldCount = varargin{6};
+%     fieldCoords = varargin{7};
+    cd([cellList{1} '/' filttype '/' num2str(pix) 'px/']);
     % Load object
     switch objtype
         case 'place'
@@ -224,8 +224,9 @@ if strcmp(objtype, 'place')  % Place maps
                     saveas(h,figtitle,'png');
                     print('-painters',figtitle,'-dsvg');
                     cd(cwd);
+                    close(figure(fig));
                 end
-                close(figure(fig));
+                
                 fig = fig + 1;
                 subpnum = 1;
             end
@@ -376,8 +377,9 @@ if strcmp(objtype, 'place')  % Place maps
             saveas(h,figtitle,'png');
             print('-painters',figtitle,'-dsvg');
             cd(cwd);
+            close(figure(fig));
         end
-        close(figure(fig));
+        
         fig = fig + 1;
         subpnum = 1;
         
@@ -439,8 +441,9 @@ elseif strcmp(objtype, 'spatialview')
                     saveas(h,figtitle,'png');
                     print('-painters',figtitle,'-dsvg');
                     cd(cwd);
+                    close(figure(fig));
                 end
-                close(figure(fig));
+                
                 fig = fig + 1;
                 subpnum = 1;
             end
@@ -625,7 +628,7 @@ elseif strcmp(objtype, 'spatialview')
             close(figure(fig));
             cd(cwd);
         end
-        fig = fig + 1;
+        
         subpnum = 1;
         
     end
