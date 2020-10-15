@@ -16,7 +16,7 @@ function [obj, varargout] = vmpv(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session','RequiredFile','binData.hdf', ...
 				'GridSteps',40, 'overallGridSize',25, ...
-                'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.1,'MinDurView',0.1);
+                'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -490,7 +490,10 @@ if(~isempty(dir(Args.RequiredFile)))
         end    
     
         data.place_good_rows = place_good_ignore_speed;
+        
+    % Consolidate good rows across place and view
     
+        data.pv_good_rows = view_good_ignore_speed & place_good_ignore_speed;
         
     % minor section 1 - thresholding minobs long duration    
         

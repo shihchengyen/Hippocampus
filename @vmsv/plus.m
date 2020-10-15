@@ -2,6 +2,7 @@ function r = plus(p,q,varargin)
 %@dirfiles/plus Overloaded plus function for dirfiles objects.
 %   R = plus(P,Q) combines dirfiles objects P and Q and returns the
 %   dirfiles object R.
+% vmsv combineobj
 
 % get name of class
 classname = mfilename('class');
@@ -48,7 +49,7 @@ else
         r.data.maps_adsm2 = [p.data.maps_adsm2; q.data.maps_adsm2];
         r.data.dur_adsm = [p.data.dur_adsm; q.data.dur_adsm];
         r.data.radii = [p.data.radii; q.data.radii];
-        r.data.radiish = [p.data.radiish; q.data.radiish];
+%         r.data.radiish = [p.data.radiish; q.data.radiish];
 %         r.data.maps_adsmooth = [p.data.maps_adsmooth; q.data.maps_adsmooth];
         r.data.SIC = [p.data.SIC; q.data.SIC];
         r.data.ISE = [p.data.ISE; q.data.ISE];
