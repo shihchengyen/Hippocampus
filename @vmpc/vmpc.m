@@ -17,7 +17,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',0, 'UseAllTrials',1, 'Alpha', 1000);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -134,6 +134,13 @@ if(~isempty(dir(Args.RequiredFile)))
         if Args.ThresVel > 0
             conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
         end
+        
+        if Args.UseMinObs
+            bins_sieved = pv.data.place_good_bins;
+            conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+        else
+            bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
+        end
 
         disp('conditioning done');
         if repeat == 1
@@ -174,11 +181,7 @@ if(~isempty(dir(Args.RequiredFile)))
         stc_ss(~(stc_ss(:,1) > 0),:) = [];
         stc_ss = [stc_ss; [1600 0]];
         gpdur = accumarray(stc_ss(:,1),stc_ss(:,2))';
-        if Args.UseMinObs
-            bins_sieved = pv.data.place_good_bins;
-        else
-            bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
-        end
+        
             
             if Args.AdaptiveSmooth
 
