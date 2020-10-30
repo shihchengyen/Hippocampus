@@ -6,8 +6,8 @@ filttype = 'FiltVel';
 pix = 1;
 
 if nargin > 1 % Single cell
-    cwd = varargin(1);
-    cellList = (cwd);
+    cwd = varargin{1};
+    cellList = {cwd};
 else % Batch 
     % Load cell list
     cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
@@ -46,12 +46,16 @@ setsessions = unique(identifiers(:,1));
 % Remove cell directories that already exist 
 figdir = ['/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/' filttype '/' num2str(pix) 'px/PlaceView/'];
 if savefig    
-        if exist(figdir,'dir') ~= 7
-            mkdir(figdir);
-        else
-            rmdir(figdir,'s');
-            mkdir(figdir);
-        end
+    if exist(figdir,'dir') ~= 7
+        mkdir(figdir);
+    else
+        rmdir(figdir,'s');
+        mkdir(figdir);
+    end
+    % Create txt file to save list of selective cells
+    cd(figdir);
+    fid = fopen('sigcells.txt','a');
+    cd(cwd);
 end
 
 sigcells = {};
@@ -89,9 +93,11 @@ for ss = 1:size(setsessions,1)
         
         cd(cellList{setcells(cc)});
         disp(cellList{setcells(cc)});
-        [figureout,data] = placebyspatialview_cell(pv,identifiers(setcells(cc),:),savefig,figdir,filttype,pix,pcSIthr,svSIthr);
+        [figureout,data,celltype] = placebyspatialview_cell(pv,identifiers(setcells(cc),:),savefig,figdir,filttype,pix,pcSIthr,svSIthr);
         if figureout
             sigcells{end+1,1} = cellList{setcells(cc)};
+            ID = [num2str(identifiers(setcells(cc),1)) 'ch' num2str(identifiers(setcells(cc),4)) 'c' num2str(identifiers(setcells(cc),5))];
+            fprintf(fid,'%s\n',[ID celltype]);
         end
         close all;
         
@@ -102,13 +108,14 @@ disp(sigcells);
     
 
 
-function [figureout,data] = placebyspatialview_cell(pv,identifier,savefig,figdir,filttype,pix,pcSIthr,svSIthr)
+function [figureout,data,celltype] = placebyspatialview_cell(pv,identifier,savefig,figdir,filttype,pix,pcSIthr,svSIthr)
 
 ID = [num2str(identifier(1)) 'ch' num2str(identifier(4)) 'c' num2str(identifier(5))];
 figureout = 0;
 fieldsize = 5;
 objtype = {'place','spatialview'};
 data = struct;
+celltype = '';
 
 cwd = pwd;
 objdir = [cwd '/' filttype '/' num2str(pix) 'px/'];
@@ -134,12 +141,13 @@ if pcSI > pcSIthr || svSI > svSIthr
     figureout = 1;
     
     if pcSI > pcSIthr && svSI > svSIthr
-        figdir = [figdir ID 'pv'];
+        celltype = 'pv';
     elseif pcSI > pcSIthr && svSI < svSIthr
-        figdir = [figdir ID 'p'];
+        celltype = 'p';
     elseif pcSI < pcSIthr && svSI > svSIthr
-        figdir = [figdir ID 'v'];
+        celltype = 'v';
     end
+    figdir = [figdir ID celltype];
     if savefig
         if exist(figdir,'dir') ~= 7
             mkdir(figdir);
@@ -155,7 +163,7 @@ if pcSI > pcSIthr || svSI > svSIthr
 
     % Combine place and view info with spikes and make rate maps
     pvT = pv.data.sessionTimeC;
-    pvT(:,4) = [0; diff(pvT(:,1))];
+    pvT(:,4) = [diff(pvT(:,1)); 0];
     binned = histcounts(spiketrain, pvT(:,1))';
     pvT(:,5) = [binned; 0];
     % Filter out segments 
