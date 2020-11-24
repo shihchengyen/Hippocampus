@@ -387,10 +387,17 @@ if(~isempty(dir(Args.RequiredFile)))
             end
             curr_place = sessionTimeC(row,2);
             curr_start_time = sessionTimeC(row,1);
+            if row == size(sessionTimeC,1) % in the rare case that the place changes on the last stc row
+                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
+                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = uma.data.sessionTime(end,1);
+                place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+            end
         elseif row == size(sessionTimeC,1)
-            place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
-            place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = sessionTimeC(end,1);
-            place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+            if curr_place ~= 0 && curr_place ~= -1
+                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
+                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = sessionTimeC(end,1);
+                place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+            end
         end
 
     end
