@@ -2,15 +2,21 @@ function glm_corrmap(filttype,pix,varargin)
 
 %
 %
-%   Be in directory of cell, or input cell dir as varargin
+%   Be in directory of cell, 
+%   or input cell dir as varargin
+%    
 %
-%
+
+%%%% CHANGE THIS TO SOMETHING ELSE
+figdir = '/Volumes/User/huimin/Desktop/';
+% figdir = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/';
 
 if nargin > 2
     cd(varargin{1});
 end
 cwd = pwd;
 objdir = [cwd '/' filttype '/' num2str(pix) 'px/'];
+
 
 %%% not part of placebyspatialview.m
 cd ../../..
@@ -224,7 +230,7 @@ s = regexp(cwd,'session');
 identifiers = [str2double(cwd(s-9:s-2)) str2double(cwd(s+7:s+8)) ...
     str2double(cwd(s+15:s+16)) str2double(cwd(s+25:s+27)) str2double(cwd(s+33:s+34))];
 ID = [num2str(identifiers(1,1)) 'ch' num2str(identifiers(1,4)) 'c' num2str(identifiers(1,5))];
-figdir = ['/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/' filttype '/' num2str(pix) 'px/Corrmaps/' ID 'pick' num2str(pick) '/'];
+figdir = [figdir filttype '/' num2str(pix) 'px/Corrmaps/' ID 'pick' num2str(pick) '/'];
 mkdir(figdir);
 cd(figdir)
 % mkdir(ID)
