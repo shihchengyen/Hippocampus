@@ -1,4 +1,4 @@
-function glm_corrmap(filttype,pix,figdir,varargin)
+function glm_corrmap(filttype,pix,varargin)
 
 %
 %
@@ -7,12 +7,16 @@ function glm_corrmap(filttype,pix,figdir,varargin)
 %    
 %
 
+%%%% CHANGE THIS TO SOMETHING ELSE
+figdir = '/Volumes/User/huimin/Desktop/';
+% figdir = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/';
+
 if nargin > 2
     cd(varargin{1});
 end
 cwd = pwd;
 objdir = [cwd '/' filttype '/' num2str(pix) 'px/'];
-% figdir = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/';
+
 
 %%% not part of placebyspatialview.m
 cd ../../..
