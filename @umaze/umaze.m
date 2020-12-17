@@ -323,7 +323,7 @@ if(dnum>0)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% umaze specific calculations ends here  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
 	% create nptdata so we can inherit from it
-    data.numSets = dnum; 
+    data.numSets = ufdata.data.numSets; 
     data.Args = Args;
 	n = nptdata(data.numSets,0,pwd);
 	d.data = data;

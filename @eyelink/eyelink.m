@@ -216,6 +216,7 @@ if(dlsize>0)
 				noOfTrials = zeros(1, 1); %stores number of trials per session
 				missingData = []; %stores missing data from edf file that is then saved in an edf file
 				sessionFolder = 1; %stores the current sessionFolder we are in
+                edfMatchSessions = []; %the session indices which correspond to actual sessions
 			
 				%This loop goes through all the sessions found in the edf file and:
 				%(1)Checks if the edf file is complete by calling completeData
@@ -242,6 +243,10 @@ if(dlsize>0)
 							noOfTrials (1,sessionFolder) = size(corrected_times, 1);
 							missingData = vertcat(missingData, tempMissing);
 							sessionFolder = sessionFolder+1;
+                            edfMatchSessions = [edfMatchSessions i];
+                            if sessionFolder > actualSessionNo
+                                break
+                            end
 						else
 							fprintf('Dummy Session skipped %d\n',i);
 						end
@@ -355,12 +360,13 @@ if(dlsize>0)
             %(2)Saves the timestamps at which fixation events occured to
             %   facilitate plotting of the raycast object (ref @raycast/plot.m)
             for j=1:noOfSessions
+                k = edfMatchSessions(j);
                 if (j==noOfSessions)
-                    idx2 = indexSacc(indexSacc > messageEvent(sessionIndex(j)));
-                    idx1 = indexFix(indexFix > messageEvent(sessionIndex(j)));
+                    idx2 = indexSacc(indexSacc > messageEvent(sessionIndex(k)));
+                    idx1 = indexFix(indexFix > messageEvent(sessionIndex(k)));
                 else
-                    idx2 = indexSacc(indexSacc > messageEvent(sessionIndex(j,1)) & indexSacc < messageEvent(sessionIndex(j+1,1)));
-                    idx1 = indexFix(indexFix > messageEvent(sessionIndex(j,1)) & indexFix< messageEvent(sessionIndex(j+1,1))); %extract the relevant indices
+                    idx2 = indexSacc(indexSacc > messageEvent(sessionIndex(k,1)) & indexSacc < messageEvent(sessionIndex(k+1,1)));
+                    idx1 = indexFix(indexFix > messageEvent(sessionIndex(k,1)) & indexFix< messageEvent(sessionIndex(k+1,1))); %extract the relevant indices
                 end
                 
                 fixEvents = cell (size(idx1,1),2);
@@ -389,6 +395,7 @@ if(dlsize>0)
             %This for loop splits the created matrices, which contain
             %timestamps from all sessions, into session objects.
             for idx=1:noOfSessions
+                edfSessionIdx = edfMatchSessions(idx);
                 %this selects the session director and cds into it
                 strName = sessionName(idx).name;
                 cd (strName);
@@ -415,7 +422,7 @@ if(dlsize>0)
                 data.noOfTrials= noOfTrials(1, idx);
                 data.expTime =  edfdata.FEVENT(1).sttime;
                 
-                data.session_start = edfdata.FEVENT(messageEvent(sessionIndex(idx))).sttime;
+                data.session_start = edfdata.FEVENT(messageEvent(sessionIndex(edfSessionIdx))).sttime;
                 
                 % create nptdata so we can inherit from it
                 data.numSets = 1;    %eyelink is a session object = each session has only object
