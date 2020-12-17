@@ -169,7 +169,7 @@ function aligning_objects(threshold)
         session_trial_duration = rp.data.timeStamps(1,1) - true_session_start;
         session_trial_duration = session_trial_duration * 1000; % true delay between unity start and first trial is now in milliseconds
 
-        finding_index = find(el.data.timestamps==el.data.session_start);
+        finding_index = find(el.data.timestamps==el.data.session_start(1));
         finding_index = finding_index(1);
 
         el_session_trial_chunk = double(el.data.timestamps(finding_index:el.data.trial_timestamps(1,1)));
@@ -183,7 +183,7 @@ function aligning_objects(threshold)
         el.data.timestamps(finding_index:el.data.trial_timestamps(1,1)) = scaled_chunk;
 
         target = true_session_start * 1000;
-        full_shift = el.data.session_start - target;
+        full_shift = el.data.session_start(1) - target;
         el.data.timestamps = uint32(el.data.timestamps - full_shift);
         el.data.session_start_index = finding_index;
         
