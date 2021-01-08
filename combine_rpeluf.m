@@ -45,7 +45,6 @@ for s = 2:size(sessions,1)
     r.data.noOfTrials = p.data.noOfTrials + q.data.noOfTrials;
 
     % object specific fields
-    % This eyelink plus.m is written for combining same-day sessions
 
     % First, remove all information from the last trial of p to the
     % session start of q
@@ -140,7 +139,7 @@ end
 cd([day_dir '/session01'])
 copyfile eyelink.mat eyelink_original.mat % backup original
 el = r;
-save('eyelink.mat','el')
+save('eyelink.mat','el','-v7.3')
 disp('Merged eyelink saved!')
 
 
@@ -188,7 +187,7 @@ end
 cd([day_dir '/session01'])
 copyfile rplparallel.mat rplparallel_original.mat % backup original
 rp = r;
-save('rplparallel.mat','rp')
+save('rplparallel.mat','rp','-v7.3')
 disp('Merged rplparallel saved!')
 
 
@@ -228,7 +227,7 @@ end
 cd([day_dir '/session01'])
 copyfile unityfile.mat unityfile_original.mat % backup original
 uf = r;
-save('unityfile.mat','uf')
+save('unityfile.mat','uf','-v7.3')
 disp('Merged unityfile saved!')
 
 
