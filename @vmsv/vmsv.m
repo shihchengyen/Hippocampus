@@ -241,17 +241,18 @@ if(~isempty(dir(Args.RequiredFile)))
             
             
             retrievemap = cell(size(grid_o_i_Gaze,1),1);
+            grid_o_i_Gaze_temp = grid_o_i_Gaze; % keep the original unpadded version to take reference from during padding
+            grid_spikeBin_Gaze_temp = grid_spikeBin_Gaze; % keep the original unpadded version to take reference from during padding
             for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
                 
                 if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
                     % Pad each grid map with adjoining bins from other grids
                     % Pad with <<5>> extra bin rows
                     n = 5;
-                    [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gazeSections,jj);
+                    [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze_temp{jj},grid_spikeBin_Gaze_temp{jj},grid_o_i_Gaze_temp,grid_spikeBin_Gaze_temp,gazeSections,jj);
                     
                 end
             end
-            
             
             alpha = Args.Alpha;
             %         alpha = 1;
