@@ -278,7 +278,8 @@ if(~isempty(dir(Args.RequiredFile)))
                 gpdur1(isnan(gpdur1)) = 0;
                 firing_counts_full1(isnan(firing_counts_full1)) = 0;
                 
-                to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
+%                 to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
+                to_compute = 1:0.5:(max(binDepths(jj,:)))/2;
                 
                 possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
                 to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
