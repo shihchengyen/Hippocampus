@@ -16,7 +16,7 @@ function [obj, varargout] = test_ise(savefig,varargin)
 for ss = 1:size(cellList,1)
 
 % % % %     generate new vmsv
-    cd(strrep(cell2str(cellList(ss))),'Volumes','Users/yuhsuan');%directory specific to my workstation
+    cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
     sv=vmsv('auto');
 %     get each cell's ise
     ise=[ise(:) sv.data.ISE];
