@@ -4,7 +4,7 @@
 function [obj, varargout] = test_ise(savefig,varargin)
 % Batch 
     % Load cell list
-    cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
+    cwd = '/Users/yuhsuan/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
     fid = fopen([cwd '/cell_list.txt'],'rt');
 %     fid = fopen([cwd '/cell_list_1pxFiltAll.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
@@ -14,7 +14,7 @@ function [obj, varargout] = test_ise(savefig,varargin)
 for ss = 1:size(cellList,1)
 
 % % % %     generate new vmsv
-    cd(cellList(ss));
+    cd(cell2str(cellList(ss)));
     sv=vmsv('auto');
 %     get each cell's ise
     ise=[ise(:) sv.data.ISE];
