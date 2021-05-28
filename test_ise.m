@@ -28,7 +28,7 @@ end
        difference=ise-ise_thr_avg;
 %     each cell's ise/overall threshold
         ratio=ise/ise_thr_avg;
- save('//path_to_file/test_ise.mat');
+ save('/Desktop/test_ise.mat');
 end
 
 
