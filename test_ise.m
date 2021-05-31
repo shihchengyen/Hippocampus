@@ -51,6 +51,37 @@ for ss = 1:size(cellList,1)
 %     get each cell's ise_threshold 95% percentile
     ise_thr =[ise_thr(:) prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
 end
+
+% % % % % % % old
+% Load vmpv object for each session
+for ss = 1:size(setsessions,1)
+
+    cd(['/Users/yuhsuan/Hippocampus/Data/picasso-misc/' num2str(setsessions(ss)) '/session01']);
+    pv = load([num2str(pix) 'vmpv.mat']);
+    pv = pv.pv;
+    setcells = find(identifiers(:,1) == setsessions(ss));
+       
+    % Process placebyspatialview cell by cell
+    for cc = 1:size(setcells,1)
+        
+        cd(cellList{setcells(cc)});
+        disp(cellList{setcells(cc)});
+        sv=vmsv('auto');
+%       get each cell's ise
+        ise=[ise(:) sv.data.ISE];
+%       get each cell's ise_threshold 95% percentile
+        ise_thr =[ise_thr(:) prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
+   
+        close all;%from old file
+        
+    end
+    
+end
+
+
+
+
+% % % % % % % % % 
 % average the each cell's ise threshold to get overall threshold
     ise_thr_avg=mean(ise_thr(:));
 % find the difference between the ise and overall threshold
