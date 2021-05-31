@@ -471,6 +471,11 @@ if(~isempty(dir(Args.RequiredFile)))
             shuffled_images = canvas(:,:,2:end);
             shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
 
+            %for testing
+            data.actual_image=actual_image;
+            data.ashuffled_images=shuffled_images;
+
+            
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             tic;
 
