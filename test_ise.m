@@ -1,6 +1,8 @@
 % get each cell's directory with the spiketrain.mat
 % calculate each vmsv
-    
+
+% % % % % % % need to deal with missing file
+
 function [obj, varargout] = test_ise(savefig,varargin)
 % Batch 
     % Load cell list
@@ -12,10 +14,36 @@ function [obj, varargout] = test_ise(savefig,varargin)
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
-% Load vmpv object for each session
+% Make sure no empty cells
+notempty = ~cellfun(@isempty,cellList);
+cellList = cellList(notempty,:);
+% Generate unique identifier for each cell
+s = regexp(cellList{1},'session');
+identifiers = zeros(size(cellList,1),5);
+cellid = cell(size(cellList,1),1);
+missing = [];
+for ii = 1:size(cellList,1)
+    if exist(cellList{ii},'dir') == 7
+        % Collect date, session, array, channel, cell
+        identifiers(ii,:) = [str2double(cellList{ii}(s-9:s-2)) str2double(cellList{ii}(s+7:s+8)) ...
+            str2double(cellList{ii}(s+15:s+16)) str2double(cellList{ii}(s+25:s+27)) str2double(cellList{ii}(s+33:s+34))];
+        % Cell identifier
+        cellid{ii} = horzcat(num2str(identifiers(ii,4)),'-',num2str(identifiers(ii,5)));
+    else
+        missing = [missing ii];
+    end
+end
+% Remove missing cells
+identifiers(missing,:) = [];
+cellid(missing) = [];
+cellList(missing) = [];
+setsessions = unique(identifiers(:,1));
+% setcells = unique(cellid);
+    
+    
+% % % % %     generate new vmsv
 for ss = 1:size(cellList,1)
 
-% % % %     generate new vmsv
     cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
     sv=vmsv('auto');
 %     get each cell's ise

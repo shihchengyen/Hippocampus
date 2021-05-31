@@ -1,0 +1,126 @@
+% new version of ise based on my understanding
+% https://nptel.ac.in/content/storage2/courses/117104069/chapter_1/1_10.html
+
+
+% Steps:
+%   histogram count for each "pixel" [count,edge]=histcounts(image,bin#=20);
+%   propability of each "pixel"
+%       individual probability
+%       joint probability
+%   calculate each entropy
+%       joint entropy H(X,Xu) and entropy H(X)
+%   outputs a (column) vector of entropies for all shuffles
+
+
+
+function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
+%   input image
+    actual_disc(isnan(actual_image)) = 0;
+    shuffled_disc(isnan(shuffled_images)) = 0;
+    combined = [actual_disc; shuffled_disc]; %1+shuffles x 1600
+    length=1600; %total number of "pixel"= 1600
+    
+%    for each (image) row of combined calculate the probablity
+    prob=[];
+    bin=20;
+    for row = 1:size(combined,1)
+       image=combined(row,:);
+       [count,edge]=histcounts(image,bin);
+       count_p=count/length;
+       p=[];
+%        assign propability
+        for c=1:size(image) %make more efficient later
+           if edge(1)<=image(c) && image(c)<edge(2)
+               p(c)=[p(:) count_p(1)];
+           elseif edge(2)<=image(c) && image(c)<edge(3)
+               p(c)=[p(:) count_p(2)];
+           elseif edge(3)<=image(c) && image(c)<edge(4)
+               p(c)=[p(:) count_p(3)];
+           elseif edge(4)<=image(c) && image(c)<edge(5)
+               p(c)=[p(:) count_p(4)];
+           elseif edge(5)<=image(c) && image(c)<edge(6)
+               p(c)=[p(:) count_p(5)];
+           elseif edge(6)<=image(c) && image(c)<edge(7)
+               p(c)=[p(:) count_p(6)];
+           elseif edge(7)<=image(c) && image(c)<edge(8)
+               p(c)=[p(:) count_p(7)];
+           elseif edge(8)<=image(c) && image(c)<edge(9)
+               p(c)=[p(:) count_p(8)];
+           elseif edge(9)<=image(c) && image(c)<edge(10)
+               p(c)=[p(:) count_p(9)];
+           elseif edge(10)<=image(c) && image(c)<edge(11)
+               p(c)=[p(:) count_p(10)];
+           elseif edge(11)<=image(c) && image(c)<edge(12)
+               p(c)=[p(:) count_p(11)];
+           elseif edge(12)<=image(c) && image(c)<edge(13)
+               p(c)=[p(:) count_p(12)];
+           elseif edge(13)<=image(c) && image(c)<edge(14)
+               p(c)=[p(:) count_p(13)];
+           elseif edge(14)<=image(c) && image(c)<edge(15)
+               p(c)=[p(:) count_p(14)];
+           elseif edge(15)<=image(c) && image(c)<edge(16)
+               p(c)=[p(:) count_p(15)];
+           elseif edge(16)<=image(c) && image(c)<edge(17)
+               p(c)=[p(:) count_p(16)];
+           elseif edge(17)<=image(c) && image(c)<edge(18)
+               p(c)=[p(:) count_p(17)];
+           elseif edge(18)<=image(c) && image(c)<edge(19)
+               p(c)=[p(:) count_p(18)];
+           elseif edge(19)<=image(c) && image(c)<edge(20)
+               p(c)=[p(:) count_p(19)];
+           else
+               p(c)=[p(:) count_p(20)];
+           end    
+        end
+       prob=[prob(:);p];
+    end
+    
+%     reshape the prob
+    combined = reshape(prob, size(prob,1), dim1, dim2); %now num_shuffles+1 x 51 x 161
+    
+% find Xu,X,Xl,Xr
+    upper = combined(:,1:end-1,:); %Xu
+    centre = combined(:,2:end,:); %X
+    left = circshift(centre,1,3); %Xl
+    right = circshift(centre,-1,3); %Xr
+    
+%   1) joint probability 2)entropy
+    %   for  H(X,Xu) computations
+    p_X_Xu=centre .* upper;
+    [vert_entropy] = shuffled_joint_entropy(p_X_Xu);
+    
+    %   H(Xl,Xu) computations
+    p_X1_Xu= left(:,:,2:end) .* upper(:,:,2:end); %idk why yet
+    [pos_angled_entropy] = shuffled_joint_entropy(p_X1_Xu);
+    
+    %   H(Xr,Xu) computations
+    p_Xr_Xu=right(:,:,2:end) .* upper(:,:,2:end);%idk why yet
+    [neg_angled_entropy] = shuffled_joint_entropy(p_Xr_Xu);  
+    
+    %   H(Xr/X) computations ~ H(Xr,X) - H(X)
+    %   H(Xr,X)
+    p_Xr_X=combined(:,:,1:end-1).* combined(:,:,2:end); %idk why yet
+    [hor_entropy] = shuffled_joint_entropy(p_Xr_X);
+    p_X= combined_disc(:,:,1:end-1); %according to Kian Wei's ise.m
+    %   H(X)
+    [self_entropy] = shuffled_joint_entropy(p_X);
+    hor_cond_entropy = hor_entropy - self_entropy;
+    
+%   final calculation:
+      mn = size(combined,1)*size(combined,2);
+%       num_shuffles+1 x 39(which is dim1) wierd dimension
+      ise_out = mn.*(vert_entropy + hor_cond_entropy);
+      ise_out = ise_out - (mn/2).*(pos_angled_entropy + neg_angled_entropy);
+
+end
+function [entropy] = entropy(input)
+
+    % expects (num_shuffles+1 x num_pairs_x x num_pairs_y) array 
+    % outputs column vector of entropies for all shuffles
+    temp=input;
+    temp = reshape(input, size(input,1),size(input,2)*size(input,3)); % now (num_shuffles+1) x 39*40 
+    entropy= -temp .* log2(temp);
+    entropy= cumsum(entropy,2);
+    entropy=entropy(:,end);%only the sum value of each image
+    
+end
