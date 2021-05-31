@@ -60,7 +60,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     mn = size(combined_disc,2)*size(combined_disc,3);
     ise_out = mn.*(vert_entropy + hor_cond_entropy);
     ise_out = ise_out - (mn/2).*(pos_angled_entropy + neg_angled_entropy);
-    ise_out = ise_out ./ mn;
+%     ise_out = ise_out ./ mn;
      
 end
 
