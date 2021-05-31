@@ -17,6 +17,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
 %   input image
     actual_disc(isnan(actual_image)) = 0;
     shuffled_disc(isnan(shuffled_images)) = 0;
+    
     combined = [actual_disc; shuffled_disc]; %1+shuffles x 1600
     length=1600; %total number of "pixel"= 1600
     
