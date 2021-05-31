@@ -930,6 +930,10 @@ end
 % smoothedPos(pos==0)=nan;
 % smoothedSpk(pos==0)=nan;
 % % report radii sizes?
-
-
-
+% 
+%  ISE=sv.data.ISE
+% ISE_sh=sv.data.ISEsh;
+% ISE_thr=prctile([ISE;sv.data.ISEsh],95);
+% actual_image=sv.data.actual_image;
+% shuffled_images=sv.data.ashuffled_images;
+% save('/Users/yuhsuan//Desktop/test_ise.mat');
