@@ -50,7 +50,7 @@ for ss = 1:size(cellList,1)
     filename=strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan');
     if isfile(filename)
         if isfile('spiketrain.mat')
-            cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
+            cd(filename);%directory specific to my workstation
             sv=vmsv('auto');
         %     get each cell's ise
             ise=[ise(:) sv.data.ISE];
