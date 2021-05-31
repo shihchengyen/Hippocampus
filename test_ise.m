@@ -13,6 +13,10 @@ function [obj, varargout] = test_ise(savefig,varargin)
 %     fid = fopen([cwd '/cell_list_1pxFiltAll.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
+% change directory
+for ss = 1:size(cellList,1)
+cellList(ss)=str2cell(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));
+end    
 
 % Make sure no empty cells
 notempty = ~cellfun(@isempty,cellList);
@@ -41,7 +45,18 @@ setsessions = unique(identifiers(:,1));
 % setcells = unique(cellid);
     
     
-% % % % % % % modify from old
+% % % % %     generate new vmsv
+for ss = 1:size(cellList,1)
+
+    cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
+    sv=vmsv('auto');
+%     get each cell's ise
+    ise=[ise(:) sv.data.ISE];
+%     get each cell's ise_threshold 95% percentile
+    ise_thr =[ise_thr(:) prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
+end
+
+% % % % % % % old
 % Load vmpv object for each session
 for ss = 1:size(setsessions,1)
 
