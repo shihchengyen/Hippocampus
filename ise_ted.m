@@ -26,7 +26,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     length=1600; %total number of "pixel"= 1600
     
 %    for each (image) row of combined calculate the probablity
-    prob=[];
+    prob=zeros(size(combined,1),1);
     bin=20;
     for row = 1:size(combined,1)
        image=combined(row,:);
@@ -34,7 +34,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
        count_p=count/length;
        p=[];
 %        assign propability
-        for c=1:size(image) %make more efficient later
+        for c=1:size(image,2) %make more efficient later
            if edge(1)<=image(c) && image(c)<edge(2)
                p=[p(:) count_p(1)];
            elseif edge(2)<=image(c) && image(c)<edge(3)
@@ -77,7 +77,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
                p=[p(:) count_p(20)];
            end    
         end
-       prob(row)=[prob(:)p(:)];
+       prob=[prob(:) ; p(:)];
     end
     
 %     reshape the prob
