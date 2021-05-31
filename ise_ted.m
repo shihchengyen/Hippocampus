@@ -77,7 +77,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
                p=[p(:) count_p(20)];
            end    
         end
-       prob=[prob(:);p(:)];
+       prob(row,:)=[prob(row,:);p(:)];
     end
     
 %     reshape the prob
