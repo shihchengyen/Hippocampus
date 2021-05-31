@@ -41,18 +41,7 @@ setsessions = unique(identifiers(:,1));
 % setcells = unique(cellid);
     
     
-% % % % %     generate new vmsv
-for ss = 1:size(cellList,1)
-
-    cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
-    sv=vmsv('auto');
-%     get each cell's ise
-    ise=[ise(:) sv.data.ISE];
-%     get each cell's ise_threshold 95% percentile
-    ise_thr =[ise_thr(:) prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
-end
-
-% % % % % % % old
+% % % % % % % modify from old
 % Load vmpv object for each session
 for ss = 1:size(setsessions,1)
 
