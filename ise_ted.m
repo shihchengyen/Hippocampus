@@ -36,48 +36,48 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
 %        assign propability
         for c=1:size(image) %make more efficient later
            if edge(1)<=image(c) && image(c)<edge(2)
-               p(c)=[p(:) count_p(1)];
+               p=[p(:) count_p(1)];
            elseif edge(2)<=image(c) && image(c)<edge(3)
-               p(c)=[p(:) count_p(2)];
+               p=[p(:) count_p(2)];
            elseif edge(3)<=image(c) && image(c)<edge(4)
-               p(c)=[p(:) count_p(3)];
+               p=[p(:) count_p(3)];
            elseif edge(4)<=image(c) && image(c)<edge(5)
-               p(c)=[p(:) count_p(4)];
+               p=[p(:) count_p(4)];
            elseif edge(5)<=image(c) && image(c)<edge(6)
-               p(c)=[p(:) count_p(5)];
+               p=[p(:) count_p(5)];
            elseif edge(6)<=image(c) && image(c)<edge(7)
-               p(c)=[p(:) count_p(6)];
+               p=[p(:) count_p(6)];
            elseif edge(7)<=image(c) && image(c)<edge(8)
-               p(c)=[p(:) count_p(7)];
+               p=[p(:) count_p(7)];
            elseif edge(8)<=image(c) && image(c)<edge(9)
-               p(c)=[p(:) count_p(8)];
+               p=[p(:) count_p(8)];
            elseif edge(9)<=image(c) && image(c)<edge(10)
-               p(c)=[p(:) count_p(9)];
+               p=[p(:) count_p(9)];
            elseif edge(10)<=image(c) && image(c)<edge(11)
-               p(c)=[p(:) count_p(10)];
+               p=[p(:) count_p(10)];
            elseif edge(11)<=image(c) && image(c)<edge(12)
-               p(c)=[p(:) count_p(11)];
+               p=[p(:) count_p(11)];
            elseif edge(12)<=image(c) && image(c)<edge(13)
-               p(c)=[p(:) count_p(12)];
+               p=[p(:) count_p(12)];
            elseif edge(13)<=image(c) && image(c)<edge(14)
-               p(c)=[p(:) count_p(13)];
+               p=[p(:) count_p(13)];
            elseif edge(14)<=image(c) && image(c)<edge(15)
-               p(c)=[p(:) count_p(14)];
+               p=[p(:) count_p(14)];
            elseif edge(15)<=image(c) && image(c)<edge(16)
-               p(c)=[p(:) count_p(15)];
+               p=[p(:) count_p(15)];
            elseif edge(16)<=image(c) && image(c)<edge(17)
-               p(c)=[p(:) count_p(16)];
+               p=[p(:) count_p(16)];
            elseif edge(17)<=image(c) && image(c)<edge(18)
-               p(c)=[p(:) count_p(17)];
+               p=[p(:) count_p(17)];
            elseif edge(18)<=image(c) && image(c)<edge(19)
-               p(c)=[p(:) count_p(18)];
+               p=[p(:) count_p(18)];
            elseif edge(19)<=image(c) && image(c)<edge(20)
-               p(c)=[p(:) count_p(19)];
+               p=[p(:) count_p(19)];
            else
-               p(c)=[p(:) count_p(20)];
+               p=[p(:) count_p(20)];
            end    
         end
-       prob=[prob(:);p];
+       prob=[prob(:);p(:)];
     end
     
 %     reshape the prob
