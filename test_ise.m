@@ -87,7 +87,7 @@ end
 
 % % % % % % % % % 
 % average the each cell's ise threshold to get overall threshold
-    ise_thr_avg=mean(ise_thr(:));
+    ise_thr_avg=mean(ise_thr(:),'All');
 % find the difference between the ise and overall threshold
 %     each cell's ise-overall threshold
        difference=ise-ise_thr_avg;
