@@ -11,9 +11,12 @@
 %       joint entropy H(X,Xu) and entropy H(X)
 %   outputs a (column) vector of entropies for all shuffles
 
-
-
-function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
+% actual_image= [rand(1,8211)];
+% shuffled_images= [rand(10,8211)];
+% dim1=51;
+% dim2=161;
+% [ise_out] = ise(actual_image, shuffled_images, dim1, dim2);
+function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
  
     % parameters to discretize maps
     bin_resolution = 0.05; % 0.005 
@@ -23,7 +26,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     shuffled_disc = floor(shuffled_images/bin_resolution)+1;
     shuffled_disc(isnan(shuffled_disc)) = 0;
     combined = [actual_disc; shuffled_disc]; %1+shuffles x 1600
-    length=1600; %total number of "pixel"= 1600
+    length=size(combined,2); %total number of "pixel"= 1600
     
 %    for each (image) row of combined calculate the probablity
     prob=[];
@@ -77,10 +80,10 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
                p=[p count_p(20)];
            end    
         end
-       prob=[prob(:) p'];
+       prob=[prob(:); p'];
        p=[];
     end
-    prob=prob';
+    prob=reshape(prob,size(combined,1),size(combined,2));
 %     reshape the prob
     combined = reshape(prob, size(prob,1), dim1, dim2); %now num_shuffles+1 x 51 x 161
     
@@ -93,23 +96,23 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
 %   1) joint probability 2)entropy
     %   for  H(X,Xu) computations
     p_X_Xu=centre .* upper;
-    [vert_entropy] = shuffled_joint_entropy(p_X_Xu);
+    [vert_entropy] = entropy(p_X_Xu);
     
     %   H(Xl,Xu) computations
     p_X1_Xu= left(:,:,2:end) .* upper(:,:,2:end); %idk why yet
-    [pos_angled_entropy] = shuffled_joint_entropy(p_X1_Xu);
+    [pos_angled_entropy] = entropy(p_X1_Xu);
     
     %   H(Xr,Xu) computations
     p_Xr_Xu=right(:,:,2:end) .* upper(:,:,2:end);%idk why yet
-    [neg_angled_entropy] = shuffled_joint_entropy(p_Xr_Xu);  
+    [neg_angled_entropy] = entropy(p_Xr_Xu);  
     
     %   H(Xr/X) computations ~ H(Xr,X) - H(X)
     %   H(Xr,X)
     p_Xr_X=combined(:,:,1:end-1).* combined(:,:,2:end); %idk why yet
-    [hor_entropy] = shuffled_joint_entropy(p_Xr_X);
-    p_X= combined_disc(:,:,1:end-1); %according to Kian Wei's ise.m
+    [hor_entropy] = entropy(p_Xr_X);
+    p_X= combined(:,:,1:end-1); %according to Kian Wei's ise.m
     %   H(X)
-    [self_entropy] = shuffled_joint_entropy(p_X);
+    [self_entropy] = entropy(p_X);
     hor_cond_entropy = hor_entropy - self_entropy;
     
 %   final calculation:
