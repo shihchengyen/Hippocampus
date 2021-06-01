@@ -473,7 +473,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
             %for testing
             data.actual_image=actual_image;
-            data.shuffled_images=shuffled_images;
+            data.shuffled_images=shuffled_images(:);
 
             
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
