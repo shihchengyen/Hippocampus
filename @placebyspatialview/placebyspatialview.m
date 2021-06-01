@@ -10,8 +10,10 @@ if nargin > 1 % Single cell
     cellList = {cwd};
 else % Batch 
     % Load cell list
-    cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
-    fid = fopen([cwd '/cell_list.txt'],'rt');
+%     cwd = '/Users/yuhsuan/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
+    cwd='/Users/yuhsuan/Desktop';
+%     fid = fopen([cwd '/cell_list.txt'],'rt');
+    fid = fopen([cwd '/cell_list copy.txt'],'rt');
 %     fid = fopen([cwd '/cell_list_1pxFiltAll.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};

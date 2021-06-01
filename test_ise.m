@@ -8,7 +8,7 @@ function [obj, varargout] = test_ise(savefig,varargin)
     % Load cell list
     cwd = '/Users/yuhsuan/Desktop';
 %     Analysis'
-    fid = fopen([cwd '/cell_list.txt'],'rt');
+    fid = fopen([cwd '/cell_list copy 2.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
@@ -22,6 +22,8 @@ cellid = cell(size(cellList,1),1);
 missing = [];
     
 % Load vmpv object for each session
+ise=[];
+ise_thr =[];
 for ss = 1:size(cellList,1)
 
 % % % %     generate new vmsv
@@ -40,7 +42,7 @@ end
        difference=ise-ise_thr_avg;
 %     each cell's ise/overall threshold
         ratio=ise/ise_thr_avg;
- save('/Desktop/test_ise.mat');
+ save('/Desktop/test_list2.mat');
 end
 
 
