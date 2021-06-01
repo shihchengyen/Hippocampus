@@ -25,8 +25,8 @@ missing = [];
 for ss = 1:size(cellList,1)
 
 % % % %     generate new vmsv
-    cd(cellList{ss});
-    cd ..\ %up one to cell01
+    cd(strrep(cellList{ss},'/spiketrain.mat','');
+%     cd ..\ %up one to cell01
     sv=vmsv('auto');
 %     get each cell's ise
     ise=[ise(:) sv.data.ISE];
