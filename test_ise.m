@@ -6,22 +6,27 @@
 function [obj, varargout] = test_ise(savefig,varargin)
 % Batch 
     % Load cell list
-    cwd = '/Users/yuhsuan/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
-%old: cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current
+    cwd = '/Users/yuhsuan/Desktop';
 %     Analysis'
     fid = fopen([cwd '/cell_list.txt'],'rt');
-%     fid = fopen([cwd '/cell_list_1pxFiltAll.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
-    
-    
+% Make sure no empty cells
+notempty = ~cellfun(@isempty,cellList);
+cellList = cellList(notempty,:);
+% Generate unique identifier for each cell
+s = regexp(cellList{1},'session');
+identifiers = zeros(size(cellList,1),5);
+cellid = cell(size(cellList,1),1);
+missing = [];
     
 % Load vmpv object for each session
 for ss = 1:size(cellList,1)
 
 % % % %     generate new vmsv
-    cd(strrep(cell2str(cellList(ss)),'Volumes','Users/yuhsuan'));%directory specific to my workstation
+    cd(cellList{ss});
+    cd ..\ %up one to cell01
     sv=vmsv('auto');
 %     get each cell's ise
     ise=[ise(:) sv.data.ISE];
