@@ -8,7 +8,7 @@ function [obj, varargout] = test_ise(savefig,varargin)
     % Load cell list
     cwd = '/Users/yuhsuan/Desktop';
 %     Analysis'
-    fid = fopen([cwd '/cell_list copy 2.txt'],'rt');
+    fid = fopen([cwd '/cell_list copy 3.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
@@ -42,7 +42,7 @@ end
        difference=ise-ise_thr_avg;
 %     each cell's ise/overall threshold
         ratio=ise/ise_thr_avg;
- save('Users/yuhsuan/Desktop/test_list2ise.mat');
+ save('/Users/yuhsuan/Desktop/test_list2ise_ted.mat');
 end
 
 
