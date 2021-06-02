@@ -8,7 +8,7 @@ function [obj, varargout] = test_ise(savefig,varargin)
     % Load cell list
     cwd = '/Users/yuhsuan/Desktop';
 %     Analysis'
-    fid = fopen([cwd '/cell_list copy 3.txt'],'rt');
+    fid = fopen([cwd '/cell_list copy.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
@@ -21,12 +21,12 @@ identifiers = zeros(size(cellList,1),5);
 cellid = cell(size(cellList,1),1);
 missing = [];
 for ii = 1:size(cellList,1)
-    if exist(cellList{ii},'dir') == 2 
+    if exist(cellList{ii},'file') == 2 
         %also want to check vmpv.ma file
-        s=cellList{ii};
-        array_p= strfind(s,'array');%position of 'array'
-        filename= [s(1:array_p-2),'vmpv.mat'];%vmpv filename
-        if exist(filename,'dir') == 2 
+        st=cellList{ii};
+        array_p= strfind(st,'array');%position of 'array'
+        filename= [st(1:array_p-1),'vmpv.mat'];%vmpv filename
+        if exist(filename,'file') == 2 
             % Collect date, session, array, channel, cell
             identifiers(ii,:) = [str2double(cellList{ii}(s-9:s-2)) str2double(cellList{ii}(s+7:s+8)) ...
                 str2double(cellList{ii}(s+15:s+16)) str2double(cellList{ii}(s+25:s+27)) str2double(cellList{ii}(s+33:s+34))];
