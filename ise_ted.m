@@ -19,12 +19,12 @@
 function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
  
     % parameters to discretize maps
-%     bin_resolution = 0.05; % 0.005 
+    bin_resolution = 0.05; % 0.005 
 %   input image
-%     actual_disc = floor(actual_image/bin_resolution)+1;
-    actual_disc(isnan(actual_image)) = 0;
-%     shuffled_disc = floor(shuffled_images/bin_resolution)+1;
-    shuffled_disc(isnan(shuffled_image)) = 0;
+    actual_disc = floor(actual_image/bin_resolution)+1;
+    actual_disc(isnan(actual_disc)) = 0;
+    shuffled_disc = floor(shuffled_images/bin_resolution)+1;
+    shuffled_disc(isnan(shuffled_disc)) = 0;
     combined = [actual_disc; shuffled_disc]; %1+shuffles x 1600
     length=size(combined,2); %total number of "pixel"= 1600
     
