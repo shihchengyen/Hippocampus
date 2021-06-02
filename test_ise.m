@@ -4,6 +4,7 @@
 % % % % % % % need to deal with missing file
 
 function [obj, varargout] = test_ise(savefig,varargin)
+tic;
 % Batch 
     % Load cell list
     cwd = '/Users/yuhsuan/Desktop';
@@ -72,7 +73,8 @@ end
         ratio=ise/ise_thr_avg;
 %     ise_result=[identifiers ise ise_thr difference ratio];
 %  save('/Users/yuhsuan/Desktop/test_list2ise_ted.mat');
- save('/Users/yuhsuan/Desktop/test_list2ise_ted.mat','identifiers','ise','ise_thr','ise_thr_avg','difference','ratio');
+time=toc;
+ save('/Users/yuhsuan/Desktop/test_list2ise.mat','identifiers','ise','ise_thr','ise_thr_avg','difference','ratio','time');
 end
 
 
