@@ -478,8 +478,9 @@ if(~isempty(dir(Args.RequiredFile)))
             
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             tic;
-
-            ise_out = ise_ted(actual_image, shuffled_images, 51, 161);
+    
+            ise_out = ise(actual_image, shuffled_images, 51, 161);
+%             ise_out = ise_ted(actual_image, shuffled_images, 51, 161);
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             if repeat == 1

@@ -31,9 +31,9 @@ for ss = 1:size(cellList,1)
 %     cd ..\ %up one to cell01
     sv=vmsv('auto');
 %     get each cell's ise
-    ise=[ise(:) sv.data.ISE];
+    ise=[ise; sv.data.ISE];
 %     get each cell's ise_threshold 95% percentile
-    ise_thr =[ise_thr(:) prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
+    ise_thr =[ise_thr; prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
 end
 % average the each cell's ise threshold to get overall threshold
     ise_thr_avg=mean(ise_thr(:));
@@ -42,7 +42,7 @@ end
        difference=ise-ise_thr_avg;
 %     each cell's ise/overall threshold
         ratio=ise/ise_thr_avg;
- save('/Desktop/test_list2.mat');
+ save('Users/yuhsuan/Desktop/test_list2ise.mat');
 end
 
 
