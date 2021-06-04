@@ -29,7 +29,7 @@ for ii = 1:size(cellList,1)
         filename= [st(1:array_p-1),'vmpv.mat'];%vmpv filename
         filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat');
         if exist(filename,'file') == 2 
-            if exist(filename2,'file') == 2
+            if exist(filename2,'file') ~= 2
                 % Collect date, session, array, channel, cell
                 identifiers(ii,:) = [str2double(cellList{ii}(s-9:s-2)) str2double(cellList{ii}(s+7:s+8)) ...
                     str2double(cellList{ii}(s+15:s+16)) str2double(cellList{ii}(s+25:s+27)) str2double(cellList{ii}(s+33:s+34))];
