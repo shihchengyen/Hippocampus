@@ -39,4 +39,9 @@ identifiers(missing,:) = [];
 cellid(missing) = [];
 cellList(missing) = [];
 % writecell(cellList,'/Users/yuhsuan/Documents/MATLAB/cell_list.txt');
-writecell(identifiers(:,1),'/Users/yuhsuan/Documents/MATLAB/cell_list.txt');
+% writecell(identifiers(:,1),'/Users/yuhsuan/Documents/MATLAB/cell_list.txt');
+
+r=(identifiers(:,1));
+fileID = fopen('/Users/yuhsuan/Documents/MATLAB/cell_list.txt','w');
+fprintf(fileID,'%d\n',r);
+fclose(fileID);
