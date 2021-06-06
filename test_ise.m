@@ -27,7 +27,7 @@ for ii = 1:size(cellList,1)
         st=cellList{ii};
         array_p= strfind(st,'array');%position of 'array'
         filename= [st(1:array_p-1),'vmpv.mat'];%vmpv filename
-        filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat');
+        filename2=strrep(cellList{ii},'/spiketrain.mat','/vmsv_isechange.mat');
         if exist(filename,'file') == 2 
             if exist(filename2,'file') ~= 2
                 % Collect date, session, array, channel, cell
@@ -38,6 +38,8 @@ for ii = 1:size(cellList,1)
             else
                 missing = [missing ii];
             end
+        else
+                missing = [missing ii];
         end
     end
 end
