@@ -474,13 +474,13 @@ if(~isempty(dir(Args.RequiredFile)))
             %for testing
             data.actual_image=actual_image;
             data.shuffled_images=shuffled_images(:);
-
+%             save('/Users/DataDesktop')
             
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             tic;
     
-            ise_out = ise(actual_image, shuffled_images, 51, 161);
-%             ise_out = ise_ted(actual_image, shuffled_images, 51, 161);
+%             ise_out = ise(actual_image, shuffled_images, 51, 161);
+            ise_out = ise_ted(actual_image, shuffled_images, 51, 161);
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             if repeat == 1

@@ -43,5 +43,5 @@ cellList(missing) = [];
 
 r=(identifiers(:,1));
 fileID = fopen('/Users/yuhsuan/Documents/MATLAB/cell_list.txt','w');
-fprintf(fileID,'%d\n',r);
+fprintf(fileID,'%d/session01\n',r);
 fclose(fileID);

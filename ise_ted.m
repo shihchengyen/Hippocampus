@@ -10,12 +10,13 @@
 %   calculate each entropy
 %       joint entropy H(X,Xu) and entropy H(X)
 %   outputs a (column) vector of entropies for all shuffles
-
+% 
 % actual_image= [rand(1,8211)];
 % shuffled_images= [rand(10,8211)];
+% % [counts,binLocations] = imhist(actual_image)
 % dim1=51;
 % dim2=161;
-% [ise_out] = ise(actual_image, shuffled_images, dim1, dim2);
+% % [ise_out] = ise(actual_image, shuffled_images, dim1, dim2);
 function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
  
     % parameters to discretize maps
@@ -37,6 +38,7 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
        [count,edge]=histcounts(image,bin);
        count_p=count/length;
 %        assign propability
+%        use recursion?
         for c=1:size(combined,2) %make more efficient later
            if edge(1)<=image(c) && image(c)<edge(2)
                p=[p count_p(1)];
@@ -85,7 +87,7 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
     end
     prob=reshape(prob,size(combined,1),size(combined,2));
 %     reshape the prob
-    combined = reshape(prob, size(prob,1), dim1, dim2); %now num_shuffles+1 x 51 x 161
+    combined = reshape(prob, size(combined,1), dim1, dim2); %now num_shuffles+1 x 51 x 161
     
 % find Xu,X,Xl,Xr
     upper = combined(:,1:end-1,:); %Xu
@@ -113,11 +115,14 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
     p_X= combined(:,:,1:end-1); %according to Kian Wei's ise.m
     %   H(X)
     [self_entropy] = entropy(p_X);
-    hor_cond_entropy = hor_entropy - self_entropy;
+%     %original
+%     hor_cond_entropy = hor_entropy - self_entropy;
+    %modify to avoid negative entropy
+    hor_cond_entropy = -hor_entropy + self_entropy;
     
 %   final calculation:
-      mn = size(combined,1)*size(combined,2);
-%       num_shuffles+1 x 39(which is dim1) wierd dimension
+      mn = size(combined,2)*size(combined,3);
+%       dim1*dim2
       ise_out = mn.*(vert_entropy + hor_cond_entropy);
       ise_out = ise_out - (mn/2).*(pos_angled_entropy + neg_angled_entropy);
 
@@ -128,7 +133,13 @@ function [entropy] = entropy(input)
     % outputs column vector of entropies for all shuffles
     temp=input;
     temp = reshape(input, size(input,1),size(input,2)*size(input,3)); % now (num_shuffles+1) x 39*40 
+    temp1 = reshape(input, 1,[]);
+    l=log2(temp);
+    l2=log2(temp1);
+%     should be:
     entropy= -temp .* log2(temp);
+% %     without (-) version
+%     entropy= temp .* log2(temp);
     entropy= cumsum(entropy,2);
     entropy=entropy(:,end);%only the sum value of each image
     
