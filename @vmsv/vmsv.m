@@ -280,7 +280,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 firing_counts_full1(isnan(firing_counts_full1)) = 0;
                 
 %                 to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
-                to_compute = 1:0.5:(max(size(grid_o_i_Gaze{jj})))/2;
+                to_compute = 1:0.5:(max(size(grid_o_i_Gaze{jj}(:,:,1))))/2;
                 
                 possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
                 to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
@@ -927,4 +927,19 @@ end
 % % report radii sizes?
 
 
-
+            
+            %             %%%% NEW
+%             map = cell(9,1);
+%             for jj = 3:size(grid_o_i_Gaze,1)
+%                 [map{jj},smoothedSpk,smoothedDur]=adsmooth(grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},alpha);
+%             end
+%             map_unpad = cell(9,1);
+%             maplin = nan(5122,1);
+%             for jj = 3:size(grid_o_i_Gaze,1)
+%                 map_unpad{jj} = map{jj}(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2));
+%                 % Put grid map back into linear map
+%                 set = reshape(flipud(rot90(map_unpad{jj})),size(map_unpad{jj},1)*size(map_unpad{jj},2),1);
+%                 lin_inds = sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2))+1:sum(binDepths(1:jj,1).*binDepths(1:jj,2));
+%                 maplin(lin_inds,:) = reshape(set,1,binDepths(jj,1)*binDepths(jj,2));
+%             end
+%             %%% END OF NEW %%%
