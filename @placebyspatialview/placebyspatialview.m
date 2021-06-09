@@ -46,7 +46,7 @@ setsessions = unique(identifiers(:,1));
 % setcells = unique(cellid);
 
 % Remove cell directories that already exist 
-figdir = ['/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/' filttype '/' num2str(pix) 'px/PlaceView/'];
+figdir = ['/Users/yuhsuan/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/' filttype '/' num2str(pix) 'px/PlaceView/'];
 if savefig    
     if exist(figdir,'dir') ~= 7
         mkdir(figdir);
