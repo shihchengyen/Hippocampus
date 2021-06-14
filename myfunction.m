@@ -1,5 +1,6 @@
 function myfunction(varargin)
 % make vmsv file
-sv=vmsv('save');
-% save('vmsv_ise_ted_20.mat','sv');
+sv=vmsv('auto');
+% save('vmsv_ise_matlab.mat','sv');
+save('vmsv_isechange.mat','sv');
 end

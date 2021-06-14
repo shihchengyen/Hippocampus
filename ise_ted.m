@@ -38,7 +38,8 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
        [count,edge]=histcounts(image,bin);
        count_p=count/length;
 %        assign propability
-%        use recursion?
+%        use: ind=edge(1)<=image(c) && image(c)<edge(2);
+%       image(ind)=count_p;
         for c=1:size(combined,2) %make more efficient later
            if edge(1)<=image(c) && image(c)<edge(2)
                p=[p count_p(1)];

@@ -2,9 +2,10 @@
 function [obj, varargout] = get_vmsv(savefig,varargin)
 % Batch 
     % Load cell list
-    cwd = '/Users/yuhsuan/Desktop';
+%     cwd = '/Users/yuhsuan/Desktop';
 %     Analysis'
-    fid = fopen([cwd '/cell_list copy.txt'],'rt');
+%     fid = fopen([cwd '/cell_list2.txt'],'rt');
+    fid = fopen('cell_list2.txt','rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
 
@@ -18,12 +19,12 @@ cellid = cell(size(cellList,1),1);
 missing = [];
 for ii = 1:size(cellList,1)
     if exist(cellList{ii},'file') == 2
-        filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat');
+        filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv.mat');
         %also want to check vmpv.ma file
         st=cellList{ii};
         array_p= strfind(st,'array');%position of 'array'
         filename= [st(1:array_p-1),'vmpv.mat'];%vmpv filename
-        filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat');
+%         filename2=strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat');
         if exist(filename,'file') == 2
             if exist(filename2,'file') == 2
                 % Collect date, session, array, channel, cell
@@ -47,7 +48,8 @@ ise=[];
 ise_thr =[];
 for ss = 1:size(cellList,1)
 
-    sv=load (strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat'));
+%     sv=load (strrep(cellList{ii},'/spiketrain.mat','vmsv_isechange.mat'));
+    sv=load (strrep(cellList{ii},'/spiketrain.mat','vmsv.mat'));
 %     cd ..\ %up one to cell01
 %     get each cell's ise
     ise=[ise; sv.data.ISE];
@@ -55,16 +57,19 @@ for ss = 1:size(cellList,1)
     ise_thr =[ise_thr; prctile([sv.data.ISE; sv.data.ISEsh(:)],95)];
 end
 % average the each cell's ise threshold to get overall threshold
-    ise_thr_avg=mean(ise_thr(:));
+    ise_thr_avg=ones(size(ise),1);
+    ise_thr_avg=ise_thr_avg*mean(ise_thr(:));
 % find the difference between the ise and overall threshold
 %     each cell's ise-overall threshold
        difference=ise-ise_thr_avg;
 %     each cell's ise/overall threshold
-        ratio=ise/ise_thr_avg;
-%     ise_result=[identifiers ise ise_thr difference ratio];
+        ratio=ise./ise_thr_avg;
+    ise_result=[identifiers ise ise_thr ise_thr_avg difference ratio];
+    save('ise_ted_result.mat','ise_result');
+    
 %  save('/Users/yuhsuan/Desktop/test_list2ise_ted.mat');
-time=toc;
- save('/Users/yuhsuan/Desktop/isechange_result.mat','identifiers','ise','ise_thr','ise_thr_avg','difference','ratio','time');
+% time=toc;
+%  save('/Users/yuhsuan/Desktop/isechange_result.mat','identifiers','ise','ise_thr','ise_thr_avg','difference','ratio','time');
 end
 
 
