@@ -39,14 +39,14 @@ for i=1:size(bin_resolution,1)
 name=['ise' num2str(bin_resolution(i)) '.mat'];
 sv=load(name);
 
-ISE =[ISE; sv.vs.data.ISE];
-ISEsh =[ISEsh; mean(sv.vs.data.ISEsh)];
-SIC =[SIC; sv.vs.data.SIC];
-SICsh =[SICsh; mean(sv.vs.data.SICsh)];
+ISE =[ISE; sv.ISE];
+ISEsh =[ISEsh; mean(sv.ISEsh)];
+% SIC =[SIC; sv.vs.data.SIC];
+% SICsh =[SICsh; mean(sv.vs.data.SICsh)];
 
 end
 ISE_ISEsh =ISE./ISEsh;
 
 % Create a table, T, as a container for the workspace variables. The table function uses the workspace variable names as the names of the table variables in T. A table variable can have multiple columns. For example, the BloodPressure variable in T is a 5-by-2 array.
-
-T = table(Method,ISE,ISEsh,ISE_ISEsh,SIC,SICsh)
+% T = table(Method,ISE,ISEsh,ISE_ISEsh,SIC,SICsh)
+T = table(Method,ISE,ISEsh,ISE_ISEsh)
