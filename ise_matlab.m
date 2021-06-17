@@ -6,17 +6,17 @@ function [ise_out] = ise_matlab(actual_image, shuffled_images, dim1, dim2)
 %     shuffled_images= [rand(10,8211)];
 %     dim1=51;
 %     dim2=161;
-%     % parameters to discretize maps
-%     bin_resolution = 0.05; % 0.005 
-% 
-%     % binning each datapoint
-%     actual_disc = floor(actual_image/bin_resolution)+1;
-    actual_image(isnan(actual_image)) = 0;
-%     shuffled_disc = floor(shuffled_images/bin_resolution)+1;
-    shuffled_images(isnan(shuffled_images)) = 0;
+    % parameters to discretize maps
+    bin_resolution = 0.05; % 0.005 
+
+    % binning each datapoint
+    actual_disc = floor(actual_image/bin_resolution)+1;
+    actual_disc(isnan(actual_disc)) = 0;
+    shuffled_disc = floor(shuffled_images/bin_resolution)+1;
+    shuffled_disc(isnan(shuffled_disc)) = 0;
     
-combined = [actual_image; shuffled_images];
-[counts,binLocations] = imhist(actual_image);
+combined = [actual_disc; shuffled_disc];
+[counts,binLocations] = imhist(actual_disc);
 %  assign propability
 %convert count to probability
 counts=counts/sum(counts);
