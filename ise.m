@@ -108,6 +108,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     
     % parameters to discretize maps
     bin_resolution = 0.05; % 0.005 
+%     bin_resolution = 0.005;
 
     % binning each datapoint
     actual_disc = floor(actual_image/bin_resolution)+1;
@@ -150,11 +151,11 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     hor_cond_entropy = hor_entropy - self_entropy;
     
     % final calculation
-%     mn = size(combined_disc,1)*size(combined_disc,2);
-    mn = size(combined_disc,3)*size(combined_disc,2);
+    mn = size(combined_disc,1)*size(combined_disc,2);
+%     mn = size(combined_disc,3)*size(combined_disc,2);
     ise_out = mn.*(vert_entropy + hor_cond_entropy);
     ise_out = ise_out - (mn/2).*(pos_angled_entropy + neg_angled_entropy);
-%     ise_out = ise_out ./ mn;
+    ise_out = ise_out ./ mn;
     
 end
 
