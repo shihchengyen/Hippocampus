@@ -92,7 +92,7 @@
 % 
 % end
 
-function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
+function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2,bin_resolution)
 
     % function to calculate image spatial entropy, which builds on shannon's entropy but
     % uses quadrilateral markov random field to take into account spatial
@@ -107,7 +107,7 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2)
     % for pillars and walls)
     
     % parameters to discretize maps
-    bin_resolution = 0.05; % 0.005 
+%     bin_resolution = 0.05; % 0.005 
 %     bin_resolution = 0.005;
 
     % binning each datapoint
