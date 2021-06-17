@@ -482,7 +482,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
 for i=1:size(bin_resolution,1)
 ise_out = ise(actual_image, shuffled_images, 51, 161,bin_resolution(i))
-name=['ise' num2str(bin_resolution(i))'.mat'];
+name=['ise' num2str(bin_resolution(i)) '.mat'];
 ISE = ise_out(1);
 ISEsh = ise_out(2:end,1);
 save(name,'ISE','ISEsh');
