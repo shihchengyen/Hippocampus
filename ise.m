@@ -30,13 +30,13 @@ name1=['ise' num2str(bin_resolution) '_s.fig'];
 name1_2=['ise' num2str(bin_resolution) '_s.png'];
 savefig(name1);
 saveas(gcf,name1_2);
-
+close all
 [mapG,mapGdummy]=plotmap(mapL,'place');
 name2=['ise' num2str(bin_resolution) '_p.fig'];
 name2_2=['ise' num2str(bin_resolution) '_p.png'];
 savefig(name2);
 saveas(gcf,name2_2);
-
+close all
     % reshaping to 2d structure, stacked by shuffles for 3d result
     combined_disc = reshape(combined_disc, size(combined_disc,1), dim1, dim2);
     
