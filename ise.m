@@ -26,14 +26,14 @@ function [ise_out] = ise(actual_image, shuffled_images, dim1, dim2,bin_resolutio
 % % % % %     map it out
 mapL=actual_disc;
 [mapG,mapGdummy]=plotmap(mapL,'spatialview');
-name1=['ise' num2str(bin_resolution(i)) '_s.fig'];
-name1_2=['ise' num2str(bin_resolution(i)) '_s.png'];
+name1=['ise' num2str(bin_resolution) '_s.fig'];
+name1_2=['ise' num2str(bin_resolution) '_s.png'];
 savefig(name1);
 saveas(gcf,name1_2);
 
 [mapG,mapGdummy]=plotmap(mapL,'place');
-name2=['ise' num2str(bin_resolution(i)) '_p.fig'];
-name2_2=['ise' num2str(bin_resolution(i)) '_p.png'];
+name2=['ise' num2str(bin_resolution) '_p.fig'];
+name2_2=['ise' num2str(bin_resolution) '_p.png'];
 savefig(name2);
 saveas(gcf,name2_2);
 
