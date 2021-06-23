@@ -475,20 +475,21 @@ if(~isempty(dir(Args.RequiredFile)))
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             tic;
 % %     for testing
-            bin_resolution=[0.5; 0.05; 0.005; 0.0005; 0.1; 0.01; 0.001; 0.0001; 1];
-save('/Users/yuhsuan/Desktop/data/20181031/actual_image.mat','actual_image','shuffled_images' );       
-% save('/Users/yuhsuan/Desktop/data/20181101/actual_image.mat','actual_image','shuffled_images' );      
-% save('/Users/yuhsuan/Desktop/data/20181102/actual_image.mat','actual_image','shuffled_images' );    
+            
+            address='/Users/yuhsuan/Desktop/data/20181031';
+%             address='/Users/yuhsuan/Desktop/data/20181101';
+%             address='/Users/yuhsuan/Desktop/data/20181102';
+            cd(address);
+save('actual_image.mat','actual_image','shuffled_images' );       
+bin_resolution=[0.5; 0.05; 0.005; 0.0005; 0.1; 0.01; 0.001; 0.0001; 1];
 for i=1:size(bin_resolution,1)
 
 ise_out = ise(actual_image, shuffled_images, 51, 161,bin_resolution(i))
 name=['ise' num2str(bin_resolution(i)) '.mat'];
 ISE = ise_out(1);
 ISEsh = ise_out(2:end,1);
-address=['/Users/yuhsuan/Desktop/data/20181031/' name]
-% address=['/Users/yuhsuan/Desktop/data/20181101/' name]
-% address=['/Users/yuhsuan/Desktop/data/20181102/' name]
-save(address,'ISE','ISEsh');
+
+save(name,'ISE','ISEsh');
 end
 %             ise_out = ise(actual_image, shuffled_images, 51, 161);
 %             ise_out = ise_ted(actual_image, shuffled_images, 51, 161);
