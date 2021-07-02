@@ -1,45 +1,52 @@
-clear all
-close all
-clc
-load('vmsv.mat');
-load('vmpc.mat');
-
-% bin_resolution=[1; 0.5;0.1;  0.05;  0.01;0.005;0.001; 0.0005; 0.0001  ];
-bin_resolution=[0.1;  0.05;  0.01;0.005;0.001; 0.0005];
-for i=1:size(bin_resolution,1)
-%     actual_disc = floor(vms.data.maps_adsm/bin_resolution(i))+1;
+% clear all
+% close all
+% clc
+% load('vmsv.mat');
+% load('vmpc.mat');
+% 
+% % bin_resolution=[1; 0.5;0.1;  0.05;  0.01;0.005;0.001; 0.0005; 0.0001  ];
+% bin_resolution=[0.1;  0.05;  0.01;0.005;0.001; 0.0005];
+% for i=1:size(bin_resolution,1)
+% %     actual_disc = floor(vms.data.maps_adsm/bin_resolution(i))+1;
+% %     actual_disc(isnan(actual_disc)) = 0;
+% % %     actual_disc = (actual_disc-mean(actual_disc))/std(actual_disc);
+% % %     figure('Name', num2str(bin_resolution(i)),'NumberTitle','off');
+% %     subplot(2,3,i)
+% % h=histogram(actual_disc) 
+% % % h=histogram(actual_disc, 0:(1/bin_resolution(i)/5):max(actual_disc))
+% % title(num2str(bin_resolution(i)));
+% % %     plotmap(actual_disc,'spatialview')
+% 
+% actual_disc = floor(vmp.data.maps_adsm/bin_resolution(i))+1;
 %     actual_disc(isnan(actual_disc)) = 0;
-% %     actual_disc = (actual_disc-mean(actual_disc))/std(actual_disc);
-% %     figure('Name', num2str(bin_resolution(i)),'NumberTitle','off');
+% % %     actual_disc = (actual_disc-mean(actual_disc))/std(actual_disc);
+% %     figure('Name',num2str(bin_resolution(i)),'NumberTitle','off');
+% %     plotmap(actual_disc,'place')
+% %     lim = caxis;
+% %     caxis([lim(2)*2/3 lim(2)])
 %     subplot(2,3,i)
-% h=histogram(actual_disc) 
-% % h=histogram(actual_disc, 0:(1/bin_resolution(i)/5):max(actual_disc))
+% % h=histogram(actual_disc) 
+% h=histogram(actual_disc, 0:(1/bin_resolution(i)/20):max(actual_disc))
+% % low=(h.BinLimits(2)*8/10)/ h.BinWidth;
+% low=(h.BinLimits(2)*0.02)/ h.BinWidth;
+% h.BinLimits=[floor(low)*h.BinWidth  h.BinLimits(2)]
 % title(num2str(bin_resolution(i)));
-% %     plotmap(actual_disc,'spatialview')
-
-actual_disc = floor(vmp.data.maps_adsm/bin_resolution(i))+1;
-    actual_disc(isnan(actual_disc)) = 0;
-% %     actual_disc = (actual_disc-mean(actual_disc))/std(actual_disc);
-%     figure('Name',num2str(bin_resolution(i)),'NumberTitle','off');
-%     plotmap(actual_disc,'place')
-%     lim = caxis;
-%     caxis([lim(2)*2/3 lim(2)])
-    subplot(2,3,i)
-% h=histogram(actual_disc) 
-h=histogram(actual_disc, 0:(1/bin_resolution(i)/20):max(actual_disc))
-% low=(h.BinLimits(2)*8/10)/ h.BinWidth;
-low=(h.BinLimits(2)*0.02)/ h.BinWidth;
-h.BinLimits=[floor(low)*h.BinWidth  h.BinLimits(2)]
-title(num2str(bin_resolution(i)));
-end          
+% end          
            
 %%%%%vmp
+% load('actual_image.mat');ise_out = ise_ted_2(actual_image, shuffled_images, 51, 161);save('ise_ted.mat','ise_out');
+clear
+clc
+vmp=vmpc('auto');save('vmpc_ted','vmp');load('vmpc_ted.mat'); vmp.data.ISEsh;
+% load('vmpc_ted.mat')
+
+
 sic_vmp = vmp.data.SIC;
-sic_95 = prctile(vmp.data.SICsh, 95);
+sic_97 = prctile(vmp.data.SICsh, 97.5);
 z =(vmp.data.SIC-mean(vmp.data.SICsh))/std(vmp.data.SICsh);
 sic1 = vmp.data.SIC1;
 sic2 = vmp.data.SIC2;
-T1 = table(sic_vmp, sic_95, z,sic1, sic2)
+T1 = table(sic_vmp, sic_97, z,sic1, sic2)
 
 ise_vmp = vmp.data.ISE;
 ise_2_5 = prctile(vmp.data.ISEsh, 2.5);
@@ -64,38 +71,38 @@ T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
 % T4 = table(ise_vs, ise_2_5, z, ise1, ise2)
 
 
-%%%%%vms
-sic_vms = vms.data.SIC;
-sic_95 = prctile(vms.data.SICsh, 95);
-z =(vms.data.SIC-mean(vms.data.SICsh))/std(vms.data.SICsh);
-sic1 = vms.data.SIC1;
-sic2 = vms.data.SIC2;
-T3 = table(sic_vms, sic_95, z,sic1, sic2)
-
-ise_vms = vms.data.ISE;
-ise_2_5 = prctile(vms.data.ISEsh, 2.5);
-z =(vms.data.ISE-mean(vms.data.ISEsh))/std(vms.data.ISEsh);
-ise1 = vms.data.ISE1;
-ise2 = vms.data.ISE2;
-T4 = table(ise_vms, ise_2_5, z, ise1, ise2)
-%map out vmp
-           figure('Name','maps_raw','NumberTitle','off');
-           plotmap(vmp.data.maps_raw,'place')
-           figure('Name','maps_adsm','NumberTitle','off');
-           plotmap(vmp.data.maps_adsm,'place')
-           figure('Name','maps_adsm1','NumberTitle','off');
-           plotmap(vmp.data.maps_adsm1,'place')
-           figure('Name','maps_adsm2','NumberTitle','off');
-           plotmap(vmp.data.maps_adsm2,'place')
-%map out vms
-           figure('Name','maps_raw','NumberTitle','off');
-           plotmap(vms.data.maps_raw,'spatialview')
-           figure('Name','maps_adsm','NumberTitle','off');
-           plotmap(vms.data.maps_adsm,'spatialview')
-           figure('Name','maps_adsm1','NumberTitle','off');
-           plotmap(vms.data.maps_adsm1,'spatialview')
-           figure('Name','maps_adsm2','NumberTitle','off');
-           plotmap(vms.data.maps_adsm2,'spatialview')
+% %%%%%vms
+% sic_vms = vms.data.SIC;
+% sic_95 = prctile(vms.data.SICsh, 95);
+% z =(vms.data.SIC-mean(vms.data.SICsh))/std(vms.data.SICsh);
+% sic1 = vms.data.SIC1;
+% sic2 = vms.data.SIC2;
+% T3 = table(sic_vms, sic_95, z,sic1, sic2)
+% 
+% ise_vms = vms.data.ISE;
+% ise_2_5 = prctile(vms.data.ISEsh, 2.5);
+% z =(vms.data.ISE-mean(vms.data.ISEsh))/std(vms.data.ISEsh);
+% ise1 = vms.data.ISE1;
+% ise2 = vms.data.ISE2;
+% T4 = table(ise_vms, ise_2_5, z, ise1, ise2)
+% %map out vmp
+%            figure('Name','maps_raw','NumberTitle','off');
+%            plotmap(vmp.data.maps_raw,'place')
+%            figure('Name','maps_adsm','NumberTitle','off');
+%            plotmap(vmp.data.maps_adsm,'place')
+%            figure('Name','maps_adsm1','NumberTitle','off');
+%            plotmap(vmp.data.maps_adsm1,'place')
+%            figure('Name','maps_adsm2','NumberTitle','off');
+%            plotmap(vmp.data.maps_adsm2,'place')
+% %map out vms
+%            figure('Name','maps_raw','NumberTitle','off');
+%            plotmap(vms.data.maps_raw,'spatialview')
+%            figure('Name','maps_adsm','NumberTitle','off');
+%            plotmap(vms.data.maps_adsm,'spatialview')
+%            figure('Name','maps_adsm1','NumberTitle','off');
+%            plotmap(vms.data.maps_adsm1,'spatialview')
+%            figure('Name','maps_adsm2','NumberTitle','off');
+%            plotmap(vms.data.maps_adsm2,'spatialview')
 
 
 
