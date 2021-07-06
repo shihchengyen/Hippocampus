@@ -33,7 +33,7 @@
 % title(num2str(bin_resolution(i)));
 % end          
            
-%%%%%vmp
+%%%%vmp
 % load('actual_image.mat');ise_out = ise_ted_2(actual_image, shuffled_images, 51, 161);save('ise_ted.mat','ise_out');
 clear
 clc
@@ -41,20 +41,21 @@ vmp=vmpc('auto');save('vmpc_ted','vmp');load('vmpc_ted.mat'); vmp.data.ISEsh;
 % load('vmpc_ted.mat')
 
 
-sic_vmp = vmp.data.SIC;
-sic_97 = prctile(vmp.data.SICsh, 97.5);
-z =(vmp.data.SIC-mean(vmp.data.SICsh))/std(vmp.data.SICsh);
-sic1 = vmp.data.SIC1;
-sic2 = vmp.data.SIC2;
-T1 = table(sic_vmp, sic_97, z,sic1, sic2)
-
+% sic_vmp = vmp.data.SIC;
+% sic_97 = prctile(vmp.data.SICsh, 97.5);
+% z =(vmp.data.SIC-mean(vmp.data.SICsh))/std(vmp.data.SICsh);
+% sic1 = vmp.data.SIC1;
+% sic2 = vmp.data.SIC2;
+% T1 = table(sic_vmp, sic_97, z,sic1, sic2)
+% 
 ise_vmp = vmp.data.ISE;
 ise_2_5 = prctile(vmp.data.ISEsh, 2.5);
 z =(vmp.data.ISE-mean(vmp.data.ISEsh))/std(vmp.data.ISEsh);
 ise1 = vmp.data.ISE1;
 ise2 = vmp.data.ISE2;
 T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
-
+figure
+histogram(vmp.data.ISEsh)
 % %%%%%vms
 % sic_vs = vs.data.SIC;
 % sic_95 = prctile(vs.data.SICsh, 95);
@@ -73,7 +74,7 @@ T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
 
 % %%%%%vms
 % sic_vms = vms.data.SIC;
-% sic_95 = prctile(vms.data.SICsh, 95);
+% sic_95 = prctile(vms.data.SICsh, 97.5);
 % z =(vms.data.SIC-mean(vms.data.SICsh))/std(vms.data.SICsh);
 % sic1 = vms.data.SIC1;
 % sic2 = vms.data.SIC2;
@@ -85,15 +86,15 @@ T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
 % ise1 = vms.data.ISE1;
 % ise2 = vms.data.ISE2;
 % T4 = table(ise_vms, ise_2_5, z, ise1, ise2)
-% %map out vmp
-%            figure('Name','maps_raw','NumberTitle','off');
-%            plotmap(vmp.data.maps_raw,'place')
-%            figure('Name','maps_adsm','NumberTitle','off');
-%            plotmap(vmp.data.maps_adsm,'place')
-%            figure('Name','maps_adsm1','NumberTitle','off');
-%            plotmap(vmp.data.maps_adsm1,'place')
-%            figure('Name','maps_adsm2','NumberTitle','off');
-%            plotmap(vmp.data.maps_adsm2,'place')
+% % %map out vmp
+% %            figure('Name','maps_raw','NumberTitle','off');
+% %            plotmap(vmp.data.maps_raw,'place')
+% %            figure('Name','maps_adsm','NumberTitle','off');
+% %            plotmap(vmp.data.maps_adsm,'place')
+% %            figure('Name','maps_adsm1','NumberTitle','off');
+% %            plotmap(vmp.data.maps_adsm1,'place')
+% %            figure('Name','maps_adsm2','NumberTitle','off');
+% %            plotmap(vmp.data.maps_adsm2,'place')
 % %map out vms
 %            figure('Name','maps_raw','NumberTitle','off');
 %            plotmap(vms.data.maps_raw,'spatialview')

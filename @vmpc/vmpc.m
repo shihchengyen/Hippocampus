@@ -385,14 +385,20 @@ if(~isempty(dir(Args.RequiredFile)))
                 lambda_i(:,bins_sieved) = firing_rates_full;                
                 
                 if repeat == 1
-                    ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise_ted_2(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+                    ise_out = ise_ted(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
                     data.ISE = ise_out(1);
                     data.ISEsh = ise_out(2:end,1);
                 elseif repeat == 2
-                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise_ted_2(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    ise_out = ise_ted(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE1 = ise_out;
                 elseif repeat == 3
-                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                     ise_out = ise_ted_2(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    ise_out = ise_ted(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE2 = ise_out;
                 end
         
