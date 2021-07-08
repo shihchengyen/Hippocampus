@@ -4,9 +4,9 @@
 function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
     tic;
     %discretize the map
-%     bin_resolution = 0.05; % 0.005 
+    bin_resolution = 0.05; % 0.005 
 %     bin_resolution = 0.01; 
-    bin_resolution = 0.005;
+%     bin_resolution = 0.005;
     
     % binning each datapoint
     actual_disc = floor(actual_image/bin_resolution)+1;

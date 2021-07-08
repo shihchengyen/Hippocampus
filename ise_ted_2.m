@@ -1,8 +1,8 @@
 function [ise_out] = ise_ted_2(actual_image, shuffled_images, dim1, dim2)
     tic;
     %discretize the map
-    bin_resolution = 0.05; % 0.005 
-%     bin_resolution = 0.01; % 0.005
+%     bin_resolution = 0.05; % 0.005 
+    bin_resolution = 0.01; % 0.005
     
     % binning each datapoint
     actual_disc = floor(actual_image/bin_resolution)+1;
@@ -116,19 +116,9 @@ function [ise_out] = ise_ted_2(actual_image, shuffled_images, dim1, dim2)
     end
 
     ise_out=ISE;
-    disp(['time taken to calculate for ise_matlab: ' num2str(toc)]);
+    disp(['time taken to calculate for ise_ted_2: ' num2str(toc)]);
 end
-% function [joint]=joint_p(arr1,arr2)
-% data=[arr1, arr2];
-% 
-% % [bandwidth,density,X,Y]=kde2d(data,n,MIN_XY,MAX_XY)
-% [bandwidth,density,X,Y]=kde2d(data);
-% 
-%     %need to devide the density with sum of density to normalize the joint
-%     %probability. 
-%     s=sum(sum(density));
-%     joint=density/s;
-% end
+
 function [entropy] = entropy(input)
 
     % expects (num_shuffles+1 x num_pairs_x x num_pairs_y) array 
