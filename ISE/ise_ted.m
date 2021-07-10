@@ -65,7 +65,6 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
         %1) joint probability 2)entropy    
         upper =[zeros(1,dim2); temp(1:end,:)]; %Xu
         centre = [temp(1:end,:);zeros(1,dim2)]; %X
-%         j_X_Xu=joint_p(reshape(centre,[],1),reshape(upper,[],1));
         h=hist3([reshape(centre,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))});
         total=sum(sum(h))-h(1,1);
         j_X_Xu=h/total;
@@ -73,7 +72,7 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
         %remove zero and 0 next to 0 probability
         j_X_Xu(j_X_Xu==0)=[];
         j_X_Xu(1)=[];
-        [vert_entropy] = entropy(j_X_Xu)*dim2;
+        [vert_entropy] = entropy(j_X_Xu)*dim2; %I added
         
         %   H(Xl,Xu) computations
         left =[zeros(dim1+1,1) [temp(1:end,1:end); zeros(1,dim2)]]; %Xl
@@ -105,7 +104,6 @@ function [ise_out] = ise_ted(actual_image, shuffled_images, dim1, dim2)
         %   H(Xr,X)
         right =[temp(1:end,1:end) zeros(dim1,1)]; %Xr
         centre = [zeros(dim1,1) temp(1:end,:)]; %X
-%         j_Xr_X=joint_p(reshape(right,[],1),reshape(centre,[],1)); 
         h=hist3([reshape(right,[],1),reshape(centre,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))});
         total=sum(sum(h))-h(1,1);
         j_Xr_X=h/total;
