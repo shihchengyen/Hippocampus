@@ -17,20 +17,42 @@ ISE_meannISEsh = [];
 % per = [];
 per2_5 = [];
 % per95 = [];
-for i=1:size(bin_resolution,1)
-name=['ise' num2str(bin_resolution(i)) '.mat'];
-load(name);
-
+% for i=1:size(bin_resolution,1)
+% name=['ise' num2str(bin_resolution(i)) '.mat'];
+% load(name);
+% 
+% Ise =[Ise; ISE];
+% 
+% subplot(3,3,i)
+% histogram((ISEsh-mean(ISEsh))/std(ISEsh)) 
+% title(num2str(bin_resolution(i)));
+% 
+% % t=std(ISEsh);
+% % Std =[Std; t];
+% 
+% % [h,p,ci,zval] = ztest(ISEsh ,ISE, std(ISEsh));
+% zval = (ISE-mean(ISEsh))/std(ISEsh);
+% z = [z ; zval];
+% % pass = [pass; h]; %1 means not typical, statistically signigicant.
+% % confidence_interval = [confidence_interval; ci'];
+% % min_ISEsh = [min_ISEsh; min(ISEsh)];
+% max_ISEsh = [max_ISEsh; max(ISEsh)];
+% mean_ISEsh = [mean_ISEsh; mean(ISEsh)];
+% % per = [per; p];
+% ISE_meannISEsh = [ISE_meannISEsh; (ISE/mean(ISEsh))];
+% per2_5 = [per2_5; prctile(ISEsh, 2.5)];
+% % per95 = [per95;prctile(ISEsh, 95)];
+% 
+% % figure('Name',num2str(bin_resolution(i)),'NumberTitle','off');
+% % name_fig = ['ise' num2str(bin_resolution(i)) '.mat'];
+% end
+load('ise_ted.mat');
+Bin = 0.05;
+ISE = ise_out(1);
 Ise =[Ise; ISE];
-
-subplot(3,3,i)
-histogram((ISEsh-mean(ISEsh))/std(ISEsh)) 
-title(num2str(bin_resolution(i)));
-
-% t=std(ISEsh);
-% Std =[Std; t];
-
-% [h,p,ci,zval] = ztest(ISEsh ,ISE, std(ISEsh));
+ISEsh = ise_out(2:end);
+figure
+histogram(ISEsh) 
 zval = (ISE-mean(ISEsh))/std(ISEsh);
 z = [z ; zval];
 % pass = [pass; h]; %1 means not typical, statistically signigicant.
@@ -41,11 +63,8 @@ mean_ISEsh = [mean_ISEsh; mean(ISEsh)];
 % per = [per; p];
 ISE_meannISEsh = [ISE_meannISEsh; (ISE/mean(ISEsh))];
 per2_5 = [per2_5; prctile(ISEsh, 2.5)];
-% per95 = [per95;prctile(ISEsh, 95)];
 
-% figure('Name',num2str(bin_resolution(i)),'NumberTitle','off');
-% name_fig = ['ise' num2str(bin_resolution(i)) '.mat'];
-end
+
 % smaller_min = Ise < min_ISEsh;
 smaller_per2_5 = Ise < per2_5;
 %Create a table, T, as a container for the workspace variables. The table function uses the workspace variable names as the names of the table variables in T. A table variable can have multiple columns. For example, the BloodPressure variable in T is a 5-by-2 array.
