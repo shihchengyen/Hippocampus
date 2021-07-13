@@ -8,10 +8,12 @@ for i=1:size(list,1)
     cd(list(i,:));
     if i==1 %1031
        list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
-       for ii=1:size(list1031,1)
+%        start from ch35ca
+       for ii=9:size(list1031,1)
             list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
             cd(list1031(ii,:));
             
+            %ISE
             clear
             load('vmsv.mat')
 
@@ -105,14 +107,16 @@ for i=1:size(list,1)
             ise_out6 = ise1_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise1_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-                origin = vms.data.origin;
-                ise = ise_out(1);
+                ise = zeros(25,1);
+                ise(1) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                z =(ise-mean(ise_sh))/std(ise_sh);
+                ise_2_5 = zeros(25,1);
+                ise_2_5(1) = prctile(ise_sh, 2.5);
+                z = zeros(25,1);
+                z(1) =(ise(1)-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z');
+                save('ise_s.mat','ise','ise_2_5','z');
                 
             %for ise1_2.mat            
             ise_out1 = ise1_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -124,18 +128,14 @@ for i=1:size(list,1)
             ise_out7 = ise1_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+                ise(2) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(2) = prctile(ise_sh, 2.5);
+                z(2) =(ise(2)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise1_3.mat            
             ise_out1 = ise1_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -147,18 +147,18 @@ for i=1:size(list,1)
             ise_out7 = ise1_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(3) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(3) = prctile(ise_sh, 2.5);
+                 
+                 z(3) =(ise(3)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_1.mat            
             ise_out1 = ise2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -170,18 +170,18 @@ for i=1:size(list,1)
             ise_out7 = ise2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(4) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(4) = prctile(ise_sh, 2.5);
+                 
+                 z(4) =(ise(4)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_2.mat            
             ise_out1 = ise2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -192,19 +192,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(5) = ise_out(1);
                 ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_sh(ise_sh==0) = []; %exclude zero ise 
+                ise_2_5(5) = prctile(ise_sh, 2.5);
+                z(5) =(ise(5)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise2_3.mat            
@@ -216,19 +212,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(6) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(6) = prctile(ise_sh, 2.5);
+                z(6) =(ise(6)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_1.mat            
             ise_out1 = ise3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -239,19 +231,54 @@ for i=1:size(list,1)
             ise_out6 = ise3_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-            load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            load('ise_s.mat');   
+                ise(7) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(7) = prctile(ise_sh, 2.5);
+                z(7) =(ise(7)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_2.mat            
+            ise_out1 = ise3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_2(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_2(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_2(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_2(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
+            load('ise_s.mat');  
+                ise(8) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                ise_2_5(8) = prctile(ise_sh, 2.5);
+                z(8) =(ise(8)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_3.mat            
+            ise_out1 = ise3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_3(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_3(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_3(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_3(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            load('ise_s.mat');    
+                ise(9) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                
+                ise_2_5(9) = prctile(ise_sh, 2.5);
+                 
+                 z(9) =(ise(9)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_1.mat            
             ise_out1 = ise3_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -263,18 +290,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(10) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(10) = prctile(ise_sh, 2.5);
+                 
+                 z(10) =(ise(10)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_2.mat            
             ise_out1 = ise3_2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -286,18 +313,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(11) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(11) = prctile(ise_sh, 2.5);
+                 
+                 z(11) =(ise(11)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise3_2_3.mat            
@@ -310,18 +337,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(12) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(12) = prctile(ise_sh, 2.5);
+                 
+                 z(12) =(ise(12)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_1.mat            
             ise_out1 = ise3_3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -333,18 +360,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(13) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(13) = prctile(ise_sh, 2.5);
+                 
+                 z(13) =(ise(13)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_2.mat            
             ise_out1 = ise3_3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -356,18 +383,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(14) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(14) = prctile(ise_sh, 2.5);
+                 
+                 z(14) =(ise(14)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_3.mat            
             ise_out1 = ise3_3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -379,18 +406,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(15) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(15) = prctile(ise_sh, 2.5);
+                 
+                 z(15) =(ise(15)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise4_1.mat            
@@ -403,18 +430,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(16) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(16) = prctile(ise_sh, 2.5);
+                 
+                 z(16) =(ise(16)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_2.mat            
             ise_out1 = ise4_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -426,18 +453,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(17) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(17) = prctile(ise_sh, 2.5);
+                 
+                 z(17) =(ise(17)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_3.mat            
             ise_out1 = ise4_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -449,18 +476,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(18) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(18) = prctile(ise_sh, 2.5);
+                 
+                 z(18) =(ise(18)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_1.mat            
             ise_out1 = ise5_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -472,18 +499,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(19) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(19) = prctile(ise_sh, 2.5);
+                 
+                 z(19) =(ise(19)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise5_2.mat            
@@ -496,18 +523,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(20) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(20) = prctile(ise_sh, 2.5);
+                 
+                 z(20) =(ise(20)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_3.mat            
             ise_out1 = ise5_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -519,18 +546,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(21) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(21) = prctile(ise_sh, 2.5);
+                 
+                 z(21) =(ise(21)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_1.mat            
             ise_out1 = ise6_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -542,18 +569,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(22) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(22) = prctile(ise_sh, 2.5);
+                 
+                 z(22) =(ise(22)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2.mat            
             ise_out1 = ise6_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -565,18 +592,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(23) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(23) = prctile(ise_sh, 2.5);
+                 
+                 z(23) =(ise(23)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise6_3.mat            
@@ -589,18 +616,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(24) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(24) = prctile(ise_sh, 2.5);
+                 
+                 z(24) =(ise(24)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2_1.mat            
             ise_out1 = ise6_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -612,18 +639,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(25) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(25) = prctile(ise_sh, 2.5);
+                 
+                 z(25) =(ise(25)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
             
             cd ..
        end
@@ -730,14 +757,16 @@ for i=1:size(list,1)
             ise_out6 = ise1_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise1_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-                origin = vms.data.origin;
-                ise = ise_out(1);
+                ise = zeros(25,1);
+                ise(1) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                z =(ise-mean(ise_sh))/std(ise_sh);
+                ise_2_5 = zeros(25,1);
+                ise_2_5(1) = prctile(ise_sh, 2.5);
+                z = zeros(25,1);
+                z(1) =(ise(1)-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z');
+                save('ise_s.mat','ise','ise_2_5','z');
                 
             %for ise1_2.mat            
             ise_out1 = ise1_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -749,18 +778,14 @@ for i=1:size(list,1)
             ise_out7 = ise1_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+                ise(2) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(2) = prctile(ise_sh, 2.5);
+                z(2) =(ise(2)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise1_3.mat            
             ise_out1 = ise1_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -772,18 +797,18 @@ for i=1:size(list,1)
             ise_out7 = ise1_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(3) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(3) = prctile(ise_sh, 2.5);
+                 
+                 z(3) =(ise(3)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_1.mat            
             ise_out1 = ise2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -795,18 +820,18 @@ for i=1:size(list,1)
             ise_out7 = ise2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(4) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(4) = prctile(ise_sh, 2.5);
+                 
+                 z(4) =(ise(4)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_2.mat            
             ise_out1 = ise2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -817,19 +842,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(5) = ise_out(1);
                 ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_sh(ise_sh==0) = []; %exclude zero ise 
+                ise_2_5(5) = prctile(ise_sh, 2.5);
+                z(5) =(ise(5)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise2_3.mat            
@@ -841,19 +862,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(6) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(6) = prctile(ise_sh, 2.5);
+                z(6) =(ise(6)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_1.mat            
             ise_out1 = ise3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -864,19 +881,54 @@ for i=1:size(list,1)
             ise_out6 = ise3_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-            load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            load('ise_s.mat');   
+                ise(7) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(7) = prctile(ise_sh, 2.5);
+                z(7) =(ise(7)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_2.mat            
+            ise_out1 = ise3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_2(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_2(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_2(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_2(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
+            load('ise_s.mat');  
+                ise(8) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                ise_2_5(8) = prctile(ise_sh, 2.5);
+                z(8) =(ise(8)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_3.mat            
+            ise_out1 = ise3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_3(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_3(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_3(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_3(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            load('ise_s.mat');    
+                ise(9) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                
+                ise_2_5(9) = prctile(ise_sh, 2.5);
+                 
+                 z(9) =(ise(9)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_1.mat            
             ise_out1 = ise3_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -888,18 +940,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(10) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(10) = prctile(ise_sh, 2.5);
+                 
+                 z(10) =(ise(10)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_2.mat            
             ise_out1 = ise3_2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -911,18 +963,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(11) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(11) = prctile(ise_sh, 2.5);
+                 
+                 z(11) =(ise(11)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise3_2_3.mat            
@@ -935,18 +987,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(12) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(12) = prctile(ise_sh, 2.5);
+                 
+                 z(12) =(ise(12)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_1.mat            
             ise_out1 = ise3_3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -958,18 +1010,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(13) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(13) = prctile(ise_sh, 2.5);
+                 
+                 z(13) =(ise(13)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_2.mat            
             ise_out1 = ise3_3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -981,18 +1033,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(14) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(14) = prctile(ise_sh, 2.5);
+                 
+                 z(14) =(ise(14)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_3.mat            
             ise_out1 = ise3_3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1004,18 +1056,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(15) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(15) = prctile(ise_sh, 2.5);
+                 
+                 z(15) =(ise(15)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise4_1.mat            
@@ -1028,18 +1080,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(16) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(16) = prctile(ise_sh, 2.5);
+                 
+                 z(16) =(ise(16)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_2.mat            
             ise_out1 = ise4_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1051,18 +1103,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(17) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(17) = prctile(ise_sh, 2.5);
+                 
+                 z(17) =(ise(17)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_3.mat            
             ise_out1 = ise4_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1074,18 +1126,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(18) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(18) = prctile(ise_sh, 2.5);
+                 
+                 z(18) =(ise(18)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_1.mat            
             ise_out1 = ise5_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1097,18 +1149,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(19) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(19) = prctile(ise_sh, 2.5);
+                 
+                 z(19) =(ise(19)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise5_2.mat            
@@ -1121,18 +1173,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(20) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(20) = prctile(ise_sh, 2.5);
+                 
+                 z(20) =(ise(20)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_3.mat            
             ise_out1 = ise5_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1144,18 +1196,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(21) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(21) = prctile(ise_sh, 2.5);
+                 
+                 z(21) =(ise(21)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_1.mat            
             ise_out1 = ise6_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1167,18 +1219,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(22) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(22) = prctile(ise_sh, 2.5);
+                 
+                 z(22) =(ise(22)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2.mat            
             ise_out1 = ise6_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1190,18 +1242,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(23) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(23) = prctile(ise_sh, 2.5);
+                 
+                 z(23) =(ise(23)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise6_3.mat            
@@ -1214,18 +1266,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(24) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(24) = prctile(ise_sh, 2.5);
+                 
+                 z(24) =(ise(24)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2_1.mat            
             ise_out1 = ise6_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1237,18 +1289,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(25) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(25) = prctile(ise_sh, 2.5);
+                 
+                 z(25) =(ise(25)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append'); 
+                save('ise_s.mat','ise','ise_2_5','z','-append');
             
             cd ..
        end
@@ -1355,14 +1407,16 @@ for i=1:size(list,1)
             ise_out6 = ise1_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise1_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-                origin = vms.data.origin;
-                ise = ise_out(1);
+                ise = zeros(25,1);
+                ise(1) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                z =(ise-mean(ise_sh))/std(ise_sh);
+                ise_2_5 = zeros(25,1);
+                ise_2_5(1) = prctile(ise_sh, 2.5);
+                z = zeros(25,1);
+                z(1) =(ise(1)-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z');
+                save('ise_s.mat','ise','ise_2_5','z');
                 
             %for ise1_2.mat            
             ise_out1 = ise1_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1374,18 +1428,14 @@ for i=1:size(list,1)
             ise_out7 = ise1_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+                ise(2) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(2) = prctile(ise_sh, 2.5);
+                z(2) =(ise(2)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise1_3.mat            
             ise_out1 = ise1_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1397,18 +1447,18 @@ for i=1:size(list,1)
             ise_out7 = ise1_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(3) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(3) = prctile(ise_sh, 2.5);
+                 
+                 z(3) =(ise(3)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_1.mat            
             ise_out1 = ise2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1420,18 +1470,18 @@ for i=1:size(list,1)
             ise_out7 = ise2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(4) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(4) = prctile(ise_sh, 2.5);
+                 
+                 z(4) =(ise(4)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise2_2.mat            
             ise_out1 = ise2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1442,19 +1492,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(5) = ise_out(1);
                 ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_sh(ise_sh==0) = []; %exclude zero ise 
+                ise_2_5(5) = prctile(ise_sh, 2.5);
+                z(5) =(ise(5)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise2_3.mat            
@@ -1466,19 +1512,15 @@ for i=1:size(list,1)
             ise_out6 = ise2_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+                ise(6) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(6) = prctile(ise_sh, 2.5);
+                z(6) =(ise(6)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_1.mat            
             ise_out1 = ise3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1489,19 +1531,54 @@ for i=1:size(list,1)
             ise_out6 = ise3_1(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out7 = ise3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
-            load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            load('ise_s.mat');   
+                ise(7) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                ise_2_5(7) = prctile(ise_sh, 2.5);
+                z(7) =(ise(7)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_2.mat            
+            ise_out1 = ise3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_2(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_2(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_2(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_2(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_2(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            
+            load('ise_s.mat');  
+                ise(8) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                ise_2_5(8) = prctile(ise_sh, 2.5);
+                z(8) =(ise(8)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
+                
+            %for ise3_3.mat            
+            ise_out1 = ise3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise3_3(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise3_3(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise3_3(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise3_3(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise3_3(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            load('ise_s.mat');    
+                ise(9) = ise_out(1);
+                ise_sh = ise_out(2:end);
+                ise_sh(ise_sh==0) = []; %exclude zero ise
+                
+                ise_2_5(9) = prctile(ise_sh, 2.5);
+                 
+                 z(9) =(ise(9)-mean(ise_sh))/std(ise_sh); 
+                %save new .mat file
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_1.mat            
             ise_out1 = ise3_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1513,18 +1590,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(10) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(10) = prctile(ise_sh, 2.5);
+                 
+                 z(10) =(ise(10)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_2_2.mat            
             ise_out1 = ise3_2_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1536,18 +1613,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(11) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(11) = prctile(ise_sh, 2.5);
+                 
+                 z(11) =(ise(11)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise3_2_3.mat            
@@ -1560,18 +1637,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_2_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(12) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(12) = prctile(ise_sh, 2.5);
+                 
+                 z(12) =(ise(12)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_1.mat            
             ise_out1 = ise3_3_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1583,18 +1660,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(13) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(13) = prctile(ise_sh, 2.5);
+                 
+                 z(13) =(ise(13)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_2.mat            
             ise_out1 = ise3_3_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1606,18 +1683,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(14) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(14) = prctile(ise_sh, 2.5);
+                 
+                 z(14) =(ise(14)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise3_3_3.mat            
             ise_out1 = ise3_3_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1629,18 +1706,18 @@ for i=1:size(list,1)
             ise_out7 = ise3_3_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(15) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(15) = prctile(ise_sh, 2.5);
+                 
+                 z(15) =(ise(15)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise4_1.mat            
@@ -1653,18 +1730,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(16) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(16) = prctile(ise_sh, 2.5);
+                 
+                 z(16) =(ise(16)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_2.mat            
             ise_out1 = ise4_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1676,18 +1753,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(17) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(17) = prctile(ise_sh, 2.5);
+                 
+                 z(17) =(ise(17)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise4_3.mat            
             ise_out1 = ise4_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1699,18 +1776,18 @@ for i=1:size(list,1)
             ise_out7 = ise4_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(18) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(18) = prctile(ise_sh, 2.5);
+                 
+                 z(18) =(ise(18)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_1.mat            
             ise_out1 = ise5_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1722,18 +1799,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(19) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(19) = prctile(ise_sh, 2.5);
+                 
+                 z(19) =(ise(19)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise5_2.mat            
@@ -1746,18 +1823,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(20) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(20) = prctile(ise_sh, 2.5);
+                 
+                 z(20) =(ise(20)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise5_3.mat            
             ise_out1 = ise5_3(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1769,18 +1846,18 @@ for i=1:size(list,1)
             ise_out7 = ise5_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(21) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(21) = prctile(ise_sh, 2.5);
+                 
+                 z(21) =(ise(21)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_1.mat            
             ise_out1 = ise6_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1792,18 +1869,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(22) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(22) = prctile(ise_sh, 2.5);
+                 
+                 z(22) =(ise(22)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2.mat            
             ise_out1 = ise6_2(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1815,18 +1892,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(23) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(23) = prctile(ise_sh, 2.5);
+                 
+                 z(23) =(ise(23)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
                     
             %for ise6_3.mat            
@@ -1839,18 +1916,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_3(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(24) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(24) = prctile(ise_sh, 2.5);
+                 
+                 z(24) =(ise(24)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');
+                save('ise_s.mat','ise','ise_2_5','z','-append');
                 
             %for ise6_2_1.mat            
             ise_out1 = ise6_2_1(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
@@ -1862,18 +1939,18 @@ for i=1:size(list,1)
             ise_out7 = ise6_2_1(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
             load('ise_s.mat');    
-            Origin = vms.data.origin; 
-            origin=[origin;Origin]; %file directory
-                ISE = ise_out(1);  
-                ise = [ise; ISE];
+            
+            
+                
+                ise(25) = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
-                ISE_2_5 = prctile(ise_sh, 2.5);  
-                ise_2_5 = [ise_2_5;ISE_2_5];
-                Z =(ise-mean(ise_sh))/std(ise_sh); 
-                z = [z;Z];
+                
+                ise_2_5(25) = prctile(ise_sh, 2.5);
+                 
+                 z(25) =(ise(25)-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise_s.mat','origin','ise','ise_2_5','z','-append');  
+                save('ise_s.mat','ise','ise_2_5','z','-append');
             
             cd ..
        end
