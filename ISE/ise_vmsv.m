@@ -659,7 +659,7 @@ for i=1:size(list,1)
     
     if i==2 %1101
        list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
-       for ii=1:size(list1101,1)
+       for ii=4:size(list1101,1)
            list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
            cd(list1101(ii,:));
             
