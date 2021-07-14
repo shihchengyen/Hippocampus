@@ -1,8 +1,8 @@
-% clear all
-% close all
-% clc
-% load('vmsv.mat');
-% load('vmpc.mat');
+clear all
+close all
+clc
+load('vmsv.mat');
+load('vmpc.mat');
 % 
 % % bin_resolution=[1; 0.5;0.1;  0.05;  0.01;0.005;0.001; 0.0005; 0.0001  ];
 % bin_resolution=[0.1;  0.05;  0.01;0.005;0.001; 0.0005];
@@ -35,9 +35,9 @@
            
 %%%%vmp
 % load('actual_image.mat');ise_out = ise_ted_2(actual_image, shuffled_images, 51, 161);save('ise_ted.mat','ise_out');
-clear
-clc
-vmp=vmpc('auto');save('vmpc_ted','vmp');load('vmpc_ted.mat'); vmp.data.ISEsh;
+% clear
+% clc
+% vmp=vmpc('auto');save('vmpc_ted','vmp');load('vmpc_ted.mat'); vmp.data.ISEsh;
 % load('vmpc_ted.mat')
 
 
@@ -48,14 +48,14 @@ vmp=vmpc('auto');save('vmpc_ted','vmp');load('vmpc_ted.mat'); vmp.data.ISEsh;
 % sic2 = vmp.data.SIC2;
 % T1 = table(sic_vmp, sic_97, z,sic1, sic2)
 % 
-ise_vmp = vmp.data.ISE;
-ise_2_5 = prctile(vmp.data.ISEsh, 2.5);
-z =(vmp.data.ISE-mean(vmp.data.ISEsh))/std(vmp.data.ISEsh);
-ise1 = vmp.data.ISE1;
-ise2 = vmp.data.ISE2;
-T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
-figure
-histogram(vmp.data.ISEsh)
+% ise_vmp = vmp.data.ISE;
+% ise_2_5 = prctile(vmp.data.ISEsh, 2.5);
+% z =(vmp.data.ISE-mean(vmp.data.ISEsh))/std(vmp.data.ISEsh);
+% ise1 = vmp.data.ISE1;
+% ise2 = vmp.data.ISE2;
+% T2 = table(ise_vmp, ise_2_5, z, ise1, ise2)
+% figure
+% histogram(vmp.data.ISEsh)
 % %%%%%vms
 % sic_vs = vs.data.SIC;
 % sic_95 = prctile(vs.data.SICsh, 95);
@@ -72,13 +72,13 @@ histogram(vmp.data.ISEsh)
 % T4 = table(ise_vs, ise_2_5, z, ise1, ise2)
 
 
-% %%%%%vms
-% sic_vms = vms.data.SIC;
-% sic_95 = prctile(vms.data.SICsh, 97.5);
-% z =(vms.data.SIC-mean(vms.data.SICsh))/std(vms.data.SICsh);
-% sic1 = vms.data.SIC1;
-% sic2 = vms.data.SIC2;
-% T3 = table(sic_vms, sic_95, z,sic1, sic2)
+%%%%%vms
+sic_vms = vms.data.SIC;
+sic_97 = prctile(vms.data.SICsh, 97.5);
+z =(vms.data.SIC-mean(vms.data.SICsh))/std(vms.data.SICsh);
+sic1 = vms.data.SIC1;
+sic2 = vms.data.SIC2;
+T3 = table(sic_vms, sic_97, z,sic1, sic2)
 % 
 % ise_vms = vms.data.ISE;
 % ise_2_5 = prctile(vms.data.ISEsh, 2.5);
@@ -89,8 +89,8 @@ histogram(vmp.data.ISEsh)
 % % %map out vmp
 % %            figure('Name','maps_raw','NumberTitle','off');
 % %            plotmap(vmp.data.maps_raw,'place')
-% %            figure('Name','maps_adsm','NumberTitle','off');
-% %            plotmap(vmp.data.maps_adsm,'place')
+           figure('Name','maps_adsm','NumberTitle','off');
+           plotmap(vmp.data.maps_adsm,'place')
 % %            figure('Name','maps_adsm1','NumberTitle','off');
 % %            plotmap(vmp.data.maps_adsm1,'place')
 % %            figure('Name','maps_adsm2','NumberTitle','off');
@@ -98,8 +98,8 @@ histogram(vmp.data.ISEsh)
 % %map out vms
 %            figure('Name','maps_raw','NumberTitle','off');
 %            plotmap(vms.data.maps_raw,'spatialview')
-%            figure('Name','maps_adsm','NumberTitle','off');
-%            plotmap(vms.data.maps_adsm,'spatialview')
+           figure('Name','maps_adsm','NumberTitle','off');
+           plotmap(vms.data.maps_adsm,'spatialview')
 %            figure('Name','maps_adsm1','NumberTitle','off');
 %            plotmap(vms.data.maps_adsm1,'spatialview')
 %            figure('Name','maps_adsm2','NumberTitle','off');
