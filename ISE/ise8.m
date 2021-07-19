@@ -1,5 +1,5 @@
-function [ise_out] = ise6_2_1(actual_image, shuffled_images, dim1, dim2)
-    % Use two pixel neigher, with diagnal relationship
+function [vert_entropy, pos_angled_entropy,neg_angled_entropy, hor_entropy, self_entropy] = ise8(actual_image, shuffled_images, dim1, dim2)
+    % Use QMRF
     tic; %show how long ise caculation will take
     
     % parameters to discretize maps
@@ -50,78 +50,78 @@ function [ise_out] = ise6_2_1(actual_image, shuffled_images, dim1, dim2)
             end
             image(ind)=counts(ii);
         end
-        image = image/sum(image);
         image = reshape(image, dim1, dim2); %image in the form of its pixel intensity probability
         temp = reshape(combined(i,:), dim1, dim2); %image in the form of its pixel intensity
         %image with two layer of zero border
         temp = [zeros(2,dim2); temp ; zeros(2,dim2)]; %add zeros above and below
-        temp = [zeros(dim1+4,1) temp zeros(dim1+4,1)]; %add zeros the side
+        temp = [zeros(dim1+4,2) temp zeros(dim1+4,2)]; %add zeros the side
         
-        %%one pixel neighbor
         % H(X,Xu) computations   
-        upper = temp(1:end-1,:); %Xu
+        upper =temp(1:end-1,:); %Xu
         centre = temp(2:end,:); %X
-        h=hist3([reshape(centre,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability 
+        h=hist3([reshape(centre,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
-        j_X_Xu=h/total; %convert histgram count to probability
+        j_X_Xu=h/total;%convert histgram count to probability
+%         j_X_Xu=h^2/total; 
         j_X_Xu=reshape(j_X_Xu,[],1);
         j_X_Xu(j_X_Xu==0)=[]; %remove probability of zero
         j_X_Xu(1)=[]; %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3
         [vert_entropy] = entropy(j_X_Xu);
-        [vert_entropy] = entropy(j_X_Xu)*2; %for both H(X,Xu) and H(X,Xd) 
         
+        %   H(Xl,Xu) computations
+        left =temp(2:end,1:end-1); %Xl
+        upper = temp(1:end-1,2:end); %Xu
+        h=hist3([reshape(left,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability
+        total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
+        j_X1_Xu=h/total; %convert histgram count to probability
+        j_X1_Xu=reshape(j_X1_Xu,[],1);
+        j_X1_Xu(j_X1_Xu==0)=[]; %remove probability of zero
+        j_X1_Xu(1)=[]; %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3
+        [pos_angled_entropy] = entropy(j_X1_Xu);
+        
+        %   H(Xr,Xu) computations
+        right =temp(2:end,2:end); %Xr
+        upper = temp(1:end-1,1:end-1); %Xu
+        h=hist3([reshape(right,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability
+        total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
+        j_Xr_Xu=h/total; %convert histgram count to probability
+        j_Xr_Xu=reshape(j_Xr_Xu,[],1);
+        j_Xr_Xu(j_Xr_Xu==0)=[]; %remove probability of zero
+        j_Xr_Xu(1)=[];  %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3       
+        [neg_angled_entropy] = entropy(j_Xr_Xu);  
+        
+        %   H(Xr/X) computations = H(Xr,X) - H(X)
         %   H(Xr,X)
-        right = temp(:,2:end); %Xr
+        right =temp(:,2:end); %Xr
         centre = temp(:,1:end-1); %X
         h=hist3([reshape(right,[],1),reshape(centre,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_Xr_X=h/total; %convert histgram count to probability
+%         j_Xr_X=h^2/total;
         j_Xr_X=reshape(j_Xr_X,[],1);
         j_Xr_X(j_Xr_X==0)=[]; %remove probability of zero
         j_Xr_X(1)=[]; %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3
         [hor_entropy] = entropy(j_Xr_X);
-        [hor_entropy] = entropy(j_Xr_X)*2; %for both H(Xr,X) and H(Xl,X)         
-        
-        %%two pixel neighbor
-        % H(X,Xu) computations   
-        upper = temp(1:end-2,:); %Xu
-        centre = temp(3:end,:); %X
-        h=hist3([reshape(centre,[],1),reshape(upper,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability 
-        total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
-        j_X_Xu=h/total; %convert histgram count to probability
-        j_X_Xu=reshape(j_X_Xu,[],1);
-        j_X_Xu(j_X_Xu==0)=[]; %remove probability of zero
-        j_X_Xu(1)=[]; %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3
-        [vert_entropy2] = entropy(j_X_Xu);
-        [vert_entropy2] = entropy(j_X_Xu)*2; %for both H(X,Xu) and H(X,Xd) 
-        
-        %   H(Xr,X)
-        right = temp(:,3:end); %Xr
-        centre = temp(:,1:end-2); %X
-        h=hist3([reshape(right,[],1),reshape(centre,[],1)],{0:1:max(combined(i,:)) 0:1:max(combined(i,:))}); %generate joint probability
-        total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
-        j_Xr_X=h/total; %convert histgram count to probability
-        j_Xr_X=reshape(j_Xr_X,[],1);
-        j_Xr_X(j_Xr_X==0)=[]; %remove probability of zero
-        j_Xr_X(1)=[]; %remove probability of zero happen to next to zero which is the first bin of the joint probability output from hist3
-        [hor_entropy2] = entropy(j_Xr_X);
-        [hor_entropy2] = entropy(j_Xr_X)*2; %for both H(Xr,X) and H(Xl,X) 
-        
         
         %   H(X)
         centre = image; %X
         p_X= reshape(centre,[],1); 
         p_X(p_X==0) = [];
         [self_entropy] = entropy(p_X);
-            
+        %H(Xr,X) - H(X)
+        hor_cond_entropy = hor_entropy - self_entropy;
+        
         %   final calculation:
-        ise_out = vert_entropy + hor_entropy + vert_entropy2 + hor_entropy2 +self_entropy;
+        mn = dim1*dim2;
+        ise_out = mn.*(vert_entropy + hor_cond_entropy);
+        ise_out = ise_out - (mn/2).*(pos_angled_entropy + neg_angled_entropy);
+        ise_out = ise_out./mn;
         
         ISE= [ISE ; ise_out];
     end
 
     ise_out=ISE;
-    disp(['time taken to calculate for ise: ' num2str(toc)]);
+    disp(['time taken to calculate for ise3_1: ' num2str(toc)]);
 end
 
 function [entropy] = entropy(input)
@@ -130,7 +130,7 @@ function [entropy] = entropy(input)
     % outputs sum of every entropy of every probability
     temp=input;
     % temp is the probability
-    entropy= -temp .* log2(temp);
+    entropy= -log2(temp);
     entropy= sum(entropy);%output sum of all entropy
     
 end
