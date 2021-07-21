@@ -1,9 +1,10 @@
 function [ise_out] = ise10(actual_image, shuffled_images, dim1, dim2)
+% function [ise_out] = ise10(actual_image, shuffled_images, dim1, dim2)
     % Use QMRF
     tic; %show how long ise caculation will take
     
     % parameters to discretize maps
-    bin_resolution = 0.001;
+    bin_resolution = 0.01;
     
     % binning each datapoint
     actual_disc = floor(actual_image/bin_resolution)+1;

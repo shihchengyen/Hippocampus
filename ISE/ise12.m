@@ -3,7 +3,7 @@ function [ise_out] = ise12(actual_image, shuffled_images, dim1, dim2)
     tic; %show how long ise caculation will take
     
     % parameters to discretize maps
-    bin_resolution = 0.005;
+    bin_resolution = 0.01;
     
     % binning each datapoint
     actual_disc = floor(actual_image/bin_resolution)+1;
