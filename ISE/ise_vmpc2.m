@@ -1,5 +1,5 @@
-cwd ='C:\Users\Teddy\Downloads\data\New folder';
-% cwd = 'C:\Users\teddy\Downloads\Data\New folder';
+% cwd ='C:\Users\Teddy\Downloads\data\New folder';
+cwd = 'C:\Users\teddy\Downloads\Data\New folder';
 cd(cwd);
 list=['20181031'; '20181101';'20181102'];
 
@@ -19,9 +19,11 @@ for i=1:size(list,1)
                 clear all
                 load('vmpc.mat');   
                 
-                %for ise11.mat
+                %for ise10.mat
                 origin = vmp.data.origin;
-                ise_out = ise11(vmp.data.maps_adsm, vmp.data.maps_adsmsh,40,40);
+                sh=vmp.data.maps_adsmsh;
+                sh(sh==0)=NaN;
+                ise_out = ise10(vmp.data.maps_adsm, sh,40,40);
                 ise = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
@@ -29,7 +31,7 @@ for i=1:size(list,1)
                 ise_97 = prctile(ise_sh, 97.5);
                 z =(ise-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise11_p.mat','origin','ise','ise_2_5','ise_97','z','ise_sh'); 
+                save('ise10_p.mat','origin','ise','ise_2_5','ise_97','z','ise_sh'); 
 
                 
             
@@ -49,16 +51,18 @@ for i=1:size(list,1)
                 clear all
                 load('vmpc.mat');   
                 
-                %for ise11.mat
+                %for ise10.mat
                 origin = vmp.data.origin;
-                ise_out = ise11(vmp.data.maps_adsm, vmp.data.maps_adsmsh,40,40);
+                sh=vmp.data.maps_adsmsh;
+                sh(sh==0)=NaN;
+                ise_out = ise10(vmp.data.maps_adsm, sh,40,40);
                 ise = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
                 ise_2_5 = prctile(ise_sh, 2.5);
                 z =(ise-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise11_p.mat','origin','ise','ise_2_5','z','ise_sh'); 
+                save('ise10_p.mat','origin','ise','ise_2_5','z','ise_sh'); 
 
             
             cd ..
@@ -77,16 +81,18 @@ for i=1:size(list,1)
                 clear all
                 load('vmpc.mat');   
                 
-                %for ise11.mat
+                %for ise10.mat
                 origin = vmp.data.origin;
-                ise_out = ise11(vmp.data.maps_adsm, vmp.data.maps_adsmsh,40,40);
+                sh=vmp.data.maps_adsmsh;
+                sh(sh==0)=NaN;
+                ise_out = ise10(vmp.data.maps_adsm, sh,40,40);
                 ise = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
                 ise_2_5 = prctile(ise_sh, 2.5);
                 z =(ise-mean(ise_sh))/std(ise_sh);
                 %save new .mat file
-                save('ise11_p.mat','origin','ise','ise_2_5','z','ise_sh'); 
+                save('ise10_p.mat','origin','ise','ise_2_5','z','ise_sh'); 
 
             
             cd ..

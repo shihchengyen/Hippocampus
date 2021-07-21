@@ -1,9 +1,10 @@
 % view map
-cwd ='C:\Users\Teddy\Downloads\data\New folder';
+% cwd ='C:\Users\Teddy\Downloads\data\New folder';
+cwd = 'C:\Users\teddy\Downloads\Data\New folder';
 cd(cwd);
 list=['20181031'; '20181101';'20181102'];
 
-for i=1:size(list,1)
+for i=3:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     cd(list(i,:));
     if i==1 %1031
@@ -658,9 +659,15 @@ for i=1:size(list,1)
     end
     
     if i==2 %1101
+<<<<<<< Updated upstream
        list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
        for ii=4:size(list1101,1)
            list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
+=======
+       list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch29c4';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
+       for ii=1:size(list1101,1)
+           list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch29c4';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
+>>>>>>> Stashed changes
            cd(list1101(ii,:));
             
             %ISE
