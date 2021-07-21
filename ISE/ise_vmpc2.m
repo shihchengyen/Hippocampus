@@ -21,8 +21,10 @@ for i=1:size(list,1)
                 
                 %for ise10.mat
                 origin = vmp.data.origin;
+                
                 sh=vmp.data.maps_adsmsh;
                 sh(sh==0)=NaN;
+                
                 ise_out = ise10(vmp.data.maps_adsm, sh,40,40);
                 ise = ise_out(1);
                 ise_sh = ise_out(2:end);
