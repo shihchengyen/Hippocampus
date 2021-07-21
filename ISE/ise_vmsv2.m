@@ -98,14 +98,14 @@ for i=1:size(list,1)
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
             %ISE                          
-            %for ise11.mat            
-            ise_out1 = ise11(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise11(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise11(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise11(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise11(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise11(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise11(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            %for ise13.mat            
+            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
                 
             
@@ -113,9 +113,10 @@ for i=1:size(list,1)
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
                 ise_2_5 = prctile(ise_sh, 2.5);
+                ise_97 = prctile(ise_sh, 97.5);
                 z =(ise-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise11_s.mat','ise','ise_2_5','z','ise_sh');
+                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');
                 
             
             
@@ -215,14 +216,14 @@ for i=1:size(list,1)
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
             %ISE            
-            %for ise11.mat            
-            ise_out1 = ise11(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise11(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise11(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise11(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise11(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise11(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise11(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            %for ise13.mat            
+            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
                 
             
@@ -230,9 +231,10 @@ for i=1:size(list,1)
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
                 ise_2_5 = prctile(ise_sh, 2.5);
+                ise_97 = prctile(ise_sh, 97.5);
                 z =(ise-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise11_s.mat','ise','ise_2_5','z','ise_sh');
+                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');
             
             cd ..
        end
@@ -330,24 +332,25 @@ for i=1:size(list,1)
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
             %ISE            
-            %for ise11.mat            
-            ise_out1 = ise11(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise11(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise11(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise11(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise11(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise11(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise11(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            %for ise13.mat            
+            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
+            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
+            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
+            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
             ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
                 
-            
+             
                 ise = ise_out(1);
                 ise_sh = ise_out(2:end);
                 ise_sh(ise_sh==0) = []; %exclude zero ise
                 ise_2_5 = prctile(ise_sh, 2.5);
+                ise_97 = prctile(ise_sh, 97.5);
                 z =(ise-mean(ise_sh))/std(ise_sh); 
                 %save new .mat file
-                save('ise11_s.mat','ise','ise_2_5','z','ise_sh');          
+                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');   
            
             
             
