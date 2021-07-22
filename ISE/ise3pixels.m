@@ -1,4 +1,4 @@
-function [ise_out] = ise13(actual_image, shuffled_images, dim1, dim2, bin_resolution)
+function [ise_out] = ise3pixels(actual_image, shuffled_images, dim1, dim2, bin_resolution)
     % three pixel neighbor
     tic; %show how long ise caculation will take
     
@@ -12,19 +12,21 @@ function [ise_out] = ise13(actual_image, shuffled_images, dim1, dim2, bin_resolu
     combined = [actual_disc; shuffled_disc]; %(1+shuffle) x dim1*dim2
     
     %Image spatial entropy calculation
-    ISE=[];
+    ISE=zeros(size(combined,1),2);
     for  i=1:size(combined,1)
         if max(combined(i,:))==0 %an empty image don't have ISE
             disp('an image consist of NaN');
-            ise_out = 0;
-            ISE= [ISE ; ise_out];
+            ise_out1 = 0;
+            ise_out2 = 0;
+            ISE(i,:) = [ ise_out1, ise_out2];
             continue
         end
         %an image being discrtized by not small enough bin_reolution is
         %excluded from ISE calculation
         if max(combined(i,:))==1 
-            ise_out = 0;
-            ISE= [ISE ; ise_out];
+            ise_out1 = 0;
+            ise_out2 = 0;
+            ISE(i,:) = [ ise_out1, ise_out2];
             disp('floor(combined(i,:))=0');%every intensity value rounded to zero
             continue
         end
@@ -142,19 +144,19 @@ function [ise_out] = ise13(actual_image, shuffled_images, dim1, dim2, bin_resolu
         %   final calculation:
         mn = dim1*dim2;
         %The joint probability of every intensity
-        ise_out = (vert_entropy + hor_entropy +pos_angled_entropy +neg_angled_entropy);
-        ise_out = ise_out./mn;
+        ise_out1 = (vert_entropy + hor_entropy +pos_angled_entropy +neg_angled_entropy);
+        ise_out1 = ise_out1./mn;
         %The joint probability of every pixel
         ise_out2 = (vert_entropy2 + hor_entropy2 +pos_angled_entropy2 +neg_angled_entropy2);
         ise_out2 = ise_out2./mn;
         
         %The first column use every intensity joint probability.
         %The second column use every pixel joint probability.
-        ISE= [ISE ; ise_out, ise_out2];
+        ISE(i,:) = [ ise_out1, ise_out2];
     end
 
     [ise_out]=ISE;
-    disp(['time taken to calculate for ise11: ' num2str(toc)]);
+    disp(['time taken to calculate for ise3pixels: ' num2str(toc)]);
 end
 
 function [entropy] = entropy(input)
