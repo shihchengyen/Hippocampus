@@ -1,8 +1,8 @@
 clear
 clc
 
-% cwd ='C:\Users\Teddy\Downloads\data\New folder';
-cwd = 'C:\Users\teddy\Downloads\Data\New folder';
+% cwd ='C:\Users\Teddy\Downloads\data\New folder'; %ASUS
+cwd = 'C:\Users\teddy\Downloads\Data\New folder'; %hp
 cd(cwd);
 list=['20181031'; '20181101';'20181102'];
 
