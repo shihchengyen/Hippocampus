@@ -473,6 +473,7 @@ for i=1:size(list,1)
                 end
                 
 %                 %for raw
+%                 load('vmpc_ted.mat')
 %                 origin = vmp.data.origin;
 %                 actual = vmp.data.maps_raw;
 %                 sh=vmp.data.maps_rawsh;%not yet created
@@ -771,6 +772,7 @@ for i=1:size(list,1)
                 end
                 
 %                 %for raw
+%                 load('vmpc_ted.mat')
 %                 origin = vmp.data.origin;
 %                 actual = vmp.data.maps_raw;
 %                 sh=vmp.data.maps_rawsh;%not yet created

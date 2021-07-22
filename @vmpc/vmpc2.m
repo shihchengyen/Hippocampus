@@ -1,4 +1,8 @@
-function [obj, varargout] = vmpc(varargin)
+function [obj, varargout] = vmpc2(varargin)
+%7/22/2021 change 'UseMinObs': 1 -->0
+%or shouldn't I change it?
+
+
 %@vmpc Constructor function for vmpc class
 %   OBJ = vmpc(varargin)
 %
@@ -17,7 +21,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -191,9 +195,6 @@ if(~isempty(dir(Args.RequiredFile)))
                 
                 if repeat == 1
                     data.maps_raw = to_save;
-                    to_save1 = NaN(size(firing_rates_full_raw,1)-1,Args.GridSteps^2);
-                    to_save1(:,bins_sieved) = firing_rates_full_raw(2:end,bins_sieved);
-                    data.maps_rawsh = to_save1;
                 elseif repeat == 2
                     data.maps_raw1 = to_save;
                 elseif repeat == 3

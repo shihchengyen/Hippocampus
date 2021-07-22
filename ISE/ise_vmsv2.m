@@ -1,3 +1,6 @@
+% I haven't add the calculation for the raw map yet. but first I need to
+% generate the raw map.
+
 clear
 clc
 
@@ -278,13 +281,14 @@ for i=1:size(list,1)
        list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
        
        %initialize th e array for the month
-        ise = zeros(15, 14);
+        ise = zeros(13, 14);
         shu = 10000; %shuffle images number
-        ise_sh = NaN(shu,14,15); %(shuffle images number, 7bin*2, 15 cells)
-        ise_2_5 = zeros(15, 14);
-        ise_97 = zeros(15, 14);
-        z =zeros(15, 14); %z-score
-        h = zeros(15, 14); %lillietest
+        ise_sh = NaN(shu,14,13); %(shuffle images number, 7bin*2, 15 cells)
+        ise_2_5 = zeros(13, 14);
+        ise_97 = zeros(13, 14);
+        z =zeros(13, 14); %z-score
+        h = zeros(13, 14); %lillietest
+        
        for ii=1:size(list1101,1)
            list=['20181031'; '20181101';'20181102'];
            list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
@@ -545,13 +549,13 @@ for i=1:size(list,1)
        list1102=['ch09c1';'ch19c1';'ch19c2';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch31c1';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
        
        %initialize th e array for the month
-        ise = zeros(15, 14);
+        ise = zeros(13, 14);
         shu = 10000; %shuffle images number
-        ise_sh = NaN(shu,14,15); %(shuffle images number, 7bin*2, 15 cells)
-        ise_2_5 = zeros(15, 14);
-        ise_97 = zeros(15, 14);
-        z =zeros(15, 14); %z-score
-        h = zeros(15, 14); %lillietest
+        ise_sh = NaN(shu,14,13); %(shuffle images number, 7bin*2, 15 cells)
+        ise_2_5 = zeros(13, 14);
+        ise_97 = zeros(13, 14);
+        z =zeros(13, 14); %z-score
+        h = zeros(13, 14); %lillietest
         
        for ii=1:size(list1102,1)
            list=['20181031'; '20181101';'20181102'];

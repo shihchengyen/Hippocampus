@@ -1,4 +1,9 @@
-function [obj, varargout] = vmsv(varargin)
+function [obj, varargout] = vmsv2(varargin)
+%7/22/2021 modify
+%save raw shuffle and get rid of smoothing
+%by chaning 'AdaptiveSmooth', 1 -->0
+%get rid of ISE calculation here
+
 %@vmsv Constructor function for vmsv class
 %   OBJ = vmsv(varargin)
 %
@@ -17,7 +22,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 1, 'AdaptiveSmooth', 1, 'UseAllTrials',1,'Alpha',1000);
+                'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 1, 'AdaptiveSmooth', 0, 'UseAllTrials',1,'Alpha',1000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -211,7 +216,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 %shuffle raw map save
                 maps_raw_out1 = nan(size(maps_raw1));
                 maps_raw_out1(bins_sieved,:) = maps_raw1(bins_sieved,:);
-                data.maps_rawsh = maps_raw_out1;
+                data.maps_rawsh = maps_raw_out1';
             elseif repeat == 2
                 data.maps_raw1 = maps_raw_out';
             else
@@ -404,85 +409,9 @@ if(~isempty(dir(Args.RequiredFile)))
             % ISE portion
             % create overall map and insert padded portions in, to account for
             % cross-portion pairs
-            canvas = nan(51, 161, Args.NumShuffles + 1);
+            
             firing_rates = lambda_i;
 
-            % flooring
-            floor_padded = nan(42,42,Args.NumShuffles+1);
-            floor_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-            floor_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,3203:3203+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
-            floor_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,3243:3243+39),[2 1]), 1, 40, Args.NumShuffles+1);
-            floor_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,3283:3283+39),[2 1]), 40, 1, Args.NumShuffles+1);
-            floor_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,3323:3323+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
-            canvas(10:end,1:42,:) = floor_padded;
-
-            % ceiling
-            ceiling_padded = nan(42,42,Args.NumShuffles+1);
-            ceiling_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,1603:3202),size(firing_rates,1),40,40), [3 2 1]), 1);
-            ceiling_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,4323:4323+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
-            ceiling_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,4363:4363+39),[2 1]), 1, 40, Args.NumShuffles+1);
-            ceiling_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,4403:4403+39),[2 1]), 40, 1, Args.NumShuffles+1);
-            ceiling_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,4443:4443+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
-            canvas(10:end,44:85,:) = ceiling_padded;
-
-            % walls
-            walls_padded = nan(8,161,Args.NumShuffles+1);
-            walls_padded(:,1:end-1,:) = flip(permute(reshape(firing_rates(:,3203:3203+1280-1), Args.NumShuffles+1, 40*4, 8),[3 2 1]), 1);
-            walls_padded(:,end,:) = walls_padded(:,1,:);
-            canvas(1:8,:,:) = walls_padded;
-
-            % used to pad pillar base more easily
-            floor_base = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-
-            % pillars
-            PTL_padded = nan(6,33,Args.NumShuffles+1);
-            PTL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4963:4963+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            % small diagonal issue here, diagonal floor bins at the corners are put
-            % side by side, only 16 such occurrences in total, neglected for now.
-            PTL_padded(end,1:8,:) = flip(permute(floor_base(9:16,8,:),[2 1 3]),2);
-            PTL_padded(end,9:16,:) = floor_base(8,9:16,:);
-            PTL_padded(end,17:24,:) = permute(floor_base(9:16,17,:),[2 1 3]);
-            PTL_padded(end,25:32,:) = flip(floor_base(17,9:16,:),2);
-            PTL_padded(:,end,:) = PTL_padded(:,1,:);
-            canvas(10:10+6-1,87:87+32,:) = PTL_padded;
-
-            PTR_padded = nan(6,33,Args.NumShuffles+1);
-            PTR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4803:4803+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PTR_padded(end,1:8,:) = flip(permute(floor_base(9:16,24,:),[2 1 3]),2);
-            PTR_padded(end,9:16,:) = floor_base(8,25:32,:);
-            PTR_padded(end,17:24,:) = permute(floor_base(9:16,33,:),[2 1 3]);
-            PTR_padded(end,25:32,:) = flip(floor_base(17,25:32,:),2);
-            PTR_padded(:,end,:) = PTR_padded(:,1,:);
-            canvas(10:10+6-1,121:121+32,:) = PTR_padded;
-
-            PBL_padded = nan(6,33,Args.NumShuffles+1);
-            PBL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4643:4643+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PBL_padded(end,1:8,:) = flip(permute(floor_base(25:32,8,:),[2 1 3]),2);
-            PBL_padded(end,9:16,:) = floor_base(24,9:16,:);
-            PBL_padded(end,17:24,:) = permute(floor_base(25:32,17,:),[2 1 3]);
-            PBL_padded(end,25:32,:) = flip(floor_base(33,9:16,:),2);
-            PBL_padded(:,end,:) = PBL_padded(:,1,:);
-            canvas(17:17+6-1,87:87+32,:) = PBL_padded;
-
-            PBR_padded = nan(6,33,Args.NumShuffles+1);
-            PBR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4483:4483+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PBR_padded(end,1:8,:) = flip(permute(floor_base(25:32,24,:),[2 1 3]),2);
-            PBR_padded(end,9:16,:) = floor_base(24,25:32,:);
-            PBR_padded(end,17:24,:) = permute(floor_base(25:32,33,:),[2 1 3]);
-            PBR_padded(end,25:32,:) = flip(floor_base(33,25:32,:),2);
-            PBR_padded(:,end,:) = PBR_padded(:,1,:);
-            canvas(17:17+6-1,121:121+32,:) = PBR_padded;
-
-            actual_image = canvas(:,:,1);
-            actual_image = actual_image(:)';
-            shuffled_images = canvas(:,:,2:end);
-            shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
-
-            disp(['time taken to pad map for ISE: ' num2str(toc)]);
-            
-            ise_out = ise(actual_image, shuffled_images, 51, 161);
-            disp(['time taken to compute ISE: ' num2str(toc)]);
-            
             if repeat == 1
                 if ~Args.AdaptiveSmooth
                     if Args.NumShuffles > 0
@@ -493,6 +422,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     maps_raw_out = nan(size(maps_raw));
                     maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
                     data.maps_raw = maps_raw_out;
+% % % % % % % % % % % % % % % % % % % %                     
+                    %shuffle raw map save
+                    maps_raw1 = firing_rates(2:end,:);
+                    maps_raw_out1 = nan(size(maps_raw1));
+                    maps_raw_out1(:,bins_sieved) = maps_raw1(:,bins_sieved);
+                    data.maps_rawsh = maps_raw_out1;
                 else
                     if Args.NumShuffles > 0
                         maps_raw = firing_rates(1,:);
@@ -501,7 +436,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                     maps_raw_out = nan(size(maps_raw));
                     maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsm = maps_raw_out;                    
+                    data.maps_adsm = maps_raw_out;    %if adaptive smooth is true, raw maps is adsm                
                 end
                 maps_all = firing_rates(2:end,:);
                 maps_all_out = nan(size(maps_all));
@@ -511,8 +446,8 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC = sic_out(1);
                 data.SICsh = sic_out(2:end,1);
-                data.ISE = ise_out(1);
-                data.ISEsh = ise_out(2:end,1);
+%                 data.ISE = ise_out(1);
+%                 data.ISEsh = ise_out(2:end,1);
             elseif repeat == 2
                 if ~Args.AdaptiveSmooth
                     if Args.NumShuffles > 0
@@ -534,7 +469,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_adsm1 = maps_raw_out;                    
                 end
                 data.SIC1 = sic_out;
-                data.ISE1 = ise_out;
+%                 data.ISE1 = ise_out;
             elseif repeat == 3
                 if ~Args.AdaptiveSmooth
                     if Args.NumShuffles > 0
@@ -556,7 +491,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_adsm2 = maps_raw_out;                    
                 end
                 data.SIC2 = sic_out;
-                data.ISE2 = ise_out;
+%                 data.ISE2 = ise_out;
             end            
             
     end
@@ -845,96 +780,3 @@ switch gazeSections{jj}
         spikeLoc = spikeLoc_temp;
 
 end
-
-% 
-% function [smoothedRate,smoothedSpk,smoothedPos,radiiUsedList] = adaptivesmooth(pos,spk,alpha)
-% % Adapted from rates_adaptivesmooth.m (Wills et al)
-% % pos = occupancy map/dwell time in each position bin (in seconds)
-% % spk = spike map/spike count in each position bin
-% % alpha = scaling parameter (1e6 for Skaggs et al 1996, 1e5 for Wills et al 2010)
-% 
-% % Check for empty spk maps %
-% if sum(sum(spk))==0
-%     smoothedPos=pos;    smoothedPos(pos==0)=nan;
-%     smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
-%     smoothedRate=spk;   smoothedRate(pos==0)=nan;
-%     radiiUsedList=nan(1,sum(sum(pos>0)));
-%     return
-% end
-% % Pre-assign output %
-% smoothedPos=zeros(size(pos));
-% smoothedSpk=zeros(size(pos));
-% % Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
-% vis=zeros(size(pos));
-% vis(pos>0)=1;
-% % Pre-assign map which records which bins have passed %
-% smoothedCheck=false(size(pos));
-% smoothedCheck(pos==0)=true; % Disregard unvisited - mark as already done.
-% % Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
-% radiiUsedList=nan(1,sum(sum(pos>0)));
-% radiiUsedCount=1;
-% % These parameters depend on place or dir mode %
-% if size(pos,2)>1
-%     boundary=0;             % IMFILTER boundary condition
-%     rBump=0.5;              % Increase radius in 0.5 bin steps.
-% elseif size(pos,2)==1
-%     boundary='circular';
-%     rBump=1;                % Increase radius in 1 bin steps.
-% end
-% 
-% %%% Run increasing radius iterations %%%
-% r=1; % Circle radius
-% while any(any(~smoothedCheck))
-%     % Check radius isn't getting too big (if >map/2, stop running) %
-%     if r>max(size(pos))/2
-%         smoothedSpk(~smoothedCheck)=nan;
-%         smoothedPos(~smoothedCheck)=nan;
-%         break
-%     end
-%     % Construct filter kernel ...
-%     if size(pos,2)>1
-%         % Place: Flat disk, where r>=distance to bin centre %
-%         f=fspecial('disk',r); 
-%         f(f>=(max(max(f))/3))=1;
-%         f(f~=1)=0;
-%     elseif size(pos,2)==1 
-%         % Direction: boxcar window, r bins from centre symmetrically %
-%         f=ones(1+(r*2),1);
-%     end     
-%     % Filter maps (get N spikes and pos sum within kernel) %
-%     fSpk=imfilter(spk,f,boundary);
-%     fPos=imfilter(pos,f,boundary);
-%     fVis=imfilter(vis,f,boundary);
-%     % Which bins pass criteria at this radius? %
-%     warning('off', 'MATLAB:divideByZero');
-%     binsPassed=alpha./(sqrt(fSpk).*fPos) <= r;
-%     warning('on', 'MATLAB:divideByZero');
-%     binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
-%     % Add these to list of radii used %
-%     nBins=sum(binsPassed(:));
-%     radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
-%     radiiUsedCount=radiiUsedCount+nBins;
-%     % Assign values to smoothed maps %
-%     smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
-%     smoothedPos(binsPassed)=fPos(binsPassed)./fVis(binsPassed);
-%     % Record which bins were smoothed this iteration %
-%     smoothedCheck(binsPassed)=true;
-%     % Increase circle radius (half-bin steps) %
-%     r=r+rBump;
-% end
-% 
-% % Assign Output %
-% warning('off', 'MATLAB:divideByZero');
-% smoothedRate=smoothedSpk./smoothedPos;
-% warning('on', 'MATLAB:divideByZero');
-% smoothedRate(pos==0)=nan;
-% smoothedPos(pos==0)=nan;
-% smoothedSpk(pos==0)=nan;
-% % report radii sizes?
-% 
-% ISE=sv.data.ISE
-% ISE_sh=sv.data.ISEsh;
-% ISE_thr=prctile([ISE;sv.data.ISEsh],95);
-% actual_image=sv.data.actual_image;
-% shuffled_images=sv.data.shuffled_images;
-% save('/Users/yuhsuan//Desktop/test_ise.mat');
