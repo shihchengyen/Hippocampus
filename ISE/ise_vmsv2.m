@@ -1,25 +1,42 @@
+clear
+clc
+
 % view map
-cwd ='C:\Users\Teddy\Downloads\data\New folder';
+cwd ='C:\Users\Teddy\Downloads\data\New folder'; %ASUS
+% cwd = 'C:\Users\teddy\Downloads\Data\New folder'; %hp
 cd(cwd);
 list=['20181031'; '20181101';'20181102'];
 
 for i=1:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     cd(list(i,:));
+    
     if i==1 %1031
        list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
-%        start from ch35ca
+        
+       %initialize th e array for the month
+        ise = zeros(15, 14);
+        shu = 10000; %shuffle images number
+        ise_sh = NaN(shu,14,15); %(shuffle images number, 7bin*2, 15 cells)
+        ise_2_5 = zeros(15, 14);
+        ise_97 = zeros(15, 14);
+        z =zeros(15, 14); %z-score
+        h = zeros(15, 14); %lillietest
+        
        for ii=1:size(list1031,1)
+            list=['20181031'; '20181101';'20181102'];
             list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
             cd(list1031(ii,:));
+            cwd ='C:\Users\Teddy\Downloads\data\New folder';
+%             cwd = 'C:\Users\teddy\Downloads\Data\New folder';
+            address = [cwd, '\', list(i,:)];
             
             %ISE
-            clear
             load('vmsv.mat')
 
             % Canvas padding
-            % create overall map and insert padded portions in, to account for
-            % cross-portion pairs
+            % For smoothed maps
+            smooth = [address,'\smoothed_'];
             firing_rates = [vms.data.maps_adsm ; vms.data.maps_adsmsh];
             canvas = nan(51, 161, size(vms.data.maps_adsmsh,1) + 1); 
             tic;
@@ -90,36 +107,168 @@ for i=1:size(list,1)
             PBR_padded(:,end,:) = PBR_padded(:,1,:);
             canvas(17:17+6-1,121:121+32,:) = PBR_padded;
             
-            actual_image = canvas(:,:,1);
-            actual_image = actual_image(:)';
-            shuffled_images = canvas(:,:,2:end);
-            shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
-            
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
-            %ISE                          
-            %for ise13.mat            
-            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            %ISE
+                %for ise_QMRF
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise_QMRF(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise_QMRF(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise_QMRF(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise_QMRF(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise_QMRF(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise_QMRF(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise_QMRF(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise_QMRF_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
                 
-            
-                ise = ise_out(1);
-                ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                ise_97 = prctile(ise_sh, 97.5);
-                z =(ise-mean(ise_sh))/std(ise_sh); 
-                %save new .mat file
-                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');
+                %for ise1pixel
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise1pixel(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise1pixel(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise1pixel(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise1pixel(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise1pixel(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise1pixel(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise1pixel(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise1pixel_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
                 
-            
-            
+                %for ise2pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise2pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise2pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise2pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise2pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise2pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise2pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise2pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise2pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
+                
+                %for ise3pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise3pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise3pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise3pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise3pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise3pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise3pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise3pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise3pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
             cd ..
        end
        cd .. %back one directory
@@ -127,17 +276,29 @@ for i=1:size(list,1)
     
     if i==2 %1101
        list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
+       
+       %initialize th e array for the month
+        ise = zeros(15, 14);
+        shu = 10000; %shuffle images number
+        ise_sh = NaN(shu,14,15); %(shuffle images number, 7bin*2, 15 cells)
+        ise_2_5 = zeros(15, 14);
+        ise_97 = zeros(15, 14);
+        z =zeros(15, 14); %z-score
+        h = zeros(15, 14); %lillietest
        for ii=1:size(list1101,1)
+           list=['20181031'; '20181101';'20181102'];
            list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
            cd(list1101(ii,:));
+           cwd ='C:\Users\Teddy\Downloads\data\New folder';
+%             cwd = 'C:\Users\teddy\Downloads\Data\New folder';
+            address = [cwd, '\', list(i,:)];
             
             %ISE
-            clear
             load('vmsv.mat')
 
             % Canvas padding
-            % create overall map and insert padded portions in, to account for
-            % cross-portion pairs
+            % For smoothed maps
+            smooth = [address,'\smoothed_'];         
             firing_rates = [vms.data.maps_adsm ; vms.data.maps_adsmsh];
             canvas = nan(51, 161, size(vms.data.maps_adsmsh,1) + 1); 
             tic;
@@ -215,27 +376,166 @@ for i=1:size(list,1)
             
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
-            %ISE            
-            %for ise13.mat            
-            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            %ISE
+                %for ise_QMRF
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise_QMRF(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise_QMRF(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise_QMRF(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise_QMRF(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise_QMRF(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise_QMRF(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise_QMRF(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise_QMRF_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
                 
-            
-                ise = ise_out(1);
-                ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                ise_97 = prctile(ise_sh, 97.5);
-                z =(ise-mean(ise_sh))/std(ise_sh); 
-                %save new .mat file
-                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');
-            
+                %for ise1pixel
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise1pixel(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise1pixel(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise1pixel(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise1pixel(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise1pixel(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise1pixel(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise1pixel(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise1pixel_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
+                
+                %for ise2pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise2pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise2pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise2pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise2pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise2pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise2pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise2pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise2pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
+                
+                %for ise3pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise3pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise3pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise3pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise3pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise3pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise3pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise3pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise3pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
             cd ..
        end
        cd .. %back one directory
@@ -243,17 +543,30 @@ for i=1:size(list,1)
     
     if i==3 %1102
        list1102=['ch09c1';'ch19c1';'ch19c2';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch31c1';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
+       
+       %initialize th e array for the month
+        ise = zeros(15, 14);
+        shu = 10000; %shuffle images number
+        ise_sh = NaN(shu,14,15); %(shuffle images number, 7bin*2, 15 cells)
+        ise_2_5 = zeros(15, 14);
+        ise_97 = zeros(15, 14);
+        z =zeros(15, 14); %z-score
+        h = zeros(15, 14); %lillietest
+        
        for ii=1:size(list1102,1)
+           list=['20181031'; '20181101';'20181102'];
            list1102=['ch09c1';'ch19c1';'ch19c2';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch31c1';'ch43c1';'ch43c2';'ch45c1';'ch45c2']; 
            cd(list1102(ii,:));
+           cwd ='C:\Users\Teddy\Downloads\data\New folder';
+%             cwd = 'C:\Users\teddy\Downloads\Data\New folder';
+            address = [cwd, '\', list(i,:)];
             
             %ISE
-            clear
             load('vmsv.mat')
 
             % Canvas padding
-            % create overall map and insert padded portions in, to account for
-            % cross-portion pairs
+            % For smoothed maps
+            smooth = [address,'\smoothed_'];
             firing_rates = [vms.data.maps_adsm ; vms.data.maps_adsmsh];
             canvas = nan(51, 161, size(vms.data.maps_adsmsh,1) + 1); 
             tic;
@@ -331,29 +644,166 @@ for i=1:size(list,1)
             
             disp(['time taken to pad map for ISE: ' num2str(toc)]);
             
-            %ISE            
-            %for ise13.mat            
-            ise_out1 = ise13(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out2 = ise13(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42);
-            ise_out3 = ise13(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161);
-            ise_out4 = ise13(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out5 = ise13(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out6 = ise13(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out7 = ise13(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33);
-            ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 +ise_out5+ise_out6+ise_out7;      
+            %ISE
+                %for ise_QMRF
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise_QMRF(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise_QMRF(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise_QMRF(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise_QMRF(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise_QMRF(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise_QMRF(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise_QMRF(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise_QMRF_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
                 
-             
-                ise = ise_out(1);
-                ise_sh = ise_out(2:end);
-                ise_sh(ise_sh==0) = []; %exclude zero ise
-                ise_2_5 = prctile(ise_sh, 2.5);
-                ise_97 = prctile(ise_sh, 97.5);
-                z =(ise-mean(ise_sh))/std(ise_sh); 
-                %save new .mat file
-                save('ise13_s.mat','ise','ise_2_5','ise_97','z','ise_sh');   
-           
-            
-            
+                %for ise1pixel
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise1pixel(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise1pixel(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise1pixel(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise1pixel(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise1pixel(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise1pixel(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise1pixel(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise1pixel_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
+                
+                %for ise2pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise2pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise2pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise2pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise2pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise2pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise2pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise2pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise2pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
+                
+                %for ise3pixels
+                c=1;
+                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                for iii = 1: size(bin,1)
+                    if iii>1
+                        load(filename)
+                    end
+                    ise_out1 = ise3pixels(reshape(floor_padded(:,:,1),1,[]), permute(reshape(floor_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out2 = ise3pixels(reshape(ceiling_padded(:,:,1),1,[],1), permute(reshape(ceiling_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 42, 42, bin(iii));
+                    ise_out3 = ise3pixels(reshape(walls_padded(:,:,1),1,[],1), permute(reshape(walls_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 8, 161, bin(iii));
+                    ise_out4 = ise3pixels(reshape(PTL_padded(:,:,1),1,[],1), permute(reshape(PTL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out5 = ise3pixels(reshape(PTR_padded(:,:,1),1,[],1), permute(reshape(PTR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out6 = ise3pixels(reshape(PBL_padded(:,:,1),1,[],1), permute(reshape(PBL_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out7 = ise3pixels(reshape(PBR_padded(:,:,1),1,[],1), permute(reshape(PBR_padded(:,:,2:end),1,[],size(vms.data.maps_adsmsh,1)),[3 2 1]), 6, 33, bin(iii));
+                    ise_out = ise_out1 + ise_out2 + ise_out3 + ise_out4 + ise_out5+ ise_out6+ ise_out7;  
+
+                    ise(ii, c:c+1) = ise_out(1,:);
+                    ise_sh(:,c:c+1,ii) = ise_out(2:end,:);
+                   
+                    ise_sh1 = ise_sh(:,c,ii);
+                    ise_sh1(ise_sh1==0) = []; %exclude zero ise
+                    ise_sh2 = ise_sh(:,c+1,ii);
+                    ise_sh2(ise_sh2==0) = []; %exclude zero ise
+
+                    ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
+                    ise_2_5(ii, c+1) = prctile(ise_sh2, 2.5);
+                    ise_97(ii, c) = prctile(ise_sh1, 97.5);
+                    ise_97(ii, c+1) = prctile(ise_sh2, 97.5);
+                    z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
+                    z(ii, c+1) =(ise(ii, c+1)-mean(ise_sh2))/std(ise_sh2);
+                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                    h(ii, c+1)=lillietest(ise_sh2);
+                    %save new .mat file
+                    if iii==1
+                        filename = [smooth 'ise3pixels_s.mat'];
+                    end
+                    save(filename,'ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                    c = c+2;
+                end
             cd ..
        end
        cd .. %back one directory
