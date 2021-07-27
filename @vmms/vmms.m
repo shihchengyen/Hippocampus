@@ -1,14 +1,14 @@
-function [obj, varargout] = mixselpv(varargin)
-%@dirfiles Constructor function for DIRFILES class
-%   OBJ = mixselpv(varargin)
+function [obj, varargout] = vmms(varargin)
+% Mixed selectivity
+%   OBJ = vmms(varargin)
 %
-%   OBJ = mixselpv('auto') attempts to create a DIRFILES object by ...
+%   OBJ = vmms('auto') attempts to create a DIRFILES object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on mixselpv %
+%   % Instructions on vmms %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%   Example [as, Args] = mixselpv('save','redo')
+%   Example [as, Args] = vmms('save','redo')
 %
 %   Dependencies: 
 
@@ -28,9 +28,9 @@ Args.DataCheckArgs = {};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'mixselpv';
+Args.classname = 'vmms';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'mspv';
+Args.matvarname = 'vmms';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -60,7 +60,8 @@ dlist = nptDir;
 % get entries in directory
 dnum = size(dlist,1);
 % Variables in conjunction
-objtype = {'place','spatialview'};
+msobj = {'place','spatialview'};
+Args.msobj = msobj;
 
 % check if the right conditions were met to create object
 if(dnum>0)
@@ -89,12 +90,26 @@ if(dnum>0)
     c_pc = c_pc.vmp.data;
     c_sv = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmsv.mat');
     c_sv = c_sv.vms.data;
-    pSIthr = max([prctile(c_pc.SICsh,95) prctile(pc.SICsh,95)]); % Both population and cell threshold
-    vSIthr = max([prctile(c_sv.SICsh,95) prctile(sv.SICsh,95)]);
+    pSIthr = prctile(c_pc.SICsh,95); % Population threshold only
+    vSIthr = prctile(c_sv.SICsh,95); % Population threshold only
+%     pSIthr = max([prctile(c_pc.SICsh,95) prctile(pc.SICsh,95)]); % Both population and cell threshold
+%     vSIthr = max([prctile(c_sv.SICsh,95) prctile(sv.SICsh,95)]); % Both population and cell threshold
     cd(cwd);
     
-    if pSI>pSIthr && vSI>vSIthr 
-        data.mixsel = true;
+    data.mixsel = false;
+    data.placesel = false;
+    data.spatialviewsel = false;
+    if pSI>pSIthr || vSI>vSIthr 
+        % Record selectivity
+        if pSI>pSIthr && vSI>vSIthr 
+            data.mixsel = true; % Mixed selective
+            data.placesel = true;
+            data.spatialviewsel = true;
+        elseif pSI>pSIthr && vSI<vSIthr
+            data.placesel = true; % Place selective only
+        elseif pSI<pSIthr && vSI>vSIthr
+            data.spatialviewsel = true; % View selective only
+        end
         % Filter pv with same criteria used in vmpc/sv
         cd ..; cd ..; cd ..;
         pv = load('1vmpv.mat');
@@ -158,12 +173,12 @@ if(dnum>0)
         p_map = place_spikes./place_durations;
         v_map = nansum(view_spikes,2)./nansum(view_durations,2);
         v_map(nansum(view_durations,2)==0) = nan; % restore nans to unvisited bins
-        data.place.p_map = p_map;
-        data.spatialview.v_map = v_map;
+        data.place.pvmap = p_map;
+        data.spatialview.pvmap = v_map';
         
         % Find fields in both place and view maps
-        for oo = 1:size(objtype,2)
-            switch objtype{oo}
+        for oo = 1:size(msobj,2)
+            switch msobj{oo}
                 case 'place'
                     if Args.UseCorr
                        basemapLsm = corr.maps_adsm_corrp;
@@ -204,65 +219,72 @@ if(dnum>0)
             
             % Find 3 maxima of rate maps
             count = 0;
-            for gg = 1:size(basemapGsm,1)
-                % Skip cue and hint view maps 
-                if size(basemapGsm{gg},1) == 1
-                    continue;
-                end
-                % Find fields with at least 1 pixel of > 70% peak rate
-                ind_fields = basemapGsm{gg} > 0.7*peakrate_full;
-                % Find separate fields
-                [fieldlabel,fieldcount] = bwlabel(ind_fields,4);
-                % For walls and pillars, if there are fields that wrap around
-                % split, merge them.
-                if gg > 4
-                   % Find possible split fields
-                   if any(fieldlabel(:,1)) && any(fieldlabel(:,end))
-                       boundary = [fieldlabel(:,1) fieldlabel(:,end)];
-                       [blabel,bcount] = bwlabel(boundary,8);
-                       for bb = 1:bcount
-                           label = unique(fieldlabel(blabel(:,1)==bcount(bb),1));
-                           label = label(1);
-                           labelset = unique(boundary);
-                           labelset = labelset(labelset>0);
-                           labelset = setdiff(labelset,label);
-                           for ll = 1:length(labelset)
-                              fieldlabel(fieldlabel == labelset(ll)) = label; 
-                              fieldcount = fieldcount - 1;
+            if data.([msobj{oo} 'sel'])
+                for gg = 1:size(basemapGsm,1)
+                    % Skip cue and hint view maps 
+                    if size(basemapGsm{gg},1) == 1
+                        continue;
+                    end
+                    % Find fields with at least 1 pixel of > 70% peak rate
+                    ind_fields = basemapGsm{gg} > 0.7*peakrate_full;
+                    % Find separate fields
+                    [fieldlabel,fieldcount] = bwlabel(ind_fields,4);
+                    % For walls and pillars, if there are fields that wrap around
+                    % split, merge them.
+                    if gg > 4
+                       % Find possible split fields
+                       if any(fieldlabel(:,1)) && any(fieldlabel(:,end))
+                           boundary = [fieldlabel(:,1) fieldlabel(:,end)];
+                           [blabel,bcount] = bwlabel(boundary,8);
+                           for bb = 1:bcount
+                               label = unique(fieldlabel(blabel(:,1)==bcount(bb),1));
+                               label = label(1);
+                               labelset = unique(boundary);
+                               labelset = labelset(labelset>0);
+                               labelset = setdiff(labelset,label);
+                               for ll = 1:length(labelset)
+                                  fieldlabel(fieldlabel == labelset(ll)) = label; 
+                                  fieldcount = fieldcount - 1;
+                               end
                            end
                        end
-                   end
-                end
-                % Split fields that are too large i.e. > 1/4 of area
-                for ii = 1:fieldcount
-                    inds = fieldlabel == ii;
-                    % Split fields that are too large
-                    if sum(inds(:)) >= (size(basemapLsm,2)/4) 
-                        subinds = inds & basemapGsm{gg} > 0.8*peakrate_full;
-                        [sublabel,subcount] = bwlabel(subinds,4);
-                        sublabel(subinds) = sublabel(subinds) + fieldcount;
-                        fieldcount = fieldcount + subcount;
-                        fieldlabel(inds) = 0;
-                        fieldlabel(inds) = sublabel(inds);
                     end
-                end
-                % Find fields that are big enough (i.e. > 15 bins around peak, 5x5bins area)
-                for ii = 1:fieldcount
-                    inds = fieldlabel == ii;
-                    % Make sure field size is > 15 bins 
-                    if sum(inds(:)) >= 15
-                        count = count + 1;
-                        fieldmaxrate_rw(count,1) = max(basemapGrw{gg}(inds)); 
-                        fieldmaxrate_sm(count,1) = max(basemapGsm{gg}(inds));
-                        switch objtype{oo}
-                            case 'place'
-                                gridnum(count,1) = 3;
-                            case 'spatialview'
-                                gridnum(count,1) = gg;
+                    % Split fields that are too large i.e. > 1/4 of usable area
+                    for ii = 1:fieldcount
+                        inds = fieldlabel == ii;
+                        % Split fields that are too large
+                        if sum(inds(:)) >= ((size(pc.maps_raw,2)-4*8*8)/4) 
+                            subinds = inds & basemapGsm{gg} > 0.8*peakrate_full;
+                            [sublabel,subcount] = bwlabel(subinds,4);
+                            sublabel(subinds) = sublabel(subinds) + fieldcount;
+                            fieldcount = fieldcount + subcount;
+                            fieldlabel(inds) = 0;
+                            fieldlabel(inds) = sublabel(inds);
                         end
-                        [fieldcoordx_mat, fieldcoordy_mat] = find(inds);
-                        fieldcoord{count,1} = [fieldcoordy_mat size(basemapGrw{gg},1)-fieldcoordx_mat+1]; % In plot coords. x left to right, y bottom to top
-                        seclinbin{count,1} = dummygrid{gg}(inds);
+                    end
+                    % Find fields that are big enough (i.e. > 15 bins around peak, 5x5bins area)
+                    for ii = 1:fieldcount
+                        inds = fieldlabel == ii;
+                        % Make sure field size is > 15 bins 
+                        if sum(inds(:)) >= 15
+                            % Discard field if there are not at least ONE active pixel within this field in the raw map
+                            if sum(basemapGrw{gg}(inds)>0) > 1
+                                count = count + 1;
+                                fieldmaxrate_rw(count,1) = max(basemapGrw{gg}(inds)); 
+                                fieldmaxrate_sm(count,1) = max(basemapGsm{gg}(inds));
+                                switch msobj{oo}
+                                    case 'place'
+                                        gridnum(count,1) = 3;
+                                    case 'spatialview'
+                                        gridnum(count,1) = gg;
+                                end
+                                [fieldcoordx_mat, fieldcoordy_mat] = find(inds);
+                                fieldcoord{count,1} = [fieldcoordy_mat size(basemapGrw{gg},1)-fieldcoordx_mat+1]; % In plot coords. x left to right, y bottom to top
+                                seclinbin{count,1} = dummygrid{gg}(inds);
+                            else 
+                                disp(nan);
+                            end
+                        end
                     end
                 end
             end
@@ -270,16 +292,28 @@ if(dnum>0)
             % If no significant fields, skip to next cell
             if count == 0
                 % create nptdata so we can inherit from it
-                data.(objtype{oo}).sigfields = 0;
-                data.numSets = 1;    
-                data.Args = Args;
-                n = nptdata(data.numSets,0,pwd);
-                d.data = data;
-                obj = class(d,Args.classname,n);
-                saveObject(obj,'ArgsC',Args);
-                return;
+                data.(msobj{oo}).sigfields = 0; % Selective but no sig fields 
+                data.(msobj{oo}).SI = SI;
+                data.(msobj{oo}).SIthr = SIthr;
+                data.(msobj{oo}).basemapLsm = basemapLsm;
+                data.(msobj{oo}).secmapLsm = secmapLsm;
+                data.(msobj{oo}).basemapGsm = basemapGsm;
+                data.(msobj{oo}).basemapGrw = basemapGrw;
+                data.(msobj{oo}).dummygrid = dummygrid;
+                data.(msobj{oo}).peakrate_full = [];
+                data.(msobj{oo}).peakrate_set = [];
+                data.(msobj{oo}).fieldmaxrate_sm = [];
+                data.(msobj{oo}).fieldmaxrate_rw = [];
+                data.(msobj{oo}).gridnum = [];
+                data.(msobj{oo}).fieldcoord = {};
+                data.(msobj{oo}).linbin = {};
+                data.(msobj{oo}).set_sec_linbin = {};
+                data.(msobj{oo}).rate_components = {};
+                data.(msobj{oo}).secfieldrates = {};
+                data.(msobj{oo}).secfieldrates_sh = {};
+                continue;
             else 
-                data.(objtype{oo}).sigfields = count;
+                data.(msobj{oo}).sigfields = count;
             end
 
             % Sort fields
@@ -304,7 +338,7 @@ if(dnum>0)
                 for pp = 1:size(fieldcoord{ii},1)
                     %Get corresponding secondary pixels from pv object
                     sec = [];
-                    switch objtype{oo}
+                    switch msobj{oo}
                         case 'place'
                             ind_pv = pvT(:,2) == seclinbin{ii}(pp);
                             sec(:,1) = pvT(ind_pv,3); % view px
@@ -321,6 +355,9 @@ if(dnum>0)
                     usecpx(isnan(usecpx)) = [];
                     rate_components_px = nan(length(usecpx),4); % Collect dur and spikes for secondary pixels for calculating firing rates
                     rate_components_px(:,1) = usecpx;
+                    if any(isnan(usecpx))
+                        disp(nan);
+                    end
                     ind_timechange = find(sec(:,2) > 0);
                     for cc = 1:size(ind_timechange,1) % For each instance of being in this base pixel
                         linbintemp = nan(size(usecpx,1),2); % Temp dur and spikes for this secondary pixel(s)
@@ -337,7 +374,7 @@ if(dnum>0)
                         rate_components_px(:,3) = nansum( [rate_components_px(:,3) linbintemp(:,2)] ,2); % Sum spikes for this sec pixel across instances
                     end
                     rightfulnans = rate_components_px(:,2) == 0;
-                    rate_components_px(rightfulnans,:) = nan;
+                    rate_components_px(rightfulnans,2) = nan;
                     rate_components_px(:,4) = rate_components_px(:,3)./rate_components_px(:,2); % Compute firing rates
 
                     % Collect all sec rate information for the base pixels
@@ -370,22 +407,22 @@ if(dnum>0)
             end
 
             % Store data
-            data.(objtype{oo}).SI = SI;
-            data.(objtype{oo}).SIthr = SIthr;
-            data.(objtype{oo}).basemapLsm = basemapLsm;
-            data.(objtype{oo}).secmapLsm = secmapLsm;
-            data.(objtype{oo}).basemapGsm = basemapGsm;
-            data.(objtype{oo}).basemapGrw = basemapGrw;
-            data.(objtype{oo}).dummygrid = dummygrid;
-            data.(objtype{oo}).peakrate_full = peakrate_full;
-            data.(objtype{oo}).peakrate_set = peakrate_set;
-            data.(objtype{oo}).fieldmaxrate_sm = fieldmaxrate_sm;
-            data.(objtype{oo}).fieldmaxrate_rw = fieldmaxrate_rw;
-            data.(objtype{oo}).gridnum = gridnum;
-            data.(objtype{oo}).fieldcoord = fieldcoord;
-            data.(objtype{oo}).linbin = seclinbin;
-            data.(objtype{oo}).set_sec_linbin = seclinbin_full;
-            data.(objtype{oo}).rate_components = rate_components_full;
+            data.(msobj{oo}).SI = SI;
+            data.(msobj{oo}).SIthr = SIthr;
+            data.(msobj{oo}).basemapLsm = basemapLsm;
+            data.(msobj{oo}).secmapLsm = secmapLsm;
+            data.(msobj{oo}).basemapGsm = basemapGsm;
+            data.(msobj{oo}).basemapGrw = basemapGrw;
+            data.(msobj{oo}).dummygrid = dummygrid;
+            data.(msobj{oo}).peakrate_full = peakrate_full;
+            data.(msobj{oo}).peakrate_set = peakrate_set;
+            data.(msobj{oo}).fieldmaxrate_sm = fieldmaxrate_sm;
+            data.(msobj{oo}).fieldmaxrate_rw = fieldmaxrate_rw;
+            data.(msobj{oo}).gridnum = gridnum;
+            data.(msobj{oo}).fieldcoord = fieldcoord;
+            data.(msobj{oo}).linbin = seclinbin;
+            data.(msobj{oo}).set_sec_linbin = seclinbin_full;
+            data.(msobj{oo}).rate_components = rate_components_full;
 
             clear fieldmaxrate_sm; clear fieldmaxrate_rw; clear gridnum; clear fieldcoord; clear linbin; clear session_seclinbin;
             clear seclinbin_full; % clear secgridmap_full; 
@@ -394,139 +431,175 @@ if(dnum>0)
         end
         
         % Stats
-        for oo = 1:size(objtype,2)
+        for oo = 1:size(msobj,2)
             % Output variables
-            secfieldrates = cell(size(data.(objtype{oo}).rate_components,1),1);
-            secfieldrates_sh = cell(size(data.(objtype{oo}).rate_components,1),1);
-            for ii = 1:size(data.(objtype{oo}).rate_components,1) % For each base field
-                % Output variables
-                secfieldrate = nan(size(data.(objtype{2-oo+1}).rate_components,1),1);
-                secfieldrate_sh = cell(size(data.(objtype{2-oo+1}).rate_components,1),1);
-                % Secondary pixels/map sampled for the entire session
-                session_seclinbin = data.(objtype{oo}).set_sec_linbin{ii};
-                dummygridsec = data.(objtype{2-oo+1}).dummygrid;
-                session_seclinmap = nan(size(data.(objtype{2-oo+1}).basemapLsm));
-                session_seclinmap(1,session_seclinbin(:,1)) = session_seclinbin(:,4);
-                [session_secgridmap,~] = lineartogrid(session_seclinmap,objtype{2-oo+1});
-                
-                % Test if secondary pixels sampled from this base field are more likely to fall within any of the secondary fields than outside
-                for jj = 1:size(data.(objtype{2-oo+1}).rate_components,1) % For each secondary field
+            secfieldrates = cell(size(data.(msobj{oo}).rate_components,1),1);
+            secfieldrates_sh = cell(size(data.(msobj{oo}).rate_components,1),1);
+            for ii = 1:size(data.(msobj{oo}).rate_components,1) % For each base field
+                % If there are secondary fields
+                if ~isempty(data.(msobj{2-oo+1}).rate_components)
+                    % Output variables
+                    secfieldrate = nan(size(data.(msobj{2-oo+1}).rate_components,1),1);
+                    secfieldrate_sh = cell(size(data.(msobj{2-oo+1}).rate_components,1),1);
+                    % Secondary pixels/map sampled for the entire session
+                    session_seclinbin = data.(msobj{oo}).set_sec_linbin{ii};
+                    dummygridsec = data.(msobj{2-oo+1}).dummygrid;
+                    session_seclinmap = nan(size(data.(msobj{2-oo+1}).basemapLsm));
+                    session_seclinmap(1,session_seclinbin(:,1)) = session_seclinbin(:,4);
+                    [session_secgridmap,~] = lineartogrid(session_seclinmap,msobj{2-oo+1});
 
-                    % Get mean firing rate within secondary field
-                    seclinbin = data.(objtype{2-oo+1}).linbin{jj}; % pixels that make up the sec field. Not all of these will be sampled from this base field
-                    seclinbin_sampled = seclinbin(ismember(seclinbin,session_seclinbin(:,1)));
-                    inds_infield = ismember(session_seclinbin(:,1),seclinbin); % find pixels of sec field that are sampled from this base field
-                    if sum(inds_infield) == 0 
-                        continue;
-                    end
-                    meanrate_infield = sum(session_seclinbin(inds_infield,3)) / sum(session_seclinbin(inds_infield,2));
-                    
-                    % Get mean firing rates for 10000 pseudorandom same-size fields outside of secondary field
-                    meanrate_outfield = nan(10000,1);
-                    session_seclinbin_out = session_seclinbin(~inds_infield,:);
-                    if ~isempty(session_seclinbin_out) % If all pixels are within sec field ###### FIXXXXXXXXXX ????????
-                        % Generate a psuedopopulation of outfields same size as sec field 
-                        for ff = 1:10000
-                            % Start from a random pixel that is outside of sec field
-                            startpx = randsample(1:size(session_seclinbin_out,1),1);
-                            startpx = session_seclinbin_out(startpx,1);
-                            if ismember(startpx,seclinbin) % If random px overlaps with sec field, repeat
-                                ff = ff - 1;
-                                continue;
-                            end
-                            % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
-                            switch objtype{2-oo+1}
-                                case 'place'
-                                    gnum = 1;
-                                case 'spatialview'
-                                    if startpx == 1 || startpx == 2 % Make sure not cue or hint
-                                       ff = ff - 1;
-                                       continue;
-                                    end
-                                    [gnum,~,~] = findgrid(startpx,objtype{2-oo+1});
-                            end
-                            % Get the grid coords of starting px
-                            [startindx,startindy] = find(dummygridsec{gnum} == startpx);
-                            tempmap = session_secgridmap{gnum}; % the actual sampled sec grid map
-                            % Expand radius around starting px until hit the requisite number of px 
-                            % while sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
-                            while length(startindx)*length(startindy) < size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
-                                if startindx(1) > 1 && startindx(end) < size(dummygridsec{gnum},1)
-                                    startindx = [startindx(1)-1 startindx startindx(end)+1];
-                                elseif startindx(1) == 1 && startindx(end) < size(dummygridsec{gnum},1)
-                                    startindx = [startindx startindx(end)+1];
-                                elseif startindx(1) > 1 && startindx(end) == size(dummygridsec{gnum},1)
-                                    startindx = [startindx(1)-1 startindx];
-                                end
-                                % If reach required num of px
-                                if sum(sum(~isnan(tempmap(startindx,startindy)))) > sum(inds_infield)% length(startindx)*length(startindy) > size(seclinbin,1)
-                                    break;
-                                end
-                                if startindy(1) > 1 && startindy(end) < size(dummygridsec{gnum},2)
-                                    startindy = [startindy(1)-1 startindy startindy(end)+1];
-                                elseif startindy(1) == 1 && startindy(end) < size(dummygridsec{gnum},2)
-                                    startindy = [startindy startindy(end)+1];
-                                elseif startindy(1) > 1 && startindy(end) == size(dummygridsec{gnum},2)
-                                    startindy = [startindy(1)-1 startindy];
-                                end
-                                % If exceed map bounds
-                                if startindx(1) == 1 && startindx(end) == size(dummygridsec{gnum},1) && startindy(1) == 1 && startindy(end) == size(dummygridsec{gnum},2)
-                                    break;
-                                end
-                            end
-                            % get another starting pixel if cannot sample enough px 
-                            if length(startindx)*length(startindy) < sum(inds_infield) || sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
-                                ff = ff - 1;
-                                continue;
-                            end
-                            % Remove empty pixels from sampled field
-                            pxsub = dummygridsec{gnum}(startindx,startindy);
-                            inds_sampled = ~isnan(tempmap(startindx,startindy));
-                            pxsub = pxsub(inds_sampled);
-                            if sum(inds_infield)>length(pxsub)
-                                error('Not enough sample pixels to draw pseudopopulation from');;
-                            end
-                            inds_keep = sort(randsample(1:length(pxsub),sum(inds_infield)))';
-                            pxsub = pxsub(inds_keep);
-                            % Start over if exactly the same px as field of interest
-                            if isempty(setdiff(pxsub,seclinbin))
-                                ff = ff - 1;
-                                continue;
-                            end
-                            % Get sec bins actually sampled 
-                            outfieldlinbin = pxsub;
-                            inds_outfield = ismember(session_seclinbin(:,1),outfieldlinbin);
-                            meanrate_outfield(ff,1) = sum(session_seclinbin(inds_outfield,3)) / sum(session_seclinbin(inds_outfield,2));
+                    % Test if secondary pixels sampled from this base field are more likely to fall within any of the secondary fields than outside
+                    for jj = 1:size(data.(msobj{2-oo+1}).rate_components,1) % For each secondary field
 
+                        % Get mean firing rate within secondary field
+                        seclinbin = data.(msobj{2-oo+1}).linbin{jj}; % pixels that make up the sec field. Not all of these will be sampled from this base field
+                        seclinbin_sampled = seclinbin(ismember(seclinbin,session_seclinbin(:,1)));
+                        inds_infield = ismember(session_seclinbin(:,1),seclinbin_sampled); % find pixels of sec field that are sampled from this base field
+                        if sum(inds_infield) == 0 
+                            continue;
                         end
-%                         meanrate_thr = prctile(meanrate_outfield(:),95);
+                        meanrate_infield = sum(session_seclinbin(inds_infield,3)) / sum(session_seclinbin(inds_infield,2));
+
+                        % Get mean firing rates for 10000 pseudorandom same-size fields outside of secondary field
+                        meanrate_outfield = nan(10000,1);
+                        session_seclinbin_out = session_seclinbin(~inds_infield,:);
+                        if size(session_seclinbin_out,1) > sum(inds_infield) % Filter 1 of 2: Make sure there are enough outfield px to generate stats (This catches situations where there are just too few outfield px to begin with) 
+                            % Generate a psuedopopulation of outfields same size as sec field 
+                            ff = 1;
+                            attempt = 0; % Filter 2 of 2: Make sure there are enough outfield px to generate stats (This catches situations where outfield px are enough in number but scattered so that can't form coherent shuffled field without overlapping with original sec field)
+                            abandon = false;
+                            while ff <= 10000 && ~abandon
+                                attempt = attempt + 1;
+                                % Start from a random pixel that is outside of sec field
+                                startpx = randsample(1:size(session_seclinbin_out,1),1);
+                                startpx = session_seclinbin_out(startpx,1);
+                                if ismember(startpx,seclinbin) % If random px overlaps with sec field, repeat
+    %                                 reset = true;
+                                    continue;
+                                end
+                                % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
+                                switch msobj{2-oo+1}
+                                    case 'place'
+                                        gnum = 1;
+                                    case 'spatialview'
+                                        if startpx == 1 || startpx == 2 % Make sure not cue or hint
+    %                                        reset = true;
+                                           continue;
+                                        end
+                                        [gnum,~,~] = findgrid(startpx,msobj{2-oo+1});
+                                end
+                                % Get the grid coords of starting px
+                                [startindx,startindy] = find(dummygridsec{gnum} == startpx);
+                                tempmap = session_secgridmap{gnum}; % the actual sampled sec grid map
+                                % Expand radius around starting px until hit the requisite number of px 
+                                % while sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
+                                while length(startindx)*length(startindy) < size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
+                                    if startindx(1) > 1 && startindx(end) < size(dummygridsec{gnum},1)
+                                        startindx = [startindx(1)-1 startindx startindx(end)+1];
+                                    elseif startindx(1) == 1 && startindx(end) < size(dummygridsec{gnum},1)
+                                        startindx = [startindx startindx(end)+1];
+                                    elseif startindx(1) > 1 && startindx(end) == size(dummygridsec{gnum},1)
+                                        startindx = [startindx(1)-1 startindx];
+                                    end
+                                    % If reach required num of px
+                                    if sum(sum(~isnan(tempmap(startindx,startindy)))) > sum(inds_infield)% length(startindx)*length(startindy) > size(seclinbin,1)
+                                        break;
+                                    end
+                                    if startindy(1) > 1 && startindy(end) < size(dummygridsec{gnum},2)
+                                        startindy = [startindy(1)-1 startindy startindy(end)+1];
+                                    elseif startindy(1) == 1 && startindy(end) < size(dummygridsec{gnum},2)
+                                        startindy = [startindy startindy(end)+1];
+                                    elseif startindy(1) > 1 && startindy(end) == size(dummygridsec{gnum},2)
+                                        startindy = [startindy(1)-1 startindy];
+                                    end
+                                    % If exceed map bounds
+                                    if startindx(1) == 1 && startindx(end) == size(dummygridsec{gnum},1) && startindy(1) == 1 && startindy(end) == size(dummygridsec{gnum},2)
+                                        break;
+                                    end
+                                end
+                                % sampled pixels
+                                sampledpx = dummygridsec{gnum}(startindx,startindy);
+                                sampledpx = sampledpx(~isnan(tempmap(startindx,startindy)));
+                                % get another starting pixel if cannot sample enough px / if sampled field overlaps too much with sec field 
+                                if length(startindx)*length(startindy) < sum(inds_infield) || sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
+                                    continue;
+                                elseif size(intersect(sampledpx,seclinbin),1) > 0.25*size(seclinbin,1) % If sampled field overlaps with more than half of sec field
+                                    if attempt == 10000 && ff < 10
+                                        abandon = true;
+                                    end
+                                    continue;
+                                end
+                                % Remove empty pixels from sampled field
+                                pxsub = dummygridsec{gnum}(startindx,startindy);
+                                inds_sampled = ~isnan(tempmap(startindx,startindy));
+                                pxsub = pxsub(inds_sampled);
+                                if sum(inds_infield)>length(pxsub)
+                                    error('Not enough sample pixels to draw pseudopopulation from');
+                                end
+                                inds_keep = sort(randsample(1:length(pxsub),sum(inds_infield)))';
+                                pxsub = pxsub(inds_keep);
+                                % Start over if exactly the same px as field of interest
+                                if isempty(setdiff(pxsub,seclinbin))
+    %                                 reset = true;
+                                    continue;
+                                end
+                                % Get sec bins actually sampled 
+                                outfieldlinbin = pxsub;
+                                inds_outfield = ismember(session_seclinbin(:,1),outfieldlinbin);
+                                meanrate_outfield(ff,1) = sum(session_seclinbin(inds_outfield,3)) / sum(session_seclinbin(inds_outfield,2));
+                                if mod(ff,1000) == 0
+                                    disp(ff);
+                                end
+                                ff = ff+1;
+                            end
+    %                         meanrate_thr = prctile(meanrate_outfield(:),95);
+                        end
+                        % Store data
+                        secfieldrate(jj,1) = meanrate_infield;
+                        secfieldrate_sh{jj,1} = meanrate_outfield;
                     end
                     % Store data
-                    secfieldrate(jj,1) = meanrate_infield;
-                    secfieldrate_sh{jj,1} = meanrate_outfield;
+                    secfieldrates{ii,1} = secfieldrate;
+                    secfieldrates_sh{ii,1} = secfieldrate_sh;
+%                 else
+%                     % Store data
+%                     secfieldrates{ii,1} = NaN;
+%                     secfieldrates_sh{ii,1} = nan(10000,1);
                 end
-                % Store data
-                secfieldrates{ii,1} = secfieldrate;
-                secfieldrates_sh{ii,1} = secfieldrate_sh;
             end
             % Store data
-            data.(objtype{oo}).secfieldrates = secfieldrates;
-            data.(objtype{oo}).secfieldrates_sh = secfieldrates_sh;
+            data.(msobj{oo}).secfieldrates = secfieldrates;
+            data.(msobj{oo}).secfieldrates_sh = secfieldrates_sh;
         end
-    else % If cell is not selective for both place and view
-        data.mixsel = false;
-        data.place.sigfields = NaN;
-        data.place.SI = pSI;
-        data.place.SIthr = pSIthr;
-        data.spatialview.sigfields = NaN;
-        data.spatialview.SI = vSI;
-        data.spatialview.SIthr = vSIthr;
-        
+    else % If cell is not selective for both place or view
+        for oo = 1:size(msobj,2)
+            data.(msobj{oo}).pvmap = [];
+            data.(msobj{oo}).sigfields = NaN; % Not selective
+            data.(msobj{oo}).SI = [];
+            data.(msobj{oo}).SIthr = [];
+            data.(msobj{oo}).basemapLsm = [];
+            data.(msobj{oo}).secmapLsm = [];
+            data.(msobj{oo}).basemapGsm = {};
+            data.(msobj{oo}).basemapGrw = {};
+            data.(msobj{oo}).dummygrid = {};
+            data.(msobj{oo}).peakrate_full = [];
+            data.(msobj{oo}).peakrate_set = [];
+            data.(msobj{oo}).fieldmaxrate_sm = [];
+            data.(msobj{oo}).fieldmaxrate_rw = [];
+            data.(msobj{oo}).gridnum = [];
+            data.(msobj{oo}).fieldcoord = {};
+            data.(msobj{oo}).linbin = {};
+            data.(msobj{oo}).set_sec_linbin = {};
+            data.(msobj{oo}).rate_components = {};
+            data.(msobj{oo}).secfieldrates = {};
+            data.(msobj{oo}).secfieldrates_sh = {};
+        end
     end
     
 	% create nptdata so we can inherit from it
 	data.numSets = 1;    
     data.Args = Args;
+    data.origin = {cwd};
 	n = nptdata(data.numSets,0,pwd);
 	d.data = data;
 	obj = class(d,Args.classname,n);

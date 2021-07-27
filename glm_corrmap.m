@@ -8,8 +8,8 @@ function glm_corrmap(filttype,pix,varargin)
 %
 
 %%%% CHANGE THIS TO SOMETHING ELSE
-figdir = '/Volumes/User/huimin/Desktop/';
-% figdir = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/';
+% figdir = '/Volumes/User/huimin/Desktop/';
+figdir = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Figures/';
 
 if nargin > 2
     cd(varargin{1});
@@ -28,10 +28,9 @@ cd(objdir);
 % Load vmpc object
 pc = load('vmpc.mat');
 pc = pc.vmp.data;
-
-% Load vmsv object
-sv = load('vmsv.mat');
-sv = sv.vms.data;
+% % Load vmsv object
+% sv = load('vmsv.mat');
+% sv = sv.vms.data;
 cd(cwd);
 
 % Load spike train
@@ -58,7 +57,7 @@ end
 pvT(pvT(:,2)==0,:) = []; % ITI
 
 % Create base for backfilling 
-pvTfill = pvT;
+% pvTfill = pvT;
 
 view_durations = NaN(5122,1600);
 view_spikes = NaN(5122,1600);
@@ -91,7 +90,7 @@ for i = 1:1600
 %         subsample(:,2) = fillmissing(subsample(:,2), 'previous');
         subsample(:,2) = fillmissing(subsample(:,2), 'next');
         % Put backfill into sessionTimeC array
-        pvTfill(inds,[3 4 5]) = subsample;
+%         pvTfill(inds,[3 4 5]) = subsample;
 
         % padding with 5122 bin
         if subsample(end,1) ~= 5122
@@ -126,100 +125,135 @@ else
     sv_array = ones(size(view_durations,1),1);
     sv_array(isnan(sv_array_orig)) = nan;
 end
-
+% Starting llh
 llh = sum( nansum(view_spikes.*log(p_array.*view_durations.*sv_array)) - nansum(p_array.*view_durations.*sv_array) - nansum(log(factorial(view_spikes_temp))) );
 llh_vec = llh;
-
-
-
-% for ii = 1:1600
-%     for jj = 1:5122
-%             llh_array(jj,ii) = view_spikes(jj,ii)*log(p_array(ii)*sv_array(jj)*view_durations(jj,ii)) - p_array(ii)*sv_array(jj)*view_durations(jj,ii) - log(factorial(view_spikes_temp(jj,ii)));
-% %             if log(factorial(view_spikes_temp(jj,ii)))>1
-% %                 disp(ii);
-% %             end
-% %             if view_durations(jj,ii) > 1
-% %                 disp(jj)
-% %             end
-%     end
-% end
-% llh_2 = nansum(nansum(llh_array));
-
-
-mlm_loop = 0;
 
 p_array_set = [p_array];
 sv_array_set = [sv_array];
 p_spk_set = {view_spikes};
 sv_spk_set = {view_spikes};
 mlm = true;
-% while mlm_loop < 9
+count = 0;
+
 while mlm == true
 
-    spk_adj = nan(size(view_spikes,1),size(view_spikes,2));
-    for ii = 1:size(view_spikes,2)
-        for jj = 1:size(view_spikes,1)
-            if ~isnan(view_spikes(jj,ii))
-                if isnan(sv_array(jj))
-                    spk_adj(jj,ii) = nan;
-                elseif sv_array(jj) == 0
-                    spk_adj(jj,ii) = 0; 
-                else
-                    spk_adj(jj,ii) = view_spikes(jj,ii)/sv_array(jj);
-%                     if view_spikes(jj,ii) > 0
-%                         disp(['spk=' num2str(view_spikes(jj,ii))]);
-%                         disp(['svarr=' num2str(sv_array(jj))]);
-%                         disp(['spkadj=' num2str(spk_adj(jj,ii))]);
-%                     end
-                end
-            end
-        end
-    end
-    multfac = nansum(nansum(view_spikes)) / nansum(nansum(spk_adj));
-    spk_adj = multfac*spk_adj;
-    p_array = nansum(spk_adj,1)./nansum(view_durations,1);
-    p_array_set = [p_array_set; p_array];
-    p_spk_set{end+1} = spk_adj;
+%     spk_adj = nan(size(view_spikes,1),size(view_spikes,2));
+%     for ii = 1:size(view_spikes,2)
+%         for jj = 1:size(view_spikes,1)
+%             if ~isnan(view_spikes(jj,ii))
+%                 if isnan(sv_array(jj))
+%                     spk_adj(jj,ii) = nan;
+%                 elseif sv_array(jj) == 0
+%                     spk_adj(jj,ii) = 0; 
+%                 else
+%                     spk_adj(jj,ii) = view_spikes(jj,ii)/sv_array(jj);
+%                 end
+%             end
+%         end
+%     end
+%     multfac = nansum(nansum(view_spikes)) / nansum(nansum(spk_adj));
+%     spk_adj = multfac*spk_adj;
+%     p_array = nansum(spk_adj,1)./nansum(view_durations,1);
+%     p_array_set = [p_array_set; p_array];
+%     p_spk_set{end+1} = spk_adj;
     
-    spk_adj = nan(size(view_spikes,1),size(view_spikes,2));
-    for jj = 1:size(view_spikes,1) 
-        for ii = 1:size(view_spikes,2)
-            if ~isnan(view_spikes(jj,ii))
-                if isnan(p_array(ii))
-                    spk_adj(jj,ii) = nan; 
-                elseif p_array(ii) == 0
-                    spk_adj(jj,ii) = 0; 
+    dur_adj = nan(size(view_durations,1),size(view_durations,2));
+    for ii = 1:size(view_durations,2)
+        for jj = 1:size(view_durations,1)
+            if ~isnan(view_durations(jj,ii))
+                if isnan(sv_array(jj))
+                    dur_adj(jj,ii) = 0;
+                elseif sv_array(jj) == 0
+                    dur_adj(jj,ii) = view_durations(jj,ii); 
                 else
-                    spk_adj(jj,ii) = view_spikes(jj,ii)/p_array(ii);
+                    dur_adj(jj,ii) = view_durations(jj,ii)*sv_array(jj);
                 end
             end
         end
     end
-    multfac = nansum(nansum(view_spikes)) / nansum(nansum(spk_adj));
-    spk_adj = multfac*spk_adj;
-    sv_array = nansum(spk_adj,2)./nansum(view_durations,2);
+    p_array = nansum(view_spikes,1)./nansum(dur_adj,1);
+    spk = p_array.*nansum(view_durations,1);
+    totspk = nansum(spk);
+    multfac = nansum(nansum(view_spikes)) / totspk;
+    p_array = multfac * p_array;
+    p_array_set = [p_array_set; p_array];
+    
+%     spk_adj = nan(size(view_spikes,1),size(view_spikes,2));
+%     for jj = 1:size(view_spikes,1) 
+%         for ii = 1:size(view_spikes,2)
+%             if ~isnan(view_spikes(jj,ii))
+%                 if isnan(p_array(ii))
+%                     spk_adj(jj,ii) = nan; 
+%                 elseif p_array(ii) == 0
+%                     spk_adj(jj,ii) = 0; 
+%                 else
+%                     spk_adj(jj,ii) = view_spikes(jj,ii)/p_array(ii);
+%                 end
+%             end
+%         end
+%     end
+%     multfac = nansum(nansum(view_spikes)) / nansum(nansum(spk_adj));
+%     spk_adj = multfac*spk_adj;
+%     sv_array = nansum(spk_adj,2)./nansum(view_durations,2);
+%     sv_array_set = [sv_array_set sv_array];
+%     sv_spk_set{end+1} = spk_adj;
+    
+    dur_adj = nan(size(view_durations,1),size(view_durations,2));
+    for jj = 1:size(view_durations,1)
+        for ii = 1:size(view_durations,2)
+            if ~isnan(view_durations(jj,ii))
+                if isnan(p_array(ii))
+                    dur_adj(jj,ii) = 0;
+                elseif p_array(ii) == 0
+                    dur_adj(jj,ii) = view_durations(jj,ii); 
+                else
+                    dur_adj(jj,ii) = view_durations(jj,ii)*p_array(ii);
+                end
+            end
+        end
+    end
+    sv_array = nansum(view_spikes,2)./nansum(dur_adj,2);
+    spk = sv_array.*nansum(view_durations,2);
+    totspk = nansum(spk);
+    multfac = nansum(nansum(view_spikes)) / totspk;
+    sv_array = multfac * sv_array;
     sv_array_set = [sv_array_set sv_array];
-    sv_spk_set{end+1} = spk_adj;
 
-    prev_llh = llh;
+%     prev_llh = llh;
     llh = sum( nansum(view_spikes.*log(p_array.*view_durations.*sv_array)) - nansum(p_array.*view_durations.*sv_array) - nansum(log(factorial(view_spikes_temp))) );
-    llh_vec(end+1) = llh;
-    disp(abs(llh - prev_llh)/abs(prev_llh));
+    llh_vec(end+1,1) = llh;
+    disp([num2str(size(llh_vec,1)) ':' num2str(llh)]);
+    if startorig
+        pick = find(llh_vec == max(llh_vec));
+    else 
+        pick = find(llh_vec == max(llh_vec(2:end)));
+    end
+    if size(pick,1) > 1
+        disp('undifferentiable llh');
+        pick = pick(1);
+        picklabel = ['undiff' num2str(pick)];
+        break;
+    else 
+        picklabel = num2str(pick);
+    end
+
+    if pick < size(llh_vec,1) && size(llh_vec,1) - pick > 1 
+        disp('stop');
+        count = count + 1;
+    end
+    if count > 10
+        break;
+    end
     if isinf(llh)
         mlm = false;
         disp('stop');
     end
 end
-if startorig
-    maxllh = max(llh_vec);
-    pick = find(llh_vec == maxllh);
-else
-    maxllh = max(llh_vec(2:end));
-    pick = find(llh_vec == maxllh);
-end
+
 corr_p_array = p_array_set(pick,:);
 corr_sv_array = sv_array_set(:,pick);
-corr_spk = sv_spk_set{pick};
+% corr_spk = sv_spk_set{pick};
 % corr_sv_spk = sv_spk_set{pick};
 disp(pick);
 
@@ -230,14 +264,13 @@ s = regexp(cwd,'session');
 identifiers = [str2double(cwd(s-9:s-2)) str2double(cwd(s+7:s+8)) ...
     str2double(cwd(s+15:s+16)) str2double(cwd(s+25:s+27)) str2double(cwd(s+33:s+34))];
 ID = [num2str(identifiers(1,1)) 'ch' num2str(identifiers(1,4)) 'c' num2str(identifiers(1,5))];
-figdir = [figdir filttype '/' num2str(pix) 'px/Corrmaps/' ID 'pick' num2str(pick) '/'];
+figdir = [figdir filttype '/' num2str(pix) 'px/Corrmaps/' ID 'pick' picklabel '/'];
 mkdir(figdir);
 cd(figdir)
 % mkdir(ID)
 % cd('corrmaps')
 %%%%%%%%%%%%%%%
 
-% save(['llh_history' num2str(title_suffix) '.mat'], 'llh_vec')
 save(['llh_history' '.mat'], 'llh_vec')
 
 % Original place map
@@ -258,7 +291,7 @@ clear map;
 ax = subplot(1,2,2);
 map = corr_p_array;
 plotmap(map,'place');
-ax.Title.String = ['CorrPlaceMap' ' Pick ' num2str(pick) ', MaxRate ' num2str(nanmax(map)) 'Hz'];
+ax.Title.String = ['CorrPlaceMap' ' Pick ' picklabel ', MaxRate ' num2str(nanmax(map)) 'Hz'];
 set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
     'XColor','none','YColor','none','ZColor','none',...
     'FontSize',14,'GridLineStyle','none','Color','none');
@@ -284,7 +317,7 @@ ax = subplot(1,2,2);
 set(h,'Units','normalized','Position',[0 0 1 1]);
 map = corr_sv_array;
 plotmap(map,'spatialview');
-ax.Title.String = ['CorrViewMap' ' Pick ' num2str(pick) ', MaxRate ' num2str(nanmax(map)) 'Hz'];
+ax.Title.String = ['CorrViewMap' ' Pick ' picklabel ', MaxRate ' num2str(nanmax(map)) 'Hz'];
 set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
     'XColor','none','YColor','none','ZColor','none',...
     'FontSize',14,'GridLineStyle','none','Color','none');
@@ -295,14 +328,19 @@ close(h);
 
 % LLH curve - short
 h = figure(3);
-line(1:pick+5, llh_vec(1:pick+5));
+if pick > 5
+    start = pick - 5;
+else 
+    start = 1;
+end
+line(start:size(llh_vec,1), llh_vec(start:end));
 saveas(h,['llh_short.fig']);
 saveas(h,['llh_short.png']);
 close(h);
 
 % LLH curve - full
 h = figure(4);
-line(1:size(llh_vec,2)-1, llh_vec(1:end-1));
+line(1:size(llh_vec,1), llh_vec(1:end));
 saveas(h,['llh_full.fig']);
 saveas(h,['llh_full.png']);
 close(h);

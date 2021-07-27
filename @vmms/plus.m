@@ -42,6 +42,14 @@ else
 		r.data.dlist = [p.data.dlist; q.data.dlist];
 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
 			+ q.data.setIndex(2:end))];
+        r.data.origin = [p.data.origin; q.data.origin];
+        r.data.mixsel = [p.data.mixsel; q.data.mixsel];
+        r.data.placesel = [p.data.placesel; q.data.placesel];
+        r.data.spatialviewsel = [p.data.spatialviewsel; q.data.spatialviewsel];
+        r.data.place = [p.data.place; q.data.place];
+        r.data.spatialview = [p.data.spatialview; q.data.spatialview];
+        r.data.UseCorr = [p.data.Args.UseCorr; q.data.Args.UseCorr];
+        r.data.Args = p.data.Args;
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);

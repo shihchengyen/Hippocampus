@@ -151,9 +151,9 @@ if(~isempty(dir(Args.RequiredFile)))
 
         for sp = 1:size(flat_spiketimes,1)
 
-%             if rem(sp, 10000000) == 0
-%                 disp(100*sp/size(flat_spiketimes,1))
-%             end
+            if rem(sp, 10000000) == 0
+                disp(100*sp/size(flat_spiketimes,1))
+            end
 
             while interval < size(stc_changing_ind,1)
                 if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
