@@ -5,13 +5,14 @@ clc
 cwd = 'C:\Users\teddy\Downloads\Data\New folder'; %hp
 cd(cwd);
 list=['20181031'; '20181101';'20181102'];
+% % % % % % % % % % STOP AT 1102 ch09c1
 
-
-for i=1:size(list,1)
+for i=2:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     
     cd(list(i,:));
     if i==1 %1031
+        %restart smoothed map at ch30c1 next
        list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
        
        %initialize the array for the month
@@ -44,7 +45,7 @@ for i=1:size(list,1)
                 smooth = [address,'\smoothed_'];
                 %for ise_QMRF
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -76,7 +77,7 @@ for i=1:size(list,1)
                 
                 %for ise1pixel
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -108,7 +109,7 @@ for i=1:size(list,1)
                 
                 %for ise2pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -140,7 +141,7 @@ for i=1:size(list,1)
                 
                 %for ise3pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -182,7 +183,7 @@ for i=1:size(list,1)
 %                 raw = [address,'\raw_'];
 %                 %for ise_QMRF
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -214,7 +215,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise1pixel
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -246,7 +247,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise2pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -278,7 +279,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise3pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -323,7 +324,7 @@ for i=1:size(list,1)
         ise_97 = zeros(13, 14);
         z =zeros(13, 14); %z-score
         h = zeros(13, 14); %lillietest
-       for ii=1:size(list1101,1)
+       for ii=10:size(list1101,1)
            list=['20181031'; '20181101';'20181102'];
            list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch29c4';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
            cd(list1101(ii,:));
@@ -346,7 +347,7 @@ for i=1:size(list,1)
                 smooth = [address,'\smoothed_'];
                 %for ise_QMRF
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -378,7 +379,7 @@ for i=1:size(list,1)
                 
                 %for ise1pixel
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -410,7 +411,7 @@ for i=1:size(list,1)
                 
                 %for ise2pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -442,7 +443,7 @@ for i=1:size(list,1)
                 
                 %for ise3pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -483,7 +484,7 @@ for i=1:size(list,1)
 %                 raw = [address,'\raw_'];
 %                 %for ise_QMRF
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -515,7 +516,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise1pixel
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -547,7 +548,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise2pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -579,7 +580,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise3pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -645,7 +646,7 @@ for i=1:size(list,1)
                 smooth = [address,'\smoothed_'];
                 %for ise_QMRF
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -677,7 +678,7 @@ for i=1:size(list,1)
                 
                 %for ise1pixel
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -709,7 +710,7 @@ for i=1:size(list,1)
                 
                 %for ise2pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -741,7 +742,7 @@ for i=1:size(list,1)
                 
                 %for ise3pixels
                 c=1;
-                bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+                bin=[0.1; 0.05; 0.01; 0.005];
                 for iii = 1: size(bin,1)
                     if iii>1
                         load(filename)
@@ -782,7 +783,7 @@ for i=1:size(list,1)
 %                 raw = [address,'\raw_'];
 %                 %for ise_QMRF
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -814,7 +815,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise1pixel
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -846,7 +847,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise2pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
@@ -878,7 +879,7 @@ for i=1:size(list,1)
 %                 
 %                 %for ise3pixels
 %                 c=1;
-%                 bin=[0.1; 0.05; 0.01; 0.005; 0.001; 0.0005; 0.0001];
+%                 bin=[0.1; 0.05; 0.01; 0.005];
 %                 for iii = 1: size(bin,1)
 %                     if iii>1
 %                         load(filename)
