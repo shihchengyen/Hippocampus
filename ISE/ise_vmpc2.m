@@ -38,8 +38,11 @@ for i=2:size(list,1)
                 %for smoothed
                 origin = vmp.data.origin;
                 actual = vmp.data.maps_adsm;
-                sh=vmp.data.maps_adsmsh;
-                sh(sh==0)=NaN;
+                l=isnan(actual);
+                v=~l;
+                sh=NaN(1001,dim1*dim2);
+                sh(:,v)=vmp.data.maps_adsmsh(:,v);
+                
                 dim1 = 40;
                 dim2 = 40;
                 smooth = [address,'\smoothed_'];
