@@ -70,8 +70,13 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
 
     data.origin = {pwd}; 
-    pv = vmpv('auto', varargin{:});
+%     pv = vmpv('auto', varargin{:});
 %     pv = vmpv('auto','save','MinObsView',5,'MinDurView',0.01);
+    % Patch
+    cd ..; cd ..; cd ..;
+    pv = load('1vmpv.mat');
+    pv = pv.pv;
+    %
     cd(ori);
     spiketrain = load(Args.RequiredFile);   
     
@@ -205,57 +210,73 @@ if(~isempty(dir(Args.RequiredFile)))
             maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
             if repeat == 1
                 data.maps_raw = maps_raw_out';
+                data.dur_raw = gpdur1;
+                data.spk_raw = spike_count(:,1)';
             elseif repeat == 2
                 data.maps_raw1 = maps_raw_out';
+                data.dur_raw1 = gpdur1;
+                data.spk_raw2 = spike_count(:,1)';
             else
                 data.maps_raw2 = maps_raw_out';
+                data.dur_raw2 = gpdur1;
+                data.spk_raw2 = spike_count(:,1)';
             end
                 
-            grid_o_i_Gaze = cell(size(binDepths,1),1);
-            grid_spikeBin_Gaze = grid_o_i_Gaze;
-            grid_smoothed_Gaze = grid_o_i_Gaze;
-            
-            for jj = 1:size(binDepths,1) % for each grid
-                % Initialise empty matrices
-                o_i = nan(binDepths(jj,1),binDepths(jj,2),Args.NumShuffles+1);
-                spikeBin = o_i;
-                map = o_i;
-                % Assign linear bin to grid bin
-                for mm = 1:binDepths(jj,1)*binDepths(jj,2) % For every point in linear map
-                    if mod(mm,binDepths(jj,2)) == 0
-                        y = binDepths(jj,2);
-                    else
-                        y = mod(mm,binDepths(jj,2));
-                    end
-                    x = ceil(mm/binDepths(jj,2));
-                    indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
-                    % Assign
-                    o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
-                    spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
-                    
-                end
-                % Collect output
-                grid_o_i_Gaze{jj} = o_i;
-                grid_spikeBin_Gaze{jj} = spikeBin;
-            end
+            % Assign linear bin to grid
+            [grid_o_i_Gaze] = lineartogrid(lin_o_i_Gaze,'spatialview',binDepths);
+            [grid_spikeBin_Gaze] = lineartogrid(lin_spikeLoc_Gaze,'spatialview',binDepths);
+            emptyfloor = grid_o_i_Gaze{3}(:,:,:) == 0;
             
             
-            retrievemap = cell(size(grid_o_i_Gaze,1),1);
-            grid_o_i_Gaze_temp = grid_o_i_Gaze; % keep original for reference during padding
-            grid_spikeBin_Gaze_temp = grid_spikeBin_Gaze; % keep original for reference during padding
-            for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
-                
-                if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
-                    % Pad each grid map with adjoining bins from other grids
-                    % Pad with <<5>> extra bin rows
-                    n = 5;
-                    [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gazeSections,jj);
-                    
-                end
-            end
+%             grid_o_i_Gaze = cell(size(binDepths,1),1);
+%             grid_spikeBin_Gaze = grid_o_i_Gaze;
+%             
+%             for jj = 1:size(binDepths,1) % for each grid
+%                 % Initialise empty matrices
+%                 o_i = nan(binDepths(jj,1),binDepths(jj,2),Args.NumShuffles+1);
+%                 spikeBin = o_i;
+%                 map = o_i;
+%                 % Assign linear bin to grid bin
+%                 for mm = 1:binDepths(jj,1)*binDepths(jj,2) % For every point in linear map
+%                     if mod(mm,binDepths(jj,2)) == 0
+%                         y = binDepths(jj,2);
+%                     else
+%                         y = mod(mm,binDepths(jj,2));
+%                     end
+%                     x = ceil(mm/binDepths(jj,2));
+%                     indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
+%                     % Assign
+%                     o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
+%                     spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
+%                     
+%                 end
+%                 % Collect output
+%                 grid_o_i_Gaze{jj} = o_i;
+%                 grid_spikeBin_Gaze{jj} = spikeBin;
+%             end
+            
+            % Pad grids with << 5 >> extra rows of adjoining grids
+            n = 5;
+            [grid_o_i_Gaze,retrievemap] = padsvmap(n,grid_o_i_Gaze,gazeSections);
+            [grid_spikeBin_Gaze,~] = padsvmap(n,grid_spikeBin_Gaze,gazeSections);
+%             
+%             retrievemap = cell(size(grid_o_i_Gaze,1),1);
+%             grid_o_i_Gaze_temp = grid_o_i_Gaze; % keep original for reference during padding
+%             grid_spikeBin_Gaze_temp = grid_spikeBin_Gaze; % keep original for reference during padding
+%             for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
+%                 
+%                 if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
+%                     % Pad each grid map with adjoining bins from other grids
+%                     % Pad with <<5>> extra bin rows
+%                     n = 5;
+%                     [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gazeSections,jj);
+%                     
+%                 end
+%             end
             
             alpha = Args.Alpha;
             %         alpha = 1;
+            grid_smoothed_Gaze = cell(size(binDepths,1),1);
             grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
             grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
             grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
@@ -326,11 +347,20 @@ if(~isempty(dir(Args.RequiredFile)))
                 
                 to_fill(isnan(to_fill)) = 0;
                 to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                if jj == 3 % remove the pillar fills if unpadding floor
+                    to_fill(emptyfloor) = 0;
+                end
                 grid_smoothed_Gaze{jj} = to_fill;
                 to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
                 to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                if jj == 3 % remove the pillar fills if unpadding floor
+                    to_fill_smoothed_duration(emptyfloor) = 0;
+                end
                 grid_smoothed_dur{jj} = to_fill_smoothed_duration;
                 to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
+                if jj == 3 % remove the pillar fills if unpadding floor
+                    to_fill_size(emptyfloor) = 0;
+                end
                 grid_ad_size{jj} = to_fill_size;
                 
             end
@@ -345,13 +375,16 @@ if(~isempty(dir(Args.RequiredFile)))
             radii = zeros(Args.NumShuffles+1,total_grids);
             filling_index = 0;
             for jj = 1:size(grid_o_i_Gaze,1)
-                temp4 = reshape(permute(grid_smoothed_dur{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                temp3 = reshape(permute(grid_smoothed_Gaze{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+%                 temp4 = reshape(permute(grid_smoothed_dur{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+%                 temp3 = reshape(permute(grid_smoothed_Gaze{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                temp4 = reshape(rot90(grid_smoothed_dur{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                temp3 = reshape(rot90(grid_smoothed_Gaze{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
                 gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
                 lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
                 
                 if jj > 2
-                    temp5 = reshape(permute(grid_ad_size{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+%                     temp5 = reshape(permute(grid_ad_size{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
+                    temp5 = reshape(rot90(grid_ad_size{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
                     radii(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp5';
                 end
                 filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
@@ -557,7 +590,9 @@ if(~isempty(dir(Args.RequiredFile)))
     
     % create nptdata so we can inherit from it 
     Args.NumShuffles = NumShuffles_saved;
+    data.binDepths = binDepths;
     data.gridSteps = Args.GridSteps;
+    data.gazeSections = gazeSections;
     data.numSets = 1;
     data.Args = Args;
     n = nptdata(1,0,pwd);
