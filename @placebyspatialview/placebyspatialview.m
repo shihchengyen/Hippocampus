@@ -571,7 +571,7 @@ if pcSI > pcSIthr || svSI > svSIthr
 %         data.(objtype{oo}).set_sec_gridmap = secgridmap_full;
         data.(objtype{oo}).rate_components = rate_components_full;
 
-        clear fieldmaxrate_sm; clear fieldmaxrate_rw; clear gridnum; clear fieldcoord; clear linbin;
+        clear fieldmaxrate_sm; clear fieldmaxrate_rw; clear gridnum; clear fieldcoord; clear linbin; clear session_seclinbin;
         clear seclinbin_full; % clear secgridmap_full; 
         clear rate_components_full; clear dummygrid; clear SI; clear SIthr;
 

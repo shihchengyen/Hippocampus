@@ -17,13 +17,13 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, 'DirSteps',60,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'FiltLowOcc',1);
+                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','FiltLowOcc','AdaptiveSmooth'};                           
+Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','UseMinObs','AdaptiveSmooth','ThresVel','UseAllTrials', 'Alpha'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -71,10 +71,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
-    pwd
-%     uma = load('../../../unitymaze.mat');
-%     uma = uma.um;
-%     uma.data.zero_indices = find(uma.data.sessionTime(:,2)==0);
+    pwd;
  
 	rp = rplparallel('auto',varargin{:});
     cd(ori);

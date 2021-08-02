@@ -46,11 +46,11 @@ else
         r.data.maps_adsm = [p.data.maps_adsm; q.data.maps_adsm];
         r.data.maps_adsm1 = [p.data.maps_adsm1; q.data.maps_adsm1];
         r.data.maps_adsm2 = [p.data.maps_adsm2; q.data.maps_adsm2];
-        r.data.maps_adsmsh = [p.data.maps_adsmsh; q.data.maps_adsmsh];
+%         r.data.maps_adsmsh = [p.data.maps_adsmsh; q.data.maps_adsmsh];
         r.data.dur_adsm = [p.data.dur_adsm; q.data.dur_adsm];
-        r.data.dur_adsm1 = [p.data.dur_adsm1; q.data.dur_adsm1];
-        r.data.dur_adsm2 = [p.data.dur_adsm2; q.data.dur_adsm2];
-        r.data.dur_adsmsh = [p.data.dur_adsmsh; q.data.dur_adsmsh];
+%         r.data.dur_adsm1 = [p.data.dur_adsm1; q.data.dur_adsm1];
+%         r.data.dur_adsm2 = [p.data.dur_adsm2; q.data.dur_adsm2];
+%         r.data.dur_adsmsh = [p.data.dur_adsmsh; q.data.dur_adsmsh];
         r.data.SIC = [p.data.SIC; q.data.SIC];
         r.data.SIC1 = [p.data.SIC1; q.data.SIC1];
         r.data.SIC2 = [p.data.SIC2; q.data.SIC2];
@@ -60,9 +60,9 @@ else
         r.data.ISE2 = [p.data.ISE2; q.data.ISE2];
         r.data.ISEsh = [p.data.ISEsh; q.data.ISEsh];
         r.data.radii = [p.data.radii; q.data.radii];
-        r.data.radii1 = [p.data.radii1; q.data.radii1];
-        r.data.radii2 = [p.data.radii2; q.data.radii2];
-        r.data.radiish = [p.data.radiish; q.data.radiish];
+%         r.data.radii1 = [p.data.radii1; q.data.radii1];
+%         r.data.radii2 = [p.data.radii2; q.data.radii2];
+%         r.data.radiish = [p.data.radiish; q.data.radiish];
         r.data.origin = [p.data.origin; q.data.origin];
              
 		% add nptdata objects as well
