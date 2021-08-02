@@ -70,12 +70,12 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
 
     data.origin = {pwd}; 
-%     pv = vmpv('auto', varargin{:});
+    pv = vmpv('auto', varargin{:});
 %     pv = vmpv('auto','save','MinObsView',5,'MinDurView',0.01);
-    % Patch
-    cd ..; cd ..; cd ..;
-    pv = load('1vmpv.mat');
-    pv = pv.pv;
+%     % Patch
+%     cd ..; cd ..; cd ..;
+%     pv = load('1vmpv.mat');
+%     pv = pv.pv;
     %
     cd(ori);
     spiketrain = load(Args.RequiredFile);   
