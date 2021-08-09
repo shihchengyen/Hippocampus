@@ -1,4 +1,4 @@
-close all
+% close all
 load('vmpc.mat')
 %actual image
 actual = vmp.data.maps_adsm;
@@ -42,7 +42,7 @@ all= hor + ver + pos_ang+ neg_ang;
 bin_sieved = all>0;
 %bin sieved image
 process = NaN(dim1, dim2);
-process(bin_sieved) = padded(bin_sieved)
+process(bin_sieved) = padded(bin_sieved);
 figure('Name','Bin Sieved','NumberTitle','off');
 h1=histogram(process)
 ma = max(max(process));
@@ -51,7 +51,8 @@ mi = min(min(process));
 
 %ISE section
 % parameters to discretize maps
-    bin_resolution = 0.1;
+%     bin_resolution = 0.1;
+    bin_resolution = (ma-mi)/10;
     
     %histogram BinWidth=bin_resolution
     h1.BinWidth=bin_resolution;
@@ -67,7 +68,7 @@ mi = min(min(process));
         d(isnan(d(:,1)),:)=[];
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
         figure('Name','X,Xu joint histogram','NumberTitle','off');
-        hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))})
+        hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_X_Xu=h/total;%convert histgram count to probability
@@ -85,7 +86,7 @@ mi = min(min(process));
         d(isnan(d(:,1)),:)=[];
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
         figure('Name','Xl,Xu joint histogram','NumberTitle','off');
-        hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))})
+        hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_X1_Xu=h/total;%convert histgram count to probability
@@ -103,7 +104,7 @@ mi = min(min(process));
         d(isnan(d(:,1)),:)=[];
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
         figure('Name','Xr,Xu joint histogram','NumberTitle','off');
-        hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))})
+        hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_Xr_Xu=h/total;%convert histgram count to probability
@@ -121,7 +122,7 @@ mi = min(min(process));
         d(isnan(d(:,1)),:)=[];
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
         figure('Name','Xr,X joint histogram','NumberTitle','off');
-        hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))})
+        hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_Xr_X=h/total;%convert histgram count to probability
