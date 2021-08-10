@@ -66,6 +66,17 @@ function [ise_out] = ise1pixel3(actual_image, shuffled_images, dim1, dim2)
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
 %         figure('Name','X,Xu joint histogram','NumberTitle','off');
 %         hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
+figure;
+hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))},'FaceColor','interp')
+figure;
+hist3(d,'CdataMode', 'auto','FaceColor','interp')
+figure;
+hist3(d,'CdataMode', 'auto')
+xlabel(range)
+ylabel(range)
+colorbar
+view(2)%what's view 1,3?
+
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
         j_X_Xu=h/total;%convert histgram count to probability
