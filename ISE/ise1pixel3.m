@@ -21,14 +21,14 @@ function [ise_out] = ise1pixel3(actual_image, shuffled_images, dim1, dim2)
         end
         if sum(sum(~isnan(combined(i,:))))==0 
             ISE(i) = 0;
-            disp('floor(combined(i,:))=0');%every intensity value rounded to zero
+            disp('All NaN');%every intensity value rounded to zero
             continue
         end
         image = reshape(combined(i,:), dim1, dim2); %image in the form of its pixel intensity
         
         %define threshold
         threshold = prctile(combined(i,:),50);
-       %pad a layer of NaN
+        %pad a layer of NaN
         temp = [NaN(dim1,1) image NaN(dim1,1)];
         padded = [NaN(1,dim2+2); temp ;NaN(1,dim2+2)];
         dimr = size(padded,1);
@@ -36,7 +36,7 @@ function [ise_out] = ise1pixel3(actual_image, shuffled_images, dim1, dim2)
         pass = padded>threshold;
         if sum(sum(pass))<2 
             ISE(i) = 0;
-            disp('floor(combined(i,:))=0');%every intensity value rounded to zero
+            disp('Only one intensity pass the threshold,image does not have enough data.');%every intensity value rounded to zero
             continue
         end
         %find the edge
@@ -58,24 +58,18 @@ function [ise_out] = ise1pixel3(actual_image, shuffled_images, dim1, dim2)
     
     % binning each datapoint
         temp = floor(process/bin_resolution)+1;
+        
     % H(X,Xu) computations   
         upper =temp(1:end-1,:); %Xu
         centre = temp(2:end,:); %X
         d=[reshape(centre,[],1),reshape(upper,[],1)];
         d(isnan(d(:,1)),:)=[];
         d(isnan(d(:,2)),:)=[]; %get rid of any pair of NaN
-%         figure('Name','X,Xu joint histogram','NumberTitle','off');
+        figure('Name','X,Xu joint histogram','NumberTitle','off');
 %         hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))})
-figure;
-hist3(d,{min(min(temp)):1:max(max(temp)) min(min(temp)):1:max(max(temp))},'FaceColor','interp')
-figure;
-hist3(d,'CdataMode', 'auto','FaceColor','interp')
-figure;
-hist3(d,'CdataMode', 'auto')
-xlabel(range)
-ylabel(range)
-colorbar
-view(2)%what's view 1,3?
+        hist3(d,'CdataMode', 'auto','FaceColor','interp')
+        colorbar
+        view(2) %what's view 3 for 3D
 
         h=hist3(d,{0:1:max(max(temp)) 0:1:max(max(temp))}); %generate joint probability
         total=sum(sum(h))-h(1,1); %total count = count of all intesity - count of NaN
