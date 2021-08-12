@@ -8,7 +8,7 @@ list=['20181031'; '20181101';'20181102'];
 %For place map
 dim1 = 40;
 dim2 = 40;
-for i=1:size(list,1)
+for i=2:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     
     cd(list(i,:));
@@ -59,7 +59,23 @@ for i=1:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                    
+                                    if bin(iii)==0 && divide(i4)==0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue
+                                    elseif bin(iii)~=0 && divide(i4)~=0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue   
+                                    end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
                                     ise_sh(:,c,ii) = ise_out(2:end);
@@ -70,8 +86,11 @@ for i=1:size(list,1)
                                     ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
                                     ise_97(ii, c) = prctile(ise_sh1, 97.5);
                                     z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
-                                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
-
+                                    if sum(ise_sh1)>0
+                                        h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                                    else
+                                        h(ii, c)=2; %error, an empty array 
+                                    end
                                     c = c+1;
                                 end
                             end
@@ -98,9 +117,7 @@ for i=1:size(list,1)
         z =zeros(size(list1101,1), 120); %z-score
         h = zeros(size(list1101,1), 120); %lillietest
         
-       for ii=10:size(list1101,1)
-           list=['20181031'; '20181101';'20181102'];
-           list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch29c4';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1']; 
+       for ii=1:size(list1101,1)
            cd(list1101(ii,:));
            cwd ='C:\Users\Teddy\Downloads\data\New folder';
 %            cwd = 'C:\Users\teddy\Downloads\Data\New folder';
@@ -134,7 +151,23 @@ for i=1:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                    
+                                    if bin(iii)==0 && divide(i4)==0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue
+                                    elseif bin(iii)~=0 && divide(i4)~=0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue   
+                                    end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
                                     ise_sh(:,c,ii) = ise_out(2:end);
@@ -145,7 +178,11 @@ for i=1:size(list,1)
                                     ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
                                     ise_97(ii, c) = prctile(ise_sh1, 97.5);
                                     z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
-                                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                                    if sum(ise_sh1)>0
+                                        h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                                    else
+                                        h(ii, c)=2; %error, an empty array 
+                                    end
 
                                     c = c+1;
                                 end
@@ -208,7 +245,23 @@ for i=1:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                    
+                                    if bin(iii)==0 && divide(i4)==0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue
+                                    elseif bin(iii)~=0 && divide(i4)~=0
+                                        ise(ii, c) = NaN;
+                                        ise_sh(:,c,ii) = NaN(shu,1);
+                                        ise_2_5(ii, c) = NaN;
+                                        ise_97(ii, c) = NaN;
+                                        z(ii, c) = NaN;
+                                        h(ii, c)=2;
+                                        continue   
+                                    end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
                                     ise_sh(:,c,ii) = ise_out(2:end);
@@ -219,16 +272,19 @@ for i=1:size(list,1)
                                     ise_2_5(ii, c) = prctile(ise_sh1, 2.5);
                                     ise_97(ii, c) = prctile(ise_sh1, 97.5);
                                     z(ii, c) =(ise(ii, c)-mean(ise_sh1))/std(ise_sh1);
-                                    h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
-
+                                    if sum(ise_sh1)>0
+                                        h(ii, c)=lillietest(ise_sh1); %1=skewed. 0=normallly distributed
+                                    else
+                                        h(ii, c)=2; %error, an empty array 
+                                    end
                                     c = c+1;
                                 end
                             end
                         end
                     end
                 end
-                 %save new .mat file
-                 save(filename,'origin','ise','ise_2_5','ise_97','ise_sh','z','h'); 
+%                  %save new .mat file
+%                  save(filename,'origin','ise','ise_2_5','ise_97','ise_sh','z','h'); 
             cd ..
        end
        cd .. %back one directory
