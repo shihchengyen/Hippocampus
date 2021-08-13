@@ -8,14 +8,15 @@ list=['20181031'; '20181101';'20181102'];
 %For place map
 dim1 = 40;
 dim2 = 40;
-for i=2:size(list,1)
+for i=1:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     
     cd(list(i,:));
     if i==1 %1031
         %restart smoothed map at ch30c1 next
 %        list1031=['ch19c1';'ch19c2';'ch19c3';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch35c1';'ch35c2';'ch35c3';'ch43c1';'ch43c2';'ch45c1';'ch45c2'];
-       list1031=['ch35c1'];
+%        list1031=['ch35c1'];
+       list1031=['ch19c1'];
        %initialize the array for the month
         ise = zeros(size(list1031,1), 120);
         shu = 10000; %shuffle images number
@@ -50,7 +51,7 @@ for i=2:size(list,1)
                 threshold = [0; 90; 70; 50];
                 change = [2; 1; 0];
                 pixel = [1; 2];
-                filename = [smooth 'ise_threshold_p.mat'];
+                filename = [smooth 'ise_threshold_p_19c1.mat'];
                 if ii>1
                         load(filename)
                 end
