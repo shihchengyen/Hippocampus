@@ -149,3 +149,5 @@ function [entropy] = entropy(input)
     entropy= -temp .* log2(temp);
     
 end
+
+

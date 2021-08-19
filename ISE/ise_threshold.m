@@ -91,8 +91,8 @@ function [ise_out] = ise_threshold(actual_image, shuffled_images, dim1, dim2,bin
 %         %For examination
 %         figure('Name','binned intensity histogram','NumberTitle','off');
 %         b=histogram(temp)
-%         b.BinWidth= 1;
-%         b.BinEdges= min(min(temp)):1:max(max(temp));
+% %         b.BinWidth= 1;
+% %         b.BinEdges= min(min(temp)):1:max(max(temp));
         % H(X,Xu) computations   
         if pixel == 1
             upper =temp(1:end-1,:); %Xu

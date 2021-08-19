@@ -8,7 +8,7 @@ list=['20181031'; '20181101';'20181102'];
 %For place map
 dim1 = 40;
 dim2 = 40;
-for i=1:size(list,1)
+for i=2:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     
     cd(list(i,:));
@@ -51,7 +51,7 @@ for i=1:size(list,1)
                 threshold = [0; 90; 70; 50];
                 change = [2; 1; 0];
                 pixel = [1; 2];
-                filename = [smooth 'ise_threshold_p_19c1.mat'];
+                filename = [smooth 'ise_threshold_p_19c1_n.mat'];
                 if ii>1
                         load(filename)
                 end
@@ -108,7 +108,8 @@ for i=1:size(list,1)
     
     if i==2 %1101
 %        list1101=['ch19c1';'ch19c2';'ch21c1';'ch23c1';'ch29c1';'ch29c2';'ch29c3';'ch29c4';'ch30c1';'ch30c2';'ch35c1';'ch43c1';'ch45c1'];
-       list1101=['ch19c1';'ch19c2';'ch21c1';'ch29c1';'ch29c2';'ch30c2'];
+%        list1101=['ch19c1';'ch19c2';'ch21c1';'ch29c1';'ch29c2';'ch30c2'];
+       list1101=['ch30c2'];
        %initialize the array for the month
         ise = zeros(size(list1101,1), 120);
         shu = 10000; %shuffle images number
@@ -143,7 +144,7 @@ for i=1:size(list,1)
                 threshold = [0; 90; 70; 50];
                 change = [2; 1; 0];
                 pixel = [1; 2];
-                filename = [smooth 'ise_threshold_p.mat'];
+                filename = [smooth 'ise_threshold_p_30c2.mat'];
                 if ii>1
                         load(filename)
                 end
@@ -211,8 +212,6 @@ for i=1:size(list,1)
         h = zeros(size(list1102,1), 120); %lillietest
         
        for ii=1:size(list1102,1)
-           list=['20181031'; '20181101';'20181102'];
-           list1102=['ch09c1';'ch19c1';'ch19c2';'ch26c1';'ch26c2';'ch29c1';'ch30c1';'ch30c2';'ch31c1';'ch43c1';'ch43c2';'ch45c1';'ch45c2']; 
            cd(list1102(ii,:));
           cwd ='C:\Users\Teddy\Downloads\data\New folder';
 %            cwd = 'C:\Users\teddy\Downloads\Data\New folder';
@@ -237,7 +236,7 @@ for i=1:size(list,1)
                 threshold = [0; 90; 70; 50];
                 change = [2; 1; 0];
                 pixel = [1; 2];
-                filename = [smooth 'ise_threshold_p.mat'];
+                filename = [smooth 'ise_threshold_p_31c1.mat'];
                 if ii>1
                         load(filename)
                 end
@@ -284,10 +283,16 @@ for i=1:size(list,1)
                         end
                     end
                 end
-%                  %save new .mat file
-%                  save(filename,'origin','ise','ise_2_5','ise_97','ise_sh','z','h'); 
+                 %save new .mat file
+                 save(filename,'origin','ise','ise_2_5','ise_97','ise_sh','z','h'); 
             cd ..
        end
        cd .. %back one directory
     end
 end
+% % % map
+% load('vmpc.mat')
+% figure; plotmap(vmp.data.maps_raw,'place')
+% figure; plotmap(vmp.data.maps_adsm,'place')
+% figure; plotmap(vmp.data.maps_adsm1,'place')
+% figure; plotmap(vmp.data.maps_adsm2,'place')

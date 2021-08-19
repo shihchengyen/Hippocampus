@@ -1,4 +1,4 @@
-function [] = plotratemaps(objtype,criteria,save,maptype,varargin)
+function [selcell_orig] = plotratemaps(objtype,criteria,save,maptype,varargin)
 
 % Function to plot rate maps for place, spatialview and heading direction
 % Without additional inputs, it will work from and save in current
@@ -38,12 +38,6 @@ cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
 if nargin > 4 % If plotting a single cell and map is already given as input (only used in placebyspatialview.m) 
     % Load cell list
     cellList = varargin(1);
-%     mapGrid = varargin{2};
-%     ax = varargin{3};
-%     mapLin = varargin{4};
-%     binDepths = varargin{5};
-%     fieldCount = varargin{6};
-%     fieldCoords = varargin{7};
     cd([cellList{1} '/' filttype '/' num2str(pix) 'px/']);
     % Load object
     switch objtype
@@ -57,6 +51,9 @@ if nargin > 4 % If plotting a single cell and map is already given as input (onl
             objMain = load('vmhd.mat');
             objMain = objMain.vmd;
     end
+    % Load object corrected for independent influences of place/view
+    objCorr = load('vmcorr.mat');
+    objCorr = objCorr.vmcorr;
     if save
         %%% FILL IN
     end
@@ -75,19 +72,13 @@ elseif nargin > 4 % If plotting a single cell and map needs to be loaded
             objMain = load('vmhd.mat');
             objMain = objMain.vmd;
     end
+    % Load object corrected for independent influences of place/view
+    objCorr = load('vmcorr.mat');
+    objCorr = objCorr.vmcorr;
     if save
         %%% FILL IN
     end
 else % If plotting a batch of cells
-    if save
-        figdir = [cwd '/Figures/' filttype '/' num2str(pix) 'px' '/RateMaps/' objtype '_' criteria '_' num2str(maptype)];
-        if exist(figdir,'dir') ~= 7
-            mkdir(figdir);
-        else
-            rmdir(figdir,'s');
-            mkdir(figdir);
-        end
-    end
     % Load cell list
     cd(cwd);
     fid = fopen([cwd '/cell_list.txt'],'rt');
@@ -112,11 +103,36 @@ else % If plotting a batch of cells
         case 'spatialview'
             objMain = load('c_vmsv.mat');
             objMain = objMain.vms;
+        case 'mixsel'
+            objMain = load('c_vmms.mat');
+            objMain = objMain.vmms;
+            objPlace = load('c_vmpc.mat');
+            objPlace = objPlace.vmp;
+            objView = load('c_vmsv.mat');
+            objView = objView.vms;
         case 'direction'
     end
+    % Load object corrected for independent influences of place/view
+    objCorr = load('c_vmcorr.mat');
+    objCorr = objCorr.vmcorr;
     cd(cwd);
-    if size(cellList,1) ~= size(objMain.data.SIC,1)
+    % Check that combined object is the same size as cell list
+    if size(cellList,1) ~= size(objMain.data.origin,1)
         disp('Object has different number of cells than CellList');
+    end
+    % Saving figure directory
+    if save
+        if strcmp(objtype,'mixsel')
+            figdir = [cwd '/Figures/' filttype '/' num2str(pix) 'px' '/' objtype '/UseCorr' num2str(objMain.data.Args.UseCorr)];
+        else
+            figdir = [cwd '/Figures/' filttype '/' num2str(pix) 'px' '/RateMaps/' objtype '_' criteria '_' num2str(maptype)];
+        end
+        if exist(figdir,'dir') ~= 7
+            mkdir(figdir);
+        else
+            rmdir(figdir,'s');
+            mkdir(figdir);
+        end
     end
 end
 
@@ -143,44 +159,722 @@ cellList(missing) = [];
 setsessions = unique(identifiers(:,1));
 setcells = unique(cellid);
 
+%%%% PATCH - c_vmcorr may have fewer cells than c_vmpc or c_vmsv. 
+%%%% Match the cells in c_vmcorr to cells in other objects
+if size(objCorr.data.origin,1) ~= size(objMain.data.origin,1)
+    disp('Corrected object is not the same size as main object');
+%     for ii = 1:size(objCorr.data.origin,1)
+%         [~,matchcorr] = ismember(objCorr.data.origin{1},objMain.data.origin);
+%     end
+% else
+%     matchcorr = (1:size(objCorr.data.origin,1))';
+end
+
 % Load firing rate maps depending on smoothing type
 switch maptype
     case 'raw'
-        maps = objMain.data.maps_raw;
-        if strcmp(objtype,'Direction') % For now, 1st/2nd half plots only verified for Direction
-            maps1 = objMain.data.maps_raw1;
-            maps2 = objMain.data.maps_raw2;
-        end
+        mapname = 'maps_raw';
     case 'boxcar'
-        maps = objMain.data.maps_boxsmooth;
+        mapname = 'maps_boxsmooth';
     case 'adaptive'
-        switch objtype
-            case 'place'
-                maps = objMain.data.maps_adsm;
-            case 'spatialview'
-                maps = objMain.data.maps_adsm;
-        end
-        if strcmp(objtype,'Direction') % For now, 1st/2nd half plots only verified for Direction
-            maps1 = objMain.data.maps_adsm1;
-            maps2 = objMain.data.maps_adsm2;
-        end
+        mapname = 'maps_adsm';
+end
+if strcmp(objtype,'place') 
+    maps = objMain.data.(mapname);
+    mapscorr = objCorr.data.([mapname '_corrp']);
+elseif strcmp(objtype,'spatialview')
+    maps = objMain.data.(mapname);
+    mapscorr = objCorr.data.([mapname '_corrsv']);
+elseif strcmp(objtype,'mixsel')
+    maps_p = objPlace.data.(mapname);
+    maps_v = objView.data.(mapname);
 end
 
 % Load nptdata objMainect 
 nCells = objMain.data.numSets;
 % Plot params
-plotgridh = 3;
+plotgridh = 5;
 plotgridv = 3;
+% Set up cell counts
+crossallthresh = 0;
+crosscellthresh = 0;
+crosspopthresh = 0;
+crosseitherthresh = 0;
+selcell_orig = [];
+selcell_corr = [];
 
 if strcmp(objtype, 'place')  % Place maps
     % For each session, plot rate maps for each cell
     fig = 1;
     subpnum = 1;
-    % Set up cell counts
-    crossallthresh = 0;
-    crosscellthresh = 0;
-    crosspopthresh = 0;
-    crosseitherthresh = 0;
+    
+    % Get shuffled SIC threshold for all cells
+    switch criteria
+        case 'sic'
+            thr_sh = [objMain.data.SIC; objMain.data.SICsh];
+        case 'ise'
+            thr_sh = [objMain.data.ISE; objMain.data.ISEsh];
+    end
+%     thr_sh = reshape(thr_sh,numel(thr_sh),1);
+    thr_pop = prctile(thr_sh,95);
+    z_pop = zscore(thr_sh);
+    for ii = 1:size(setsessions,1) % For each session
+        cells_ind = find(identifiers(:,1) == setsessions(ii));
+
+        % Sort cells by descending SIC if required
+        switch criteria
+            case 'sic'
+                thr_batch = objMain.data.SIC(cells_ind);
+            case 'ise'
+                thr_batch = objMain.data.ISE(cells_ind);
+        end
+        [~,thri] = sort(thr_batch,'descend');
+        for jj = 1:length(cells_ind) % For each cell
+            % Get cell index
+            if sortsic
+                cell_ind = cells_ind(thri(jj));
+            else 
+                cell_ind = cells_ind(jj);
+            end
+
+            %% Plot 1 map for 1 cell
+
+            % Find figure number
+            if jj*5 > plotgridh * plotgridv && mod((jj*5), (plotgridh * plotgridv)) == 5
+                % Save figure
+                if save
+                    cwd = pwd;
+                    cd(figdir);
+                    % Save previous figure
+                    figtitle = [num2str(setsessions(ii)) '-' num2str(floor(jj/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
+                    saveas(h,figtitle,'png');
+%                     print('-painters',figtitle,'-dsvg');
+                    cd(cwd);
+                    close(figure(fig));
+                end
+                
+                fig = fig + 1;
+                subpnum = 1;
+            end
+
+            % Get shuffled SI cutoff for this cell - 95th percentile
+            switch criteria
+                case 'sic'
+                    crit = objMain.data.SIC(cell_ind,1);
+                    thr_cell = prctile(objMain.data.SICsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles ,1 ) ,95);
+                    z_cell = z_pop(cell_ind,1);
+                case 'ise'
+                    crit = objMain.data.ISEsh(cell_ind,1);
+                    thr_cell = prctile(objMain.data.ISEsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles ,1 ),95);
+                    z_cell = z_pop(cell_ind,1);
+            end
+            
+            % Get map
+            if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells
+                mapLin = maps(cell_ind,:);
+                % if corrected map exists, get it
+                if any(ismember(objMain.data.origin{cell_ind},objCorr.data.origin))
+                    [~,corr_ind] = ismember(objMain.data.origin{cell_ind},objCorr.data.origin);
+                    mapLincorr = mapscorr(corr_ind,:);
+                else
+                    mapLincorr = nan(size(mapLin));
+                    corr_ind = [];
+                end
+                h = figure(fig);
+                ax = subplot(plotgridv,plotgridh,subpnum);
+            end
+
+            % Setup main object
+            h = gcf;
+            hold on;
+            figname = horzcat(objtype,': ',num2str(setsessions(ii)));
+            set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+
+            % Plot main object
+            [mapGrid,~]= plotmap(mapLin,objtype);
+            
+            % Set up axes
+            if ~isnan(nanmax(mapLin(3:end))) && nanmax(mapLin(3:end)) ~= 0
+                maxC = nanmax(mapLin(3:end));
+            else
+                maxC = 1;
+            end
+            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            ax.Title.String = {horzcat(num2str(setsessions(ii)), 'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', ',num2str(nanmax(mapLin),3),'Hz'), horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2)),horzcat('z-',criteria,'= ',num2str(z_cell))};
+            
+            if crit >= thr_cell && crit >= thr_pop
+                ax.Title.Color = 'r';
+                crossallthresh = crossallthresh + 1;
+%                 selcell_orig(end+1,1) = cell_ind;
+            elseif crit >= thr_cell && crit < thr_pop
+                ax.Title.Color = 'm';
+                crosscellthresh = crosscellthresh + 1;
+                crosseitherthresh = crosseitherthresh + 1;
+            elseif crit < thr_cell && crit >= thr_pop
+                ax.Title.Color = 'b';
+                crosspopthresh = crosspopthresh + 1;
+                crosseitherthresh = crosseitherthresh + 1;
+            else
+                ax.Title.Color = 'k';
+            end
+            if crit >= thr_pop
+                selcell_orig(end+1,1) = cell_ind;
+            end
+
+            % Patch standing point if placebyspatialview
+            if nargin > 5 % If placebyspatialview
+                    fieldCoords
+                    patch([fieldCoords(1)-2 fieldCoords(1)-2 fieldCoords(1)+1 fieldCoords(1)+1],[fieldCoords(2)-2 fieldCoords(2)+1 fieldCoords(2)+1 fieldCoords(2)-2], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
+            end
+            
+            % Intra-session correlation %%%%%% NOTE: Should use boxcar
+            % smoothed map
+            switch maptype
+                case 'adaptive'
+                    map1 = objMain.data.maps_adsm1(cell_ind,:);
+                    map2 = objMain.data.maps_adsm2(cell_ind,:);
+                case 'raw'
+                    map1 = objMain.data.maps_raw1(cell_ind,:);
+                    map2 = objMain.data.maps_raw2(cell_ind,:);
+            end
+            vis1 = ~isnan(map1);
+            vis2 = ~isnan(map2);
+            vis = vis1 & vis2; % Correlate only visited bins;
+            intracorr = corr2(map1(vis), map2(vis));
+            switch criteria
+                case 'sic'
+                    crit1 = objMain.data.SIC1(cell_ind);
+                    crit2 = objMain.data.SIC2(cell_ind);
+                case 'ise'
+                    crit1 = objMain.data.ISE1(cell_ind);
+                    crit2 = objMain.data.ISE2(cell_ind);
+            end
+
+            % Plot
+            subpnum = subpnum + 1;
+            for kk = 1:2
+                
+                % Get map
+                if kk == 1
+                    mapLin = map1;
+                    crit = crit1;
+                    half = '1st';
+                else
+                    mapLin = map2;
+                    crit = crit2;
+                    half = '2nd';
+                end
+                % Restructure bins from linear to square grid
+                mapGrid = flipud(reshape(mapLin, 40, 40)');
+
+                % Setup object
+                h = gcf;
+                ax = subplot(plotgridv,plotgridh,subpnum);
+                hold on;
+                set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                
+                % Plot map
+                [~,~]= plotmap(mapLin,objtype);
+
+                set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                    'XColor','none','YColor','none','ZColor','none',...
+                    'FontSize',14,'GridLineStyle','none','Color','none');
+                ax.Title.String = {horzcat(half,' half: ','corr=',num2str(intracorr,2),', ',num2str(nanmax(mapLin),3),'Hz'),horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
+                
+                if crit >= thr_cell && crit >= thr_pop
+                    ax.Title.Color = 'r';
+                elseif crit >= thr_cell && crit < thr_pop
+                    ax.Title.Color = 'm';
+                elseif crit < thr_cell && crit >= thr_pop
+                    ax.Title.Color = 'b';
+                else
+                    ax.Title.Color = 'k';
+                end
+
+                subpnum = subpnum + 1;
+            end
+            
+            % Plot corrected maps
+            
+            if isempty(corr_ind)
+                critcorr = nan;
+            else
+                switch criteria
+                    case 'sic'
+                        switch objtype
+                            case 'place'
+                                critcorr = objCorr.data.SIC_corrp(corr_ind);
+                            case 'spatialview'
+                                critcorr = objCorr.data.SIC_corrsv(corr_ind);
+                        end
+                    case 'ise'
+                        switch objtype
+                            case 'place'
+                                critcorr = objCorr.data.ISE_corrp(corr_ind);
+                            case 'spatialview'
+                                critcorr = objCorr.data.ISE_corrsv(corr_ind);
+                        end
+                end
+            end
+            
+            % Setup object
+            h = gcf;
+            ax = subplot(plotgridv,plotgridh,subpnum);
+            hold on;
+
+            % Plot map
+            [~,~]= plotmap(mapLincorr,objtype);
+            maxCcorr = nanmax(mapLincorr);
+            
+            % Set up axes
+            set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            if ~isempty(corr_ind)
+                ax.Title.String = {horzcat('Corrected',objCorr.data.llhpicklabel{corr_ind},'of',num2str(size(objCorr.data.llh{corr_ind},1)),': ',num2str(nanmax(mapLincorr),3),'Hz'),horzcat(criteria, '=',num2str(critcorr,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
+                set(ax,'CLim',[0 maxCcorr]);
+            else
+                ax.Title.String = 'No corrected map';
+            end
+            
+            if critcorr >= thr_cell && critcorr >= thr_pop
+                    ax.Title.Color = 'r';
+%                     selcell_corr(end+1,1) = cell_ind;
+            elseif critcorr >= thr_cell && critcorr < thr_pop
+                ax.Title.Color = 'm';
+            elseif critcorr < thr_cell && critcorr >= thr_pop
+                ax.Title.Color = 'b';
+            else
+                ax.Title.Color = 'k';
+            end
+            hold off;
+            if critcorr >= thr_pop
+                selcell_corr(end+1,1) = cell_ind;
+            end
+            
+            subpnum = subpnum + 1;
+            
+            % Plot covariance matrix
+            
+            % Setup object
+            h = gcf;
+            ax = subplot(plotgridv,plotgridh,subpnum);
+            hold on;
+
+            % Plot map
+            im = imagesc(objCorr.data.covmat_norm{corr_ind});
+            set(im,'AlphaData',~isnan(objCorr.data.covmat_norm{corr_ind}));
+            set(ax,'CLim',[-nanstd(nanstd(objCorr.data.covmat_norm{corr_ind})) nanstd(nanstd(objCorr.data.covmat_norm{corr_ind}))]);
+            colormap jet;
+            colorbar;
+            
+            % Replace NaNs with zeros in covariance matrix for norm calculations
+            covmat = objCorr.data.covmat{corr_ind};
+            covmat(isnan(covmat)) = 0;
+            % Calculate norms
+            norml1 = norm(covmat,1); % maximum of column sum
+            norml2 = norm(covmat,2); % maximum single value
+            
+            % Set up axes
+            set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            if ~isempty(corr_ind)
+                ax.Title.String = {'Covariance place-view:',horzcat('l1=', num2str(norml1,2)), horzcat('l2=', num2str(norml2,2))};
+            else
+                ax.Title.String = 'No corrected map';
+            end
+            
+            subpnum = subpnum + 1;
+            
+            hold off;
+
+                
+        end
+        if save
+            cwd = pwd;
+            cd(figdir);
+            % Save figure
+            figtitle = [num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
+            saveas(h,figtitle,'png');
+%             print('-painters',figtitle,'-dsvg');
+            cd(cwd);
+            close(figure(fig));
+        end
+        
+        fig = fig + 1;
+        subpnum = 1;
+        
+    end
+    disp(['Cross all thresh, ', objtype, ' only = ', num2str(crossallthresh),' cells']);
+    disp(['Cross cell thresh only = ', num2str(crosscellthresh),' cells']);
+    disp(['Cross population thresh only = ', num2str(crosspopthresh),' cells']);
+    disp(['Cross either thresh = ', num2str(crosseitherthresh),' cells']);
+    disp(['Total number of cells = ',num2str(size(cellList,1)),' cells']);
+    
+elseif strcmp(objtype, 'spatialview') 
+    
+    fig = 1;
+    subpnum = 1;
+
+    % Get shuffled SIC threshold for all cells
+    switch criteria
+        case 'sic'
+            thr_sh = [objMain.data.SIC; objMain.data.SICsh];
+        case 'ise'
+            thr_sh = [objMain.data.ISE; objMain.data.ISEsh];
+    end
+%     thr_sh = reshape(thr_sh,numel(thr_sh),1);
+    thr_pop = prctile(thr_sh,95);
+    z_pop = zscore(thr_sh);
+    for ii = 1:size(setsessions,1) % For each session
+        
+        cells_ind = find(identifiers(:,1) == setsessions(ii));
+        % Sort cells by descending SIC if required
+        switch criteria
+            case 'sic'
+                thr_batch = objMain.data.SIC(cells_ind);
+            case 'ise'
+                thr_batch = objMain.data.ISE(cells_ind);
+        end
+        [~,thri] = sort(thr_batch,'descend');
+        for jj = 1:length(cells_ind) % For each cell
+            
+            % Get cell index
+            if sortsic
+                cell_ind = cells_ind(thri(jj));
+            else 
+                cell_ind = cells_ind(jj);
+            end
+            
+            %% Plot 1 map for 1 cell
+            
+            % Find figure number
+            if jj*5 > plotgridh * plotgridv && mod((jj*5), (plotgridh * plotgridv)) == 5
+                % Save figure
+                if save
+                    cwd = pwd;
+                    cd(figdir);
+                    % Save previous figure
+                    figtitle = [num2str(setsessions(ii)) '-' num2str(floor(jj/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
+                    saveas(h,figtitle,'png');
+%                     print('-painters',figtitle,'-dsvg');
+                    cd(cwd);
+                    close(figure(fig));
+                end
+                
+                fig = fig + 1;
+                subpnum = 1;
+            end
+
+            % Get shuffled SI cutoff for this cell - 95th percentile
+            switch criteria
+                case 'sic'
+                    crit = objMain.data.SIC(cell_ind,1);
+                    thr_cell = prctile(objMain.data.SICsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
+                    z_cell = z_pop(cell_ind,1);
+                case 'ise'
+                    crit = objMain.data.ISE(cell_ind,1);
+                    thr_cell = prctile(objMain.data.ISEsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
+                    z_cell = z_pop(cell_ind,1);
+            end
+            
+            if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells)
+
+                mapLin = maps(cell_ind,:);
+                % if corrected map exists, get it
+                if any(ismember(objMain.data.origin{cell_ind},objCorr.data.origin))
+                    [~,corr_ind] = ismember(objMain.data.origin{cell_ind},objCorr.data.origin);
+                    mapLincorr = mapscorr(corr_ind,:);
+                else
+                    mapLincorr = nan(size(mapLin));
+                    corr_ind = [];
+                end
+                % Set up figure
+                h = figure(fig);
+                ax = subplot(plotgridv,plotgridh,subpnum);
+                
+            end
+            
+            mapLin = emptyinsidepillar(mapLin);
+            mapLincorr = emptyinsidepillar(mapLincorr);
+            
+            % Set up figure
+            h = gcf;
+            hold on;
+            ax = gca;
+            
+            % Plot map
+            [mapGrid,~]= plotmap(mapLin,objtype);
+            
+            % Figure and axes properties
+            figname = horzcat(objtype,': ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)));
+            set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
+            
+            % Set up axes
+            if ~isnan(nanmax(mapLin)) && nanmax(mapLin) ~= 0
+                maxC = nanmax(mapLin(3:end));
+            else
+                maxC = 1;
+            end
+            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            % Identify cells sensitive to cue or hint
+            if nanmax(mapLin(1)) > maxC
+                ax.Title.String = {horzcat('Cue: ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', ',num2str(nanmax(mapLin),3),'Hz'),horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2)),horzcat('z',num2str(z_cell))};
+            elseif nanmax(mapLin(2)) > maxC
+                ax.Title.String = {horzcat('Hint: ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', ',num2str(nanmax(mapLin),3),'Hz'),horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2)),horzcat('z',num2str(z_cell))};
+            else
+                ax.Title.String = {horzcat(num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', ',num2str(nanmax(mapLin),3),'Hz'),horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2)),horzcat('z',num2str(z_cell))};
+            end
+            % Patch environment boundaries
+            patchenvbounds(objtype);
+            
+            % Denote if significant spatial information
+            if crit >= thr_cell && crit >= thr_pop
+                ax.Title.Color = 'r';
+                crossallthresh = crossallthresh + 1;
+%                 selcell_orig(end+1,1) = cell_ind;
+            elseif crit >= thr_cell && crit < thr_pop
+                ax.Title.Color = 'm';
+                crosscellthresh = crosscellthresh + 1;
+                crosseitherthresh = crosseitherthresh + 1;
+            elseif crit >= thr_pop && crit < thr_cell
+                ax.Title.Color = 'b';
+                crosspopthresh = crosspopthresh + 1;
+                crosseitherthresh = crosseitherthresh + 1;
+            else
+                ax.Title.Color = 'k';
+            end
+            if crit >= thr_pop
+                selcell_orig(end+1,1) = cell_ind;
+            end
+            
+            if video
+%                 ax.Title.String = horzcat(num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' ',horzcat(num2str(maxC,3)),'Hz');
+                h.Units = 'normalized';
+                h.Position = [0 0 0.5 1];
+                ax.Position = [0 0 1 1];
+                ax.Title.Color = 'none';
+                ax.Color = 'none';
+                ax.CameraViewAngle = 10;
+                axis vis3d;
+                videoname = ['Video ' 'FigNum' num2str(h.Number) ' ' objtype,' ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)) '.avi'];
+                v = VideoWriter(videoname);
+                open(v);
+                for kstep = 1:360
+                    viewanglemod = [viewangle(1)+(kstep-1) viewangle(2)];
+                    disp(['kstep ' num2str(kstep) ' viewangle ' num2str(viewanglemod(1))]);
+                    view(ax,viewanglemod);
+                    frame = getframe(gcf);
+                    writeVideo(v,frame);
+                end
+                close(v);
+            end
+            
+            % Intra-session correlation %%%%%% NOTE: Should use boxcar
+            % smoothed map
+            
+            switch maptype
+                case 'adaptive'
+                    map1 = objMain.data.maps_adsm1(cell_ind,:);
+                    map2 = objMain.data.maps_adsm2(cell_ind,:);
+                case 'raw'
+                    map1 = objMain.data.maps_raw1(cell_ind,:);
+                    map2 = objMain.data.maps_raw2(cell_ind,:);
+            end
+            map1 = emptyinsidepillar(map1);
+            vis1 = ~isnan(map1);
+            map2 = emptyinsidepillar(map2);
+            vis2 = ~isnan(map2);
+            vis = vis1 & vis2; % Correlate only visited bins;
+            intracorr = corr2(map1(vis), map2(vis));
+            switch criteria
+                case 'sic'
+                    crit1 = objMain.data.SIC1(cell_ind);
+                    crit2 = objMain.data.SIC2(cell_ind);
+                case 'ise'
+                    crit1 = objMain.data.ISE1(cell_ind);
+                    crit2 = objMain.data.ISE2(cell_ind);
+            end
+
+            % Plot
+            subpnum = subpnum + 1;
+            for kk = 1:2
+                
+                % Get map
+                if kk == 1
+                    mapLin = map1;
+                    crit = crit1;
+                    half = '1st';
+                else
+                    mapLin = map2;
+                    crit = crit2;
+                    half = '2nd';
+                end
+
+                % Setup object
+                h = gcf;
+                ax = subplot(plotgridv,plotgridh,subpnum);
+                hold on;
+                set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                
+                % Plot map
+                [mapGrid,~]= plotmap(mapLin,objtype);
+                patchenvbounds(objtype);
+                
+                % Set up axes
+%                 if ~isnan(nanmax(mapLin)) && nanmax(mapLin) ~= 0
+%                     maxC = nanmax(mapLin(3:end));
+%                 else
+%                     maxC = 1;
+%                 end
+                set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                    'XColor','none','YColor','none','ZColor','none',...
+                    'FontSize',14,'GridLineStyle','none','Color','none');
+                ax.Title.String = {horzcat(half,' half: ','corr=',num2str(intracorr,2),', ',num2str(nanmax(mapLin),3),'Hz'),horzcat(criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
+                
+                if crit >= thr_cell && crit >= thr_pop
+                    ax.Title.Color = 'r';
+                elseif crit >= thr_cell && crit < thr_pop
+                    ax.Title.Color = 'm';
+                elseif crit < thr_cell && crit >= thr_pop
+                    ax.Title.Color = 'b';
+                else
+                    ax.Title.Color = 'k';
+                end
+
+                subpnum = subpnum + 1;
+            end
+            
+            % Plot corrected maps
+            
+            if isempty(corr_ind)
+                critcorr = nan;
+            else
+                switch criteria
+                    case 'sic'
+                        switch objtype
+                            case 'place'
+                                critcorr = objCorr.data.SIC_corrp(corr_ind);
+                            case 'spatialview'
+                                critcorr = objCorr.data.SIC_corrsv(corr_ind);
+                        end
+                    case 'ise'
+                        switch objtype
+                            case 'place'
+                                critcorr = objCorr.data.ISE_corrp(corr_ind);
+                            case 'spatialview'
+                                critcorr = objCorr.data.ISE_corrsv(corr_ind);
+                        end
+                end
+            end
+            
+            % Setup object
+            h = gcf;
+            ax = subplot(plotgridv,plotgridh,subpnum);
+            hold on;
+
+            % Plot map
+            [~,~]= plotmap(mapLincorr,objtype);
+            % Patch environment boundaries
+            patchenvbounds(objtype);
+            maxCcorr = nanmax(mapLincorr);
+            
+            % Set up axes
+            set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            if ~isempty(corr_ind)
+                ax.Title.String = {horzcat('Corrected',objCorr.data.llhpicklabel{corr_ind},'of',num2str(size(objCorr.data.llh{corr_ind},1)),': ',num2str(nanmax(mapLincorr),3),'Hz'),horzcat(criteria, '=',num2str(critcorr,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
+                set(ax,'CLim',[0 maxCcorr]);
+            else 
+                ax.Title.String = 'No corrected map';
+            end
+            
+            if critcorr >= thr_cell && critcorr >= thr_pop
+                    ax.Title.Color = 'r';
+%                     selcell_corr(end+1,1) = cell_ind;
+            elseif critcorr >= thr_cell && critcorr < thr_pop
+                ax.Title.Color = 'm';
+            elseif critcorr < thr_cell && critcorr >= thr_pop
+                ax.Title.Color = 'b';
+            else
+                ax.Title.Color = 'k';
+            end
+            if critcorr >= thr_pop
+                selcell_corr(end+1,1) = cell_ind;
+            end
+            
+            subpnum = subpnum + 1;
+            
+            % Plot covariance matrix
+            
+            % Setup object
+            h = gcf;
+            ax = subplot(plotgridv,plotgridh,subpnum);
+            hold on;
+
+            % Plot map
+            im = imagesc(objCorr.data.covmat_norm{corr_ind});
+            set(im,'AlphaData',~isnan(objCorr.data.covmat_norm{corr_ind}));
+%             set(ax,'CLim',[-1 1]);
+            set(ax,'CLim',[-nanstd(nanstd(objCorr.data.covmat_norm{corr_ind})) nanstd(nanstd(objCorr.data.covmat_norm{corr_ind}))]);
+            colormap jet;
+            colorbar;
+            
+            % Replace NaNs with zeros in covariance matrix for norm calculations
+            covmat = objCorr.data.covmat{corr_ind};
+            covmat(isnan(covmat)) = 0;
+            % Calculate norms
+            norml1 = norm(covmat,1); % maximum of column sum
+            norml2 = norm(covmat,2); % maximum single value
+            
+            % Set up axes
+            set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
+            if ~isempty(corr_ind)
+                ax.Title.String = {'Covariance place-view:',horzcat('l1=', num2str(norml1,2)), horzcat('l2=', num2str(norml2,2))};
+            else
+                ax.Title.String = 'No corrected map';
+            end
+            
+            subpnum = subpnum + 1;
+            
+            hold off;
+            
+        end
+        
+        if save
+            cwd = pwd;
+            cd(figdir);
+            % Save figure
+            figtitle = [num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
+            saveas(h,figtitle,'png');
+%             print('-painters',figtitle,'-dsvg');
+            cd(cwd);
+            close(figure(fig));
+        end
+        
+        fig = fig + 1;
+        subpnum = 1;
+        
+    end
+    disp(['Cross all thresh, ', objtype, ' only = ', num2str(crossallthresh),' cells']);
+    disp(['Cross cell thresh only = ', num2str(crosscellthresh),' cells']);
+    disp(['Cross population thresh only = ', num2str(crosspopthresh),' cells']);
+    disp(['Cross either thresh = ', num2str(crosseitherthresh),' cells']);
+    disp(['Total number of cells = ',num2str(size(cellList,1)),' cells']);
+    
+elseif strcmp(objtype,'corr')
+    
+    plotgridh = 4;
+    fig = 1;
+    subpnum = 1;
     
     % Get shuffled SIC threshold for all cells
     switch criteria
@@ -342,11 +1036,11 @@ if strcmp(objtype, 'place')  % Place maps
                 [~,~]= plotmap(mapLin,objtype);
                 
                 % Set up axes
-                if ~isnan(nanmax(mapLin(3:end))) && nanmax(mapLin(3:end)) ~= 0
-                    maxC = nanmax(mapLin(3:end));
-                else
-                    maxC = 1;
-                end
+%                 if ~isnan(nanmax(mapLin(3:end))) && nanmax(mapLin(3:end)) ~= 0
+%                     maxC = nanmax(mapLin(3:end));
+%                 else
+%                     maxC = 1;
+%                 end
                 set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
                     'XColor','none','YColor','none','ZColor','none',...
                     'FontSize',14,'GridLineStyle','none','Color','none');
@@ -389,518 +1083,358 @@ if strcmp(objtype, 'place')  % Place maps
     disp(['Cross population thresh only = ', num2str(crosspopthresh),' cells']);
     disp(['Cross either thresh = ', num2str(crosseitherthresh),' cells']);
     
-elseif strcmp(objtype, 'spatialview') 
+elseif strcmp(objtype,'mixsel')
     
-    fig = 1;
-    subpnum = 1;
-    % Set up cell counts
-    crossallthresh = 0;
-    crosscellthresh = 0;
-    crosspopthresh = 0;
-    crosseitherthresh = 0;
-    % Get shuffled SIC threshold for all cells
-    switch criteria
-        case 'sic'
-            thr_sh = [objMain.data.SIC; objMain.data.SICsh];
-        case 'ise'
-            thr_sh = [objMain.data.ISE; objMain.data.ISEsh];
-    end
-%     thr_sh = reshape(thr_sh,numel(thr_sh),1);
-    thr_pop = prctile(thr_sh,95);
-    z_pop = zscore(thr_sh);
+%     plotgridh = 4;
+    msobj = objMain.data.Args.msobj;
+    
     for ii = 1:size(setsessions,1) % For each session
-        
         cells_ind = find(identifiers(:,1) == setsessions(ii));
-        % Sort cells by descending SIC if required
-        switch criteria
-            case 'sic'
-                thr_batch = objMain.data.SIC(cells_ind);
-            case 'ise'
-                thr_batch = objMain.data.ISE(cells_ind);
-        end
-        [~,thri] = sort(thr_batch,'descend');
+
         for jj = 1:length(cells_ind) % For each cell
             
-            % Get cell index
-            if sortsic
-                cell_ind = cells_ind(thri(jj));
-            else 
-                cell_ind = cells_ind(jj);
-            end
             
-            %% Plot 1 map for 1 cell
-
-            % Find figure number
-            if jj*3 > plotgridh * plotgridv && mod((jj*3), (plotgridh * plotgridv)) == 3
-                % Save figure
-                if save
-                    cwd = pwd;
-                    cd(figdir);
-                    % Save previous figure
-                    figtitle = [num2str(setsessions(ii)) '-' num2str(floor(jj/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
-                    saveas(h,figtitle,'png');
-                    print('-painters',figtitle,'-dsvg');
-                    cd(cwd);
-                    close(figure(fig));
+            fig = 1;
+            % Get cell index - unsorted
+            cell_ind = cells_ind(jj);
+            cellid = [num2str(identifiers(cell_ind,1)) 'ch' num2str(identifiers(cell_ind,4)) 'c' num2str(identifiers(cell_ind,5))];
+            cell_indP = strcmp(objPlace.data.origin,cellList{cell_ind});
+            cell_indV = strcmp(objView.data.origin,cellList{cell_ind});
+            cell_indCorr = strcmp(objCorr.data.origin,cellList{cell_ind});
+            disp(['Plotting: ' cellid]);
+            
+            %% Plot 1 map for 1 cell - mixed or single selective
+            if objMain.data.placesel(cell_ind) || objMain.data.spatialviewsel(cell_ind)
+                
+                % Where to save plots
+                if objMain.data.mixsel(cell_ind)
+                    figdir2 = [figdir '/mixsel/' cellid];
+                    sel = 'mixed';
+                elseif objMain.data.placesel(cell_ind)
+                    figdir2 = [figdir '/placesel/' cellid];
+                    sel = 'place only';
+                elseif objMain.data.spatialviewsel(cell_ind)
+                    figdir2 = [figdir '/spatialviewsel/' cellid];
+                    sel = 'view only';
                 end
                 
-                fig = fig + 1;
-                subpnum = 1;
-            end
-
-            % Get shuffled SI cutoff for this cell - 95th percentile
-            switch criteria
-                case 'sic'
-                    crit = objMain.data.SIC(cell_ind,1);
-                    thr_cell = prctile(objMain.data.SICsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
-                    z_cell = z_pop(cell_ind,1);
-                case 'ise'
-                    crit = objMain.data.ISE(cell_ind,1);
-                    thr_cell = prctile(objMain.data.ISEsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
-                    z_cell = z_pop(cell_ind,1);
-            end
-            
-            if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells)
-
-                mapLin = maps(cell_ind,:);
-                % Set up figure
+                % Plot pv raw map vs pc/sv raw map vs corr
                 h = figure(fig);
-                ax = subplot(plotgridv,plotgridh,subpnum);
-                
-            end
-            
-            mapLin = emptyinsidepillar(mapLin);
-            
-            % Set up figure
-            h = gcf;
-            hold on;
-            ax = gca;
-            
-            % Plot map
-            [mapGrid,~]= plotmap(mapLin,objtype);
-            
-            % Figure and axes properties
-            figname = horzcat(objtype,': ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', ', criteria, ': ',num2str(crit,2),' of ',num2str(thr_cell,2));
-            set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
-            
-            % Set up axes
-            if ~isnan(nanmax(mapLin)) && nanmax(mapLin) ~= 0
-                maxC = nanmax(mapLin(3:end));
-            else
-                maxC = 1;
-            end
-            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                'XColor','none','YColor','none','ZColor','none',...
-                'FontSize',14,'GridLineStyle','none','Color','none');
-            % Identify cells sensitive to cue or hint
-            if nanmax(mapLin(1)) > maxC
-                ax.Title.String = horzcat('Cue: ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' ',criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2),', ','z',num2str(z_cell),', ',horzcat(num2str(nanmax(mapLin),3)),'Hz');
-            elseif nanmax(mapLin(2)) > maxC
-                ax.Title.String = horzcat('Hint: ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' ',criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2),', ','z',num2str(z_cell),', ',horzcat(num2str(nanmax(mapLin),3)),'Hz');
-            else
-                ax.Title.String = horzcat(num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' ',criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2),', ','z',num2str(z_cell),', ',horzcat(num2str(nanmax(mapLin),3)),'Hz');
-            end
-            % Patch environment boundaries
-            patchenvbounds(objtype);
-            
-            % Denote if significant spatial information
-            if crit >= thr_cell && crit >= thr_pop
-                ax.Title.Color = 'r';
-                crossallthresh = crossallthresh + 1;
-            elseif crit >= thr_cell && crit < thr_pop
-                ax.Title.Color = 'm';
-                crosscellthresh = crosscellthresh + 1;
-                crosseitherthresh = crosseitherthresh + 1;
-            elseif crit >= thr_pop && crit < thr_cell
-                ax.Title.Color = 'b';
-                crosspopthresh = crosspopthresh + 1;
-                crosseitherthresh = crosseitherthresh + 1;
-            else
-                ax.Title.Color = 'k';
-            end
-            
-            if video
-%                 ax.Title.String = horzcat(num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),' ',horzcat(num2str(maxC,3)),'Hz');
-                h.Units = 'normalized';
-                h.Position = [0 0 0.5 1];
-                ax.Position = [0 0 1 1];
-                ax.Title.Color = 'none';
-                ax.Color = 'none';
-                ax.CameraViewAngle = 10;
-                axis vis3d;
-                videoname = ['Video ' 'FigNum' num2str(h.Number) ' ' objtype,' ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)) '.avi'];
-                v = VideoWriter(videoname);
-                open(v);
-                for kstep = 1:360
-                    viewanglemod = [viewangle(1)+(kstep-1) viewangle(2)];
-                    disp(['kstep ' num2str(kstep) ' viewangle ' num2str(viewanglemod(1))]);
-                    view(ax,viewanglemod);
-                    frame = getframe(gcf);
-                    writeVideo(v,frame);
-                end
-                close(v);
-            end
-            
-            % Intra-session correlation %%%%%% NOTE: Should use boxcar
-            % smoothed map
-            
-            switch maptype
-                case 'adaptive'
-                    map1 = objMain.data.maps_adsm1(cell_ind,:);
-                    map2 = objMain.data.maps_adsm2(cell_ind,:);
-                case 'raw'
-                    map1 = objMain.data.maps_raw1(cell_ind,:);
-                    map2 = objMain.data.maps_raw2(cell_ind,:);
-            end
-            map1 = emptyinsidepillar(map1);
-            vis1 = ~isnan(map1);
-            map2 = emptyinsidepillar(map2);
-            vis2 = ~isnan(map2);
-            vis = vis1 & vis2; % Correlate only visited bins;
-            intracorr = corr2(map1(vis), map2(vis));
-            switch criteria
-                case 'sic'
-                    crit1 = objMain.data.SIC1(cell_ind);
-                    crit2 = objMain.data.SIC2(cell_ind);
-                case 'ise'
-                    crit1 = objMain.data.ISE1(cell_ind);
-                    crit2 = objMain.data.ISE2(cell_ind);
-            end
-
-            % Plot
-            subpnum = subpnum + 1;
-            for kk = 1:2
-                
-                % Get map
-                if kk == 1
-                    mapLin = map1;
-                    crit = crit1;
-                    half = '1st';
-                else
-                    mapLin = map2;
-                    crit = crit2;
-                    half = '2nd';
-                end
-
-                % Setup object
-                h = gcf;
-                ax = subplot(plotgridv,plotgridh,subpnum);
                 hold on;
+                figname = horzcat(objtype,': ',cellid,'Raw maps');
                 set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                
-                % Plot map
-                [mapGrid,~]= plotmap(mapLin,objtype);
-                patchenvbounds(objtype);
-                
-                % Set up axes
-                if ~isnan(nanmax(mapLin)) && nanmax(mapLin) ~= 0
-                    maxC = nanmax(mapLin(3:end));
-                else
-                    maxC = 1;
-                end
-                set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                    'XColor','none','YColor','none','ZColor','none',...
-                    'FontSize',14,'GridLineStyle','none','Color','none');
-                ax.Title.String = horzcat(half,' half: ','corr=',num2str(intracorr,2),' ', criteria, '=',num2str(crit,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2),', ',horzcat(num2str(nanmax(mapLin),3),'Hz'));
-                
-                if crit >= thr_cell && crit >= thr_pop
-                    ax.Title.Color = 'r';
-                elseif crit >= thr_cell && crit < thr_pop
-                    ax.Title.Color = 'm';
-                elseif crit < thr_cell && crit >= thr_pop
-                    ax.Title.Color = 'b';
-                else
-                    ax.Title.Color = 'k';
-                end
-
-                subpnum = subpnum + 1;
-            end
-            
-            hold off;
-            
-        end
-        if save
-            cd(figdir)
-            % Save figure
-            figtitle = [num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv))) ' FigNum ',num2str(h.Number)];
-            saveas(h,figtitle,'png');
-            print('-painters',figtitle,'-dsvg');
-            close(figure(fig));
-            cd(cwd);
-        end
-        
-        subpnum = 1;
-        
-    end
-    disp(['Cross all thresh = ', num2str(crossallthresh),' cells']);
-    disp(['Cross cell thresh only = ', num2str(crosscellthresh),' cells']);
-    disp(['Cross population thresh only = ', num2str(crosspopthresh),' cells']);
-    disp(['Cross either thresh = ', num2str(crosseitherthresh),' cells']);
-    
-elseif strcmp(objtype,'direction')
-    
-    maps = maps';
-    maps1 = maps1';
-    maps2 = maps2';
-   
-    
-    % For each session, plot rate maps for each cell
-    fig = 1;
-    subpnum = 1;
-    for ii = 1:size(setsessions,1) % For each session
-        cells_ind = find(identifiers(:,1) == setsessions(ii));
-%         % Get shuffled SIC threshold for this session
-%         sicsh = vpc.data.SICsh(2:end,cells_ind);
-%         sicsh = reshape(sicsh,numel(sicsh),1);
-%         shprc = prctile(sicsh,95);
-        % Sort cells by descending SIC if required
-        thr_batch = objMain.data.SIC(cells_ind);
-        [~,thri] = sort(thr_batch,'descend');
-        
-        %% Plot full session map for each cell
-        
-        for jj = 1:length(cells_ind) % For each cell
-            % Get cell index
-            if sortsic
-                cell_ind = cells_ind(thri(jj));
-            else 
-                cell_ind = cells_ind(jj);
-            end
-            
-                % Plot 1 map for 1 cell
-                
-                % Find figure number
-                if jj > plotgridh * plotgridv && mod(jj, (plotgridh * plotgridv)) == 1
-                    % Save figure
-                    if save
-                        % Save previous figure
-                        figtitle = ['Direction: ' 'Full ' num2str(setsessions(ii)) '-' num2str(floor(jj/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
-                        saveas(h,figtitle,'png');
-                        print('-painters',figtitle,'-dsvg');
+                for oo = 1:size(msobj,2)
+                    % Plot pv maps
+                    basedata = objMain.data.(msobj{oo})(cell_ind);
+                    ax = subplot(2,3,1+(oo-1)*3);
+                    plotmap(basedata.pvmap,msobj{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basedata.pvmap,msobj{oo});
+                    % Scale color map
+                    switch msobj{oo}
+                        case 'place'
+                            maxC = max(basedata.pvmap);
+                            fieldcolor = 'r';
+                        case 'spatialview'
+                            maxC = max(basedata.pvmap(3:end)); % leave out cue and hint
+                            fieldcolor = [50/256 205/256 50/256];
                     end
-                    fig = fig + 1;
-                    subpnum = 1;
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                        end
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    colormap(ax,cool);
+                    ax.Title.String = ['PV raw ',msobj{oo} ' map'];
+                    % Plot maps from pc/sv objects
+                    ax = subplot(2,3,2+(oo-1)*3);
+                    if strcmp(msobj{oo},'place')
+                        basemap = objPlace.data.maps_raw(cell_indP,:);
+                        maxC = max(objPlace.data.maps_raw(cell_indP,:));
+                        title = ['PC raw place map: ' sel];
+                    elseif strcmp(msobj{oo},'spatialview')
+                        basemap = objView.data.maps_raw(cell_indV,:);
+                        maxC = max(objView.data.maps_raw(cell_indV,3:end));
+                        title = ['SV raw view map: ' sel];
+                    end
+                    plotmap(basemap,msobj{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basemap,msobj{oo});
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                        end
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    colormap(ax,cool);
+                    ax.Title.String = title;
+                    % Plot maps from corr objects
+                    ax = subplot(2,3,3+(oo-1)*3);
+                    if strcmp(msobj{oo},'place')
+                        basemap = objCorr.data.maps_raw_corrpset{cell_indCorr}(1,:);
+                        maxC = max(basemap);
+                        title = ['Corr raw place map: ' sel];
+                    elseif strcmp(msobj{oo},'spatialview')
+                        basemap = objCorr.data.maps_raw_corrsvset{cell_indCorr}(1,:);
+                        maxC = max(basemap(3:end));
+                        title = ['Corr raw view map: ' sel];
+                    end
+                    plotmap(basemap,msobj{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basemap,msobj{oo});
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                        end
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    colormap(ax,cool);
+                    ax.Title.String = title;
                 end
-                
-                % Get shuffled SI cutoff for this cell - 95th percentile
-                crit = objMain.data.SIC(cell_ind,1);
-                thr_cell = prctile(objMain.data.SICsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
-                % Get shuffled RV cutoff for this cell - 95th percentile
-                RV = objMain.data.RV(cell_ind,1);
-                RVthr = prctile(objMain.data.RVsh( (cell_ind-1)*objMain.data.Args.NumShuffles+1:cell_ind*objMain.data.Args.NumShuffles,1 ),95);
-                % Get map
-                if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells
-                    mapLin = maps(:,cell_ind);
-                    h = figure(fig);
-                    ax = subplot(plotgridv,plotgridh,subpnum);
-                else
-                    h = gcf;
-                end
-
-                % Setup main object
-                hold on;
-                colormap(jet);
-                figname = horzcat('Direction: ','Full ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)));
-                set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
-                ax.DataAspectRatioMode = 'manual';
-                ax.DataAspectRatio = [1 1 1];
-                set(ax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{},'XColor','none','YColor','none','ZColor','none','GridLineStyle','none');
-                ax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', RVthr = ',num2str(RVthr,2));
-                
-                % Plot main object
-                % Convert to x,y %
-                bin_ang = (2*pi) / length(mapLin);
-                angles = (bin_ang/2 : bin_ang : (2*pi)-(bin_ang/2));
-%                 angles=angles+opt.rotateDir;
-%                 angles(angles>(2*pi))=angles(angles>(2*pi)) - 2*pi;
-%                 angles(angles<=0)=angles(angles<=0) + 2*pi;
-                [x, y] = pol2cart(angles', mapLin);
-                x(end+1) = x(1);    % Make line meet itself at end
-                y(end+1) = y(1);    %
-                % Plot %
-                plot(ax, x, y, 'k-');
-                % Plot circular mean, if requested %
-                if 0 % opt.circ_mean
-                    cm=circ_mean(angles',mapLin);
-                    [cmX cmY]=pol2cart(cm,max(mapLin));
-                    line('xdata',[0 cmX],'ydata',[0 cmY],'parent',ax,'linewidth',2);
-                end
-                % Format axes %
-                set(ax, 'color', 'w');  % For SCAn preview pane.
-                axis(ax, 'tight');
-                axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
-                axis(ax,[-axlim axlim -axlim axlim]);                         %   ..
-                line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-                axis(ax, 'square', 'off', 'tight');
-                % Write max rate and SI
-                set(ax, 'tag', '');
-                rate_string = num2str( max(max(mapLin)) , '%4.1f');
-                SI_string = num2str(RV,'%1.3f');
-                fs_val = 0.08;
-                fu_val = 'normalized';
-                pos_val = [0 1];
-                hoz_val = 'left';
-                ver_val = 'cap';
-                text_color = [0 0 0];
-                text('position', pos_val, 'units', 'normalized', 'HorizontalAlignment', hoz_val, 'string', rate_string, ...
-                    'FontUnits', fu_val, 'VerticalAlignment', ver_val, 'fontsize', fs_val, 'color', text_color,'parent',ax);
-                hoz_val = 'right';
-                pos_val = [1 1];
-                if RV > RVthr
-                    text_color = [1 0 0];
-                end
-                text('position', pos_val, 'units', 'normalized', 'HorizontalAlignment', hoz_val, 'string', SI_string, ...
-                    'FontUnits', fu_val, 'VerticalAlignment', ver_val, 'fontsize', fs_val, 'color', text_color,'parent',ax);
-                
-                subpnum = subpnum + 1;
-                hold off;
-                
-        end
-        if save
-            % Save figure
-            figtitle = ['Direction: ' 'Full ' num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
-            saveas(h,figtitle,'png');
-            print('-painters',figtitle,'-dsvg');
-        end
-        fig = fig + 1;
-        subpnum = 1;
-
-        %% Compute first and second half correlation
-        
-        for jj = 1:length(cells_ind) % For each cell
-            % Get cell index
-            if sortsic
-                cell_ind = cells_ind(thri(jj));
-            else 
-                cell_ind = cells_ind(jj);
-            end
-
-            % Find figure number
-            if jj*2 > plotgridh * plotgridv && mod((jj*2), (plotgridh * plotgridv)) == 2
-                % Save figure
+                % Save
+                figtitle = horzcat(cellid,': Raw maps: ', sel);
                 if save
-                    % Save previous figure
-                    figtitle = ['Direction: ' 'Half ' num2str(setsessions(ii)) '-' num2str(floor((jj*2)/(plotgridh * plotgridv)))];
-                    saveas(h,figtitle,'png');
-                    print('-painters',figtitle,'-dsvg');
+                    mkdir(figdir2);
+                    savefigure(h,figtitle,figdir2);
                 end
+                close(h);
                 fig = fig + 1;
-                subpnum = 1;
-            end
-
-            %%%%%%% CORRELATION %%%%%%%%%%%
-
-            % Intra-session correlation %%%%%% NOTE: Should use boxcar
-            % smoothed map
-            
-            map1 = maps1(:,cell_ind);
-            vis1 = ~isnan(map1);
-            crit1 = objMain.data.SIC1;
-            RV1 = objMain.data.RV1;
-            map2 = maps2(:,cell_ind);
-            vis2 = ~isnan(map2);
-            crit2 = objMain.data.SIC2;
-            RV2 = objMain.data.RV2;
-            vis = vis1 & vis2; % Correlate only visited bins;
-            intracorr = corr2(map1(vis), map2(vis));
-            % Get shuffled SI cutoff for this cell - 95th percentile
-            thr_cell = prctile(objMain.data.SICsh(2:end,cell_ind),95);
-            RVthr = prctile(objMain.data.RVsh(2:end,cell_ind),95);
-
-            % Plot
-
-            for kk = 1:2
                 
-                % Get maps
-                if nargin <= 5 % If mapGrid is not already specified (i.e. if plotting for a batch of cells
-                    if kk == 1
-                        mapLin = map1;
-                        RV = RV1;
-                    else 
-                        mapLin = map2;
-                        RV = RV2;
-                    end
-                    h = figure(fig);
-                    ax = subplot(plotgridv,plotgridh,subpnum);
-                else
-                    h = gcf;
-                end
-
-                % Setup main object
+                % Plot pc/sv vs corr smoothed maps - uncorrected
+                h = figure(fig);
                 hold on;
-                colormap(jet);
-                figname = horzcat('Direction: ','Half ',num2str(setsessions(ii)),'ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)));
-                set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
-                ax.DataAspectRatioMode = 'manual';
-                ax.DataAspectRatio = [1 1 1];
-                set(ax,'XTickLabelMode','manual','XTickLabel',{},'YTickLabelMode','manual','YTickLabel',{},'XColor','none','YColor','none','ZColor','none','GridLineStyle','none');
-                ax.Title.String = horzcat('ch',num2str(identifiers(cell_ind,4)),'c',num2str(identifiers(cell_ind,5)),', RVthr = ',num2str(RVthr,2));
+                figname = horzcat(objtype,': ',cellid,'Smoothed maps');
+                set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                for oo = 1:size(msobj,2)
+                    basedata = objMain.data.(msobj{oo})(cell_ind);
+                    % Plot maps from pc/sv objects
+                    ax = subplot(2,2,1+(oo-1)*2);
+                    if strcmp(msobj{oo},'place')
+                        basemap = objPlace.data.maps_adsm(cell_indP,:);
+                        maxC = max(basemap);
+                        title = ['PC smoothed place map: ' sel];
+                        fieldcolor = 'r';
+                    elseif strcmp(msobj{oo},'spatialview')
+                        basemap = objView.data.maps_adsm(cell_indV,:);
+                        maxC = max(basemap(3:end));
+                        title = ['SV smoothed view map: ' sel];
+                        fieldcolor = [50/256 205/256 50/256];
+                    end
+                    plotmap(basemap,msobj{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basemap,msobj{oo});
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                        end
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    colormap(ax,cool);
+                    ax.Title.String = title;
+                    % Plot maps from corr objects
+                    ax = subplot(2,2,2+(oo-1)*2);
+                    if strcmp(msobj{oo},'place')
+                        basemap = objCorr.data.maps_adsm_corrpset{cell_indCorr}(1,:);
+                        maxC = max(basemap);
+                        title = ['Corr smoothed place map: ' sel];
+                    elseif strcmp(msobj{oo},'spatialview')
+                        basemap = objCorr.data.maps_adsm_corrsvset{cell_indCorr}(1,:);
+                        maxC = max(basemap(3:end));
+                        title = ['Corr smoothed view map: ' sel];
+                    end
+                    plotmap(basemap,msobj{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basemap,msobj{oo});
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                        end
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    colormap(ax,cool);
+                    ax.Title.String = title;
+                end
+                % Save
+                figtitle = horzcat(cellid,': Smoothed maps: ', sel);
+                if save
+                    savefigure(h,figtitle,figdir2);
+                end
+                close(h);
+                fig = fig + 1;
                 
-                % Plot main object
-                % Convert to x,y %
-                bin_ang = (2*pi) / length(mapLin);
-                angles = (bin_ang/2 : bin_ang : (2*pi)-(bin_ang/2));
-    %                 angles=angles+opt.rotateDir;
-    %                 angles(angles>(2*pi))=angles(angles>(2*pi)) - 2*pi;
-    %                 angles(angles<=0)=angles(angles<=0) + 2*pi;
-                [x, y] = pol2cart(angles', mapLin);
-                x(end+1) = x(1);    % Make line meet itself at end
-                y(end+1) = y(1);    %
-                % Plot %
-                plot(ax, x, y, 'k-');
-                % Plot circular mean, if requested %
-                if 0 % opt.circ_mean
-                    cm=circ_mean(angles',mapLin);
-                    [cmX cmY]=pol2cart(cm,max(mapLin));
-                    line('xdata',[0 cmX],'ydata',[0 cmY],'parent',ax,'linewidth',2);
+                % Plot base maps for both objects and their fields
+                h = figure(fig);
+                hold on;
+                figname = horzcat(objtype,': ','Base maps: ',sel);
+                set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                for oo = 1:size(msobj,2)
+                    basedata = objMain.data.(msobj{oo})(cell_ind);
+                    ax = subplot(1,2,oo);
+                    plotmap(basedata.basemapLsm,msobj{oo});
+                    colormap(ax,cool);
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basedata.basemapLsm,msobj{oo});
+                    % Scale color map
+                    switch msobj{oo}
+                        case 'place'
+                            maxC = max(basedata.basemapLsm);
+                            fieldcolor = 'r';
+                        case 'spatialview'
+                            maxC = max(basedata.basemapLsm(3:end));
+                            fieldcolor = [50/256 205/256 50/256];
+                    end
+                    ax.Title.String = {['SI: ' num2str(basedata.SI,2)];['thr: ' num2str(basedata.SIthr,2)]};
+                    ax.Title.FontSize = 16;
+                    if basedata.SI>basedata.SIthr
+                        ax.Title.Color = 'r';
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    % Draw env boundaries
+                    patchenvbounds(msobj{oo});
+                    % Patch boundaries of base fields
+                    for ff = 1:basedata.sigfields
+                        % Patch base fields
+                        for pp = 1:size(basedata.fieldcoord{ff},1)
+                            [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                            patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',1);
+                        end
+                    end
                 end
-                % Format axes %
-                set(ax, 'color', 'w');  % For SCAn preview pane.
-                axis(ax, 'tight');
-                axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
-                axis(ax,[-axlim axlim -axlim axlim]);                         %   ..
-                line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-                axis(ax, 'square', 'off', 'tight');
-                % Write max rate and SI
-                set(ax, 'tag', '');
-                rate_string = num2str( max(max(mapLin)) , '%4.1f');
-                RV_string = num2str(RV,'%1.3f');
-                fs_val = 0.08;
-                fu_val = 'normalized';
-                pos_val = [0 1];
-                hoz_val = 'left';
-                ver_val = 'cap';
-                text_color = [0 0 0];
-                text('position', pos_val, 'units', 'normalized', 'HorizontalAlignment', hoz_val, 'string', rate_string, ...
-                    'FontUnits', fu_val, 'VerticalAlignment', ver_val, 'fontsize', fs_val, 'color', text_color,'parent',ax);
-                hoz_val = 'right';
-                pos_val = [1 1];
-                if RV > RVthr
-                    text_color = [1 0 0];
+                % Save
+                figtitle = horzcat(cellid,': Base maps: ',sel);
+                if save
+                    savefigure(h,figtitle,figdir2);
                 end
-                text('position', pos_val, 'units', 'normalized', 'HorizontalAlignment', hoz_val, 'string', RV_string, ...
-                    'FontUnits', fu_val, 'VerticalAlignment', ver_val, 'fontsize', fs_val, 'color', text_color,'parent',ax);
-                subpnum = subpnum + 1;
-                hold off;
+                close(h);
+                fig = fig + 1;
+                
+                % Plot pixel maps for each base field
+                for oo = 1:size(msobj,2)
+                    
+                    basedata = objMain.data.(msobj{oo})(cell_ind);
+                    secdata = objMain.data.(msobj{2-oo+1})(cell_ind);
+                    
+                    for ff = 1:size(basedata.rate_components,1) % In mixselpv we've only extracted data for max of 3 fields per map
+                            % Plot base maps with secondary pixel maps
+                            h = figure(fig);
+                            hold on;
+                            ax = gca;
+                            ax.Title.String = cell(size(basedata.secfieldrates{ff},1),1);
+                            linked = [];
+                            for ss = 1:size(basedata.secfieldrates{ff},1)
+                                % Check if infield firing in sec field is higher than outfield firing
+                                if basedata.secfieldrates{ff}(ss,1) > prctile(basedata.secfieldrates_sh{ff}{ss,1},95)
+                                    linked = horzcat(linked,',',num2str(ss));
+                                    ax.Title.String{ss,1} = horzcat('LINKED:',msobj{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.secfieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.secfieldrates_sh{ff}{ss,1},95),2),'Hz');
+                                else
+                                    ax.Title.String{ss,1} = horzcat(msobj{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.secfieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.secfieldrates_sh{ff}{ss,1},95),2),'Hz');
+                                end
+                            end
+                            if isempty(linked)
+                                figname = horzcat(msobj{oo},' field ',num2str(ff),' not linked');
+                            else
+                                figname = horzcat(msobj{oo},' field ',num2str(ff),' sig linked to ',msobj{2-oo+1},' field ', linked);
+%                                 ax.Title.Color = 'r';
+                            end
+                            set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                            % Plot secondary full pixel set
+                            tempsecmap = nan(size(basedata.secmapLsm));
+                            tempsecmap(basedata.set_sec_linbin{ff,1}(:,1)) = basedata.set_sec_linbin{ff,1}(:,4);
+                            plotmap(tempsecmap,msobj{2-oo+1});
+                            colormap(ax,cool);
+                            set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                                'XColor','none','YColor','none','ZColor','none',...
+                                'FontSize',14,'GridLineStyle','none','Color','none');
+                            patchenvbounds('spatialview');
+                            % If firing rate or spike count = 0, set to black
+                            settoblack(tempsecmap,msobj{2-oo+1});
+                            % Patch basemap field
+                            for pp = 1:size(basedata.fieldcoord{ff},1)
+                                [x,y,z] = converttosurf(basedata.gridnum(ff),basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                if strcmp(msobj{oo},'place')
+                                    patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',2);
+                                elseif strcmp(msobj{oo},'spatialview')
+                                    patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',2); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
+                                end
+                            end
+                            % Patch secondary fields
+                            for mm = 1:size(secdata.rate_components,1) % For each secondary field
+                                % Plot secondary field in consolidated pixel map
+                                sec = secdata.fieldcoord{mm}; % Get bins for sec field
+                                % Patch secondary fields in the consolidated pixel map
+                                for pp = 1:size(sec,1)
+                                    [x,y,z] = converttosurf(secdata.gridnum(mm),sec(pp,1),sec(pp,2));
+                                    patch(x,y,z,'r','EdgeColor',[169/256 169/256 169/256],'FaceColor','none','LineWidth',2); % Dark Grey
+                                    if strcmp(msobj{2-oo+1},'place')
+                                        patch(x,y,z,'r','EdgeColor','r','FaceColor','none','LineWidth',2); % Red
+                                    elseif strcmp(msobj{2-oo+1},'spatialview')
+                                        patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',2); % Lime green
+                                    end
+                                end
+                            end
+                            % Save 
+                            figtitle = figname;
+                            if save
+                                savefigure(h,figtitle,figdir2);
+                            end
+                            close(h);
+                            fig = fig + 1;
+                    end
+                    
+                end
+                
             end
         end
-        
-        if save
-            % Save figure
-            figtitle = ['Direction: ' 'Half ' num2str(setsessions(ii)) '-' num2str(ceil(length(cells_ind)/(plotgridh * plotgridv))),' FigNum ',num2str(h.Number)];
-            saveas(h,figtitle,'png');
-            print('-painters',figtitle,'-dsvg');
-        end
-        fig = fig + 1;
-        subpnum = 1;
-        
-        
     end
     
-
-
+ 
 end
 
+selcell_orig = cellList(selcell_orig);
+selcell_corr = cellList(selcell_corr);
+% Save list of selective cells 
+if save && ~isempty(selcell_orig) && ~isempty(selcell_corr)
+    cd(figdir);
+    fid = fopen('selectivecells_orig.txt','w');
+%     fprintf(fid,'%s\n',[num2str(size(cellList,1)) ' cells']);
+    for ii = 1:size(selcell_orig,1)
+        fprintf(fid,'%s\n',selcell_orig{ii,1});
+    end
+    fclose(fid);
+    fid = fopen('selectivecells_corr.txt','w');
+%     fprintf(fid,'%s\n',[num2str(size(cellList,1)) ' cells']);
+    for ii = 1:size(selcell_corr,1)
+        fprintf(fid,'%s\n',selcell_corr{ii,1});
+    end
+end
 cd(cwd);
 
 function [surfx,surfy,surfz,surfmap] = plotspatialview(bb,plotgridv,plotgridh,map)
@@ -1079,96 +1613,6 @@ switch bb
         shading flat;
 end
 
-
-function [] = patchboundaries(ax)
-
-%%% DEFUNCT
-
-% for ii = 1:size(ax,1)
-    
-%     % Get axis of subplot
-%     axes(ax{ii});
-%     hold(ax{ii},'on');
-    switch ax
-        case 1 % Cue
-            
-        case 2  % Hint
-            
-        case 3  % Ground
-            
-            % Outer boundaries
-            patch([0 0 40 40],[0 40 40 0], [0 0 0 0] ,[1 1 1 1],'FaceColor','none');
-            % Pillars
-            patch([24 24 32 32],[8 16 16 8], [0 0 0 0] ,[1 1 1 1],'FaceColor','none'); % Bottom left
-            patch([8 8 16 16],[8 16 16 8], [0 0 0 0] ,[1 1 1 1],'FaceColor','none'); % Top left
-            patch([8 8 16 16],[24 32 32 24], [0 0 0 0] ,[1 1 1 1],'FaceColor','none'); % Top right
-            patch([24 24 32 32 ],[24 32 32 24], [0 0 0 0] ,[1 1 1 1],'FaceColor','none'); % Bottom right
-            
-        case 4  % Ceiling
-            
-            % Outer boundaries
-            patch([0 0 40 40],[0 40 40 0], [40 40 40 40] ,[1 1 1 1],'FaceColor','none');
-            
-        case 5  % Walls
-            
-            % Outer boundaries
-            patch([0 0 40 40],[0 0 0 0], [16 24 24 16] ,[1 1 1 1],'FaceColor','none');
-            patch([0 0 0 0],[0 0 40 40], [16 24 24 16] ,[1 1 1 1],'FaceColor','none');
-            patch([0 0 40 40], [40 40 40 40], [16 24 24 16] ,[1 1 1 1],'FaceColor','none');
-            patch([40 40 40 40],[0 0 40 40], [16 24 24 16] ,[1 1 1 1],'FaceColor','none');
-            
-        case 6  % Pillar1
-            
-            % Outer boundaries
-            patch([24 24 32 32],[24 24 24 24], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([24 24 24 24],[24 24 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([24 24 32 32],[32 32 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([32 32 32 32],[24 24 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-
-            % Outline Rabit poster on m_wall_25
-            patch([26.88 26.88 29.12 29.12],[32 32 32 32], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');    
-            
-        case 7  % Pillar2
-            
-            % Outer boundaries
-            patch([24 24 32 32],[8 8 8 8], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([24 24 24 24],[8 8 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([24 24 32 32],[16 16 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([32 32 32 32],[8 8 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-        
-            % Outline Cat poster on m_wall_10
-            patch([32 32 32 32],[10.88 10.88 13.12 13.12], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');
-%             patch([32 32 32 32],[10.88 10.88 13.12 13.12], [1.8 3.2 3.2 1.8] ,[1 1 1 1],'FaceColor','none');
-
-            % Outline Pig poster on m_wall_29
-            patch([24 24 24 24],[10.88 10.88 13.12 13.12], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');
-            
-        case 8  % Pillar3
-            
-            % Outer boundaries
-            patch([8 8 16 16],[24 24 24 24], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([8 8 8 8],[24 24 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([8 8 16 16],[32 32 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([16 16 16 16],[24 24 32 32], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-
-            % Outline Croc poster on m_wall_4
-            patch([16 16 16 16],[26.88 26.88 29.12 29.12], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');
-
-            % Outline Donkey poster on m_wall_15
-            patch([8 8 8 8],[26.88 26.88 29.12 29.12], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');
-            
-        case 9  % Pillar4
-            
-            % Outer boundaries
-            patch([8 8 16 16],[8 8 8 8], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([8 8 8 8],[8 8 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([8 8 16 16],[16 16 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-            patch([16 16 16 16],[8 8 16 16], [16 21 21 16] ,[1 1 1 1],'FaceColor','none');
-
-            % Outline Camel poster on m_wall_20
-            patch([10.88 10.88 13.12 13.12],[8 8 8 8], [17.8 19.2 19.2 17.8] ,[1 1 1 1],'FaceColor','none');
-    end
-
 % Plot rate map (origin: placebyspatialview.m)
 function [mapG,mapGdummy]= plotmap(mapL,objtype)
 
@@ -1259,7 +1703,7 @@ alpha 1; shading flat;
 surf(walls_x, walls_y, walls_z, walls);      
 alpha 1; shading flat;
 
-disp(sum(sum(find(ceiling==0))) + sum(sum(find(floor==0))) + sum(sum(find(P4_TL==0))));
+% disp(sum(sum(find(ceiling==0))) + sum(sum(find(floor==0))) + sum(sum(find(P4_TL==0))));
 
 % Plot pillars
 surf(P1_x, P1_y, PX_z, P1_BR);
@@ -1302,37 +1746,36 @@ switch objtype
         patch([0 0 0 0],[0 0 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
         patch([0 0 40 40], [40 40 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
         patch([40 40 40 40],[0 0 40 40],[16 24 24 16],[1 1 1 1],'FaceColor','none');
-        % Pillar 1 (KW 3, top right)
-        patch([24 24 32 32],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([24 24 24 24],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([24 24 32 32],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([32 32 32 32],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([26.88 26.88 29.12 29.12],[32 32 32 32],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Rabbit Poster on m_wall_25
-        % Pillar 2 (KW 1, bottom right)
+        % Pillar 1 (bottom right)
         patch([24 24 32 32],[8 8 8 8],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([24 24 24 24],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([24 24 32 32],[16 16 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([32 32 32 32],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([32 32 32 32],[10.88 10.88 13.12 13.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Cat poster on m_wall_10
-        patch([24 24 24 24],[10.88 10.88 13.12 13.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Pig poster on m_wall_29
-        % Pillar 3 (KW 4, top left)
-        patch([8 8 16 16],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([8 8 8 8],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([8 8 16 16],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([16 16 16 16],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([16 16 16 16],[26.88 26.88 29.12 29.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Croc poster on m_wall_4
-        patch([8 8 8 8],[26.88 26.88 29.12 29.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Donkey poster on m_wall_15
-        % Pillar 4 (KW 2, bottom left)
+        patch([32 32 32 32],[10.88 10.88 13.12 13.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Rabbit Poster on m_wall_25
+        % Pillar 2 (bottom left)
         patch([8 8 16 16],[8 8 8 8],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([8 8 8 8],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([8 8 16 16],[16 16 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
         patch([16 16 16 16],[8 8 16 16],[16 21 21 16],[1 1 1 1],'FaceColor','none');
-        patch([10.88 10.88 13.12 13.12],[8 8 8 8],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Camel poster on m_wall_20
+        patch([10.88 10.88 13.12 13.12],[8 8 8 8],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Cat poster on m_wall_10
+        patch([10.88 10.88 13.12 13.12],[16 16 16 16],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Pig poster on m_wall_29
+        % Pillar 3 (top right)
+        patch([24 24 32 32],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 24 24],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([24 24 32 32],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([32 32 32 32],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([26.88 26.88 29.12 29.12],[24 24 24 24],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Croc poster on m_wall_4
+        patch([26.88 26.88 29.12 29.12],[32 32 32 32],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Donkey poster on m_wall_15
+        % Pillar 4 (top left)
+        patch([8 8 16 16],[24 24 24 24],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 8 8],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 16 16],[32 32 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([16 16 16 16],[24 24 32 32],[16 21 21 16],[1 1 1 1],'FaceColor','none');
+        patch([8 8 8 8],[26.88 26.88 29.12 29.12],[17.8 19.2 19.2 17.8],[1 1 1 1],'FaceColor','none'); % Camel poster on m_wall_20
         % Ceiling
         patch([0 0 40 40],[0 40 40 0],[40 40 40 40],[1 1 1 1],'FaceColor','none');
         
 end
-
 
 function smoothviewmap = emptyinsidepillar(smoothviewmap)
 
@@ -1376,3 +1819,310 @@ pillarcoords = [331:338,... % Bottom left
 
 smoothviewmap(pillarcoords) = nan;
 
+function [] = savefigure(h,figtitle,figdir)
+cwd = pwd;
+cd(figdir);
+saveas(h,figtitle,'png');
+% saveas(h,figtitle,'fig');
+% print('-painters',figtitle,'-dsvg');
+cd(cwd);
+
+function [x,y,z] = converttosurf(gridnum,bx,by)
+
+switch gridnum
+
+    case 3 % Floor
+        
+        x = [bx-1 bx-1 bx bx];
+        y = [by-1 by by by-1];
+        z = [0 0 0 0];
+
+    case 4 % Ceiling
+        
+        x = [bx-1 bx-1 bx bx];
+        y = [by-1 by by by-1];
+        z = [40 40 40 40];
+
+    case 5 % Walls
+        
+        face = ceil(bx/40);
+        startx = mod(bx,40);
+        if startx == 0
+            startx = 40;
+        end
+
+        switch face
+            case 1 % Left
+                x = [0 0 0 0];
+                y = [0+startx-1 0+startx-1 0+startx 0+startx];
+            case 2 % Top
+                x = [0+startx-1 0+startx-1 0+startx 0+startx];
+                y = [40 40 40 40];
+            case 3 % Right
+                x = [40 40 40 40];
+                y = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+            case 4 % Bottom
+                x = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+                y = [0 0 0 0];
+        end
+        z = [16+by-1 16+by 16+by 16+by-1];
+
+    case 6 % Pillar 1 bottom right
+        
+        face = ceil(bx/8);
+        startx = mod(bx,8);
+        if startx == 0
+            startx = 8;
+        end
+
+        switch face
+            case 1 % Left
+                x = [24 24 24 24];
+                y = [8+startx-1 8+startx-1 8+startx 8+startx];
+            case 2 % Top
+                x = [24+startx-1 24+startx-1 24+startx 24+startx];
+                y = [16 16 16 16];
+            case 3 % Right
+                x = [32 32 32 32];
+                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+            case 4 % Bottom
+                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+                y = [8 8 8 8];
+        end
+        z = [16+by-1 16+by 16+by 16+by-1];
+
+    case 7 % Pillar 2 bottom left
+        
+        face = ceil(bx/8);
+        startx = mod(bx,8);
+        if startx == 0
+            startx = 8;
+        end
+    
+        switch face
+            case 1 % Left
+                x = [8 8 8 8];
+                y = [8+startx-1 8+startx-1 8+startx 8+startx];
+            case 2 % Top
+                x = [8+startx-1 8+startx-1 8+startx 8+startx];
+                y = [16 16 16 16];
+            case 3 % Right
+                x = [16 16 16 16];
+                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+            case 4 % Bottom
+                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+                y = [8 8 8 8];
+        end
+        z = [16+by-1 16+by 16+by 16+by-1];
+
+    case 8 % Pillar 3 top right
+        
+        face = ceil(bx/8);
+        startx = mod(bx,8);
+        if startx == 0
+            startx = 8;
+        end
+        
+        switch face
+            case 1 % Left
+                x = [24 24 24 24];
+                y = [24+startx-1 24+startx-1 24+startx 24+startx];
+            case 2 % Top
+                x = [24+startx-1 24+startx-1 24+startx 24+startx];
+                y = [32 32 32 32];
+            case 3 % Right
+                x = [32 32 32 32];
+                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+            case 4 % Bottom
+                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+                y = [24 24 24 24];
+        end
+        z = [16+by-1 16+by 16+by 16+by-1];
+
+    case 9 % Pillar 4 top left
+        
+        face = ceil(bx/8);
+        startx = mod(bx,8);
+        if startx == 0
+            startx = 8;
+        end
+        
+        switch face
+            case 1 % Left
+                x = [8 8 8 8];
+                y = [24+startx-1 24+startx-1 24+startx 24+startx];
+            case 2 % Top
+                x = [8+startx-1 8+startx-1 8+startx 8+startx];
+                y = [32 32 32 32];
+            case 3 % Right
+                x = [16 16 16 16];
+                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+            case 4 % Bottom
+                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+                y = [24 24 24 24];
+        end
+        z = [16+by-1 16+by 16+by 16+by-1];
+
+end
+
+function [gridnum,x,y] = findgrid(px,objtype)
+% returns grid number and plot coords (x goes left to right, y goes bottom
+% to top)
+
+switch objtype
+    case 'place'
+        mapLdummy = 1:1600;
+        gridnum = 3;
+        temp = flipud(reshape(mapLdummy, 40, 40)');
+    case 'spatialview'
+        mapLdummy = 1:5122;
+        if px == 1 % Cue
+            gridnum = 1;
+            x = 1;
+            y = 1;
+        elseif px == 2 % Hint
+            gridnum = 2;
+            x = 1; 
+            y = 1;
+        elseif px >= 3 && px <= 1602 % Floor
+            gridnum = 3;
+            temp = flipud(reshape(mapLdummy(3:3+1600-1), 40, 40)');
+        elseif px >= 1603 && px <= 3202 % Ceiling
+            gridnum = 4;
+            temp = flipud(reshape(mapLdummy(1603:1603+1600-1), 40, 40)');
+        elseif px >= 3203 && px <= 4482 % Walls
+            gridnum = 5;
+            temp = flipud(reshape(mapLdummy(3203:3203+1280-1), 40*4, 8)');
+        elseif px >= 4483 && px <= 4642 % Pillar 1
+            gridnum = 6;
+            temp = flipud(reshape(mapLdummy(4483:4483+160-1), 8*4, 5)');
+        elseif px >= 4643 && px <= 4802 % Pillar 2
+            gridnum = 7;
+            temp = flipud(reshape(mapLdummy(4643:4643+160-1), 8*4, 5)');
+        elseif px >= 4803 && px <= 4962 % Pillar 3
+            gridnum = 8;
+            temp = flipud(reshape(mapLdummy(4803:4803+160-1), 8*4, 5)');
+        elseif px >= 4963 && px <= 5122 % Pillar 4
+            gridnum = 9;
+            temp = flipud(reshape(mapLdummy(4963:4963+160-1), 8*4, 5)');
+        end
+end
+[y,x] = find(temp == px);
+y = size(temp,1)-y+1;
+
+% Set zero firing rate (occupied) pixels to black to differentiate from other low
+% firing pixels
+function [] = settoblack(basemap,baseobj)
+
+blackpx = find(basemap == 0);
+for pp = 1:size(blackpx,2)
+    switch baseobj
+        case 'place'
+            gnum = 1;
+            [gnum,xx,yy] = findgrid(blackpx(pp),baseobj);
+        case 'spatialview'
+            if blackpx(pp) > 3 % Make sure not cue or hint
+               [gnum,xx,yy] = findgrid(blackpx(pp),baseobj);
+            else
+                continue;
+            end
+
+    end
+    [x,y,z] = converttosurf(gnum,xx,yy);
+    patch(x,y,z,[1 1 1 1],'FaceColor','k','FaceAlpha',0.7,'EdgeColor','none');
+end
+
+function [smoothedRate,smoothedSpk,smoothedDur]=adsmooth(dur,spk,alpha)
+% Adaptive smoothing of rate maps.
+%
+%       [smoothedRate,smoothedSpk,smoothedPos]=rates_adaptivesmooth(posMap,spkMap,alpha)
+%
+% Each bin is smoothed using a flat, circular kernal. The circle radius 
+% is set for each bin, indivdually, such that 
+%
+%   radius => alpha ./ ( sqrt(nSpike) .* nDwell )
+%
+% where nSpike and nDwell are the number of spikes, and the amount of dwell time (in s) within the kernel.
+%
+% smoothedRate, smoothedSpk, smoothedPos are the smoothed maps (spike and pos maps are smoothed 
+% with the same kernal group as for the rate map.
+
+% Check for empty spk maps %
+if sum(sum(spk))==0
+    smoothedDur=dur;    smoothedDur(dur==0)=nan;
+    smoothedSpk=spk;    smoothedSpk(dur==0)=nan;
+    smoothedRate=spk;   smoothedRate(dur==0)=nan;
+    return
+end
+% Pre-assign output %
+smoothedDur=zeros(size(dur));
+smoothedSpk=zeros(size(dur));
+% Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
+vis=zeros(size(dur));
+vis(dur>0)=1;
+% Pre-assign map which records which bins have passed %
+smoothedCheck=false(size(dur));
+smoothedCheck(dur==0)=true; % Disregard unvisited - mark as already done.
+% Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
+radiiUsedList=nan(1,sum(sum(dur>0)));
+radiiUsedCount=1;
+
+%%% Run increasing radius iterations %%%
+r=1; % Circle radius
+boundary=0; % IMFILTER boundary condition
+while any(any(~smoothedCheck))
+    % Check radius isn't getting too big (if >map/2, stop running) %
+    if r>max(size(dur))/2
+%     if r>20
+        smoothedSpk(~smoothedCheck)=nan;
+        smoothedDur(~smoothedCheck)=nan;
+        break
+    end
+    % Construct filter kernel ...
+    % Place: Flat disk, where r>=distance to bin centre %
+    f=fspecial('disk',r); 
+    f(f>=(max(max(f))/3))=1;
+    f(f~=1)=0;   
+    % Filter maps (get N spikes and pos sum within kernel) %
+    fSpk=imfilter(spk,f,boundary);
+    fDur=imfilter(dur,f,boundary);
+    fVis=imfilter(vis,f,boundary);
+    % Which bins pass criteria at this radius? %
+    warning('off', 'MATLAB:divideByZero');
+    binsPassed=alpha./(sqrt(fSpk).*fDur) <= r;
+    warning('on', 'MATLAB:divideByZero');
+    binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
+    % Add these to list of radii used %
+    nBins=sum(binsPassed(:));
+    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
+    radiiUsedCount=radiiUsedCount+nBins;
+    % Assign values to smoothed maps %
+    smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
+    smoothedDur(binsPassed)=fDur(binsPassed)./fVis(binsPassed);
+    % Record which bins were smoothed this iteration %
+    smoothedCheck(binsPassed)=true;
+    % Increase circle radius (half-bin steps) %
+    r=r+0.5; % Increase radius in 0.5 bin steps.
+end
+
+% Assign Output %
+warning('off', 'MATLAB:divideByZero');
+smoothedRate=smoothedSpk./smoothedDur;
+warning('on', 'MATLAB:divideByZero');
+smoothedRate(dur==0)=nan;
+smoothedDur(dur==0)=nan;
+smoothedSpk(dur==0)=nan;
+
+% Report radii sizes %
+if 0
+    hAllFigs = get(0, 'children');
+    hFig = findobj(hAllFigs, 'flat', 'tag', 'adaptiveSmoothPlotWindow');
+    if isempty(hFig);
+        hFig=figure;
+        set(hFig,'tag','adaptiveSmoothPlotWindow');
+    else
+        figure(hFig);
+    end
+    hist(radiiUsedList,1:10);
+    uiwait(hFig,1.5);
+end

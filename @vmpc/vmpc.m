@@ -104,6 +104,7 @@ if(~isempty(dir(Args.RequiredFile)))
         keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
         for row = 2:size(full_arr,1)
             full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime full_arr(row,1:keepers(row))];
+            full_arr(row,:) = full_arr(row, randperm(length(spiketimes))); %new shuffle
         end
         flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
         temp = full_arr';
@@ -191,9 +192,6 @@ if(~isempty(dir(Args.RequiredFile)))
                 
                 if repeat == 1
                     data.maps_raw = to_save;
-                    to_save1 = NaN(size(firing_rates_full_raw,1)-1,Args.GridSteps^2);
-                    to_save1(:,bins_sieved) = firing_rates_full_raw(2:end,bins_sieved);
-                    data.maps_rawsh = to_save1;
                 elseif repeat == 2
                     data.maps_raw1 = to_save;
                 elseif repeat == 3
@@ -388,20 +386,14 @@ if(~isempty(dir(Args.RequiredFile)))
                 lambda_i(:,bins_sieved) = firing_rates_full;                
                 
                 if repeat == 1
-%                     ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-%                     ise_out = ise_ted_2(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-                    ise_out = ise_ted(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+                    ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
                     data.ISE = ise_out(1);
                     data.ISEsh = ise_out(2:end,1);
                 elseif repeat == 2
-%                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-%                     ise_out = ise_ted_2(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                    ise_out = ise_ted(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE1 = ise_out;
                 elseif repeat == 3
-%                     ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-%                     ise_out = ise_ted_2(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                    ise_out = ise_ted(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
                     data.ISE2 = ise_out;
                 end
         
