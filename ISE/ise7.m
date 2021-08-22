@@ -1,3 +1,6 @@
+% Can use ignore. I just use this to show vert_entropy,
+% pos_angled_entropy,neg_angled_entropy, hor_entropy, self_entropy.
+% with bin=0.05
 function [vert_entropy, pos_angled_entropy,neg_angled_entropy, hor_entropy, self_entropy] = ise7(actual_image, shuffled_images, dim1, dim2)
     % Use QMRF
     tic; %show how long ise caculation will take

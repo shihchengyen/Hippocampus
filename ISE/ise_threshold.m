@@ -1,6 +1,35 @@
+%Image spatial entropy without using QMRF.
+%Actual_image =actual map from data collected.
+%Shuffled_images= randomly shuffle map base on the actual map.
+%dim1, dim2 are the dimension of the input map. 
 
+%bin_resolution is used to discretize the map intensity to multiple bin.
+%Some are too big or too small for the cell's spike aplitude.
+%When bin resolution is not 0, divide parameter won't be consider.
+
+%When bin resolution is 0,divide is used to set how many bin you want to
+%seperate the map intensity into.
+%Thresh is used to calculating only parts of the map that is above the
+%threshold.
+
+%If the thresh=0, than change 1 and 0 have any effect. 
+%since change 1 replace anything above the thershold with one.
+%but it should change to maximum value pluse one. So it won't corrupt the
+%original data.(I didn't change it yet).
+%since change 0 replace anything below the thershold with zero.
+%but it should change to minimum value minus one. So it won't corrupt the
+%original data.(I didn't change it yet).
+
+%pixel 1 means comparing value directly next to each other.
+%pixel 2 means comparing value one across each other.
+
+%Acceptable input value range.
+%bin_resolution: 0~1
+%divide>0
+%thresh:0~99
+%change: 2,1,0
+%pixel: 1,2
 function [ise_out] = ise_threshold(actual_image, shuffled_images, dim1, dim2,bin_resolution, divide, thresh, change, pixel)
-    % one and two pixels neighbor with set bin
     tic; %show how long ise caculation will take
     
     combined = [actual_image; shuffled_images]; %(1+shuffle) x dim1*dim2
@@ -8,20 +37,13 @@ function [ise_out] = ise_threshold(actual_image, shuffled_images, dim1, dim2,bin
     %Image spatial entropy calculation
     ISE=zeros(size(combined,1),1);
     for  i=1:size(combined,1)
-        if max(combined(i,:))==0 %an empty image don't have ISE
-            disp('an image consist of NaN');
-            ISE(i) = 0;
-            continue
-        end
-        %an image being discrtized by not small enough bin_reolution is
-        %excluded from ISE calculation
-        if max(combined(i,:))==1 
+        if max(combined(i,:))==1 %an image being discrtized by not small enough bin_reolution is excluded from ISE calculation
             ISE(i) = 0;
             disp('floor(combined(i,:))=0');%every intensity value rounded to zero
             continue
-        elseif sum(sum(~isnan(combined(i,:))))==0 
+        elseif sum(sum(~isnan(combined(i,:))))==0 %an empty image don't have ISE
             ISE(i) = 0;
-            disp('All NaN');%every intensity value rounded to zero
+            disp('an image consist of NaN');%every intensity value rounded to zero
             continue
         end
         image = reshape(combined(i,:), dim1, dim2); %image in the form of its pixel intensity
@@ -30,15 +52,15 @@ function [ise_out] = ise_threshold(actual_image, shuffled_images, dim1, dim2,bin
             % parameters to discretize maps
             ma = max(max(image)); %maximum intensity
             mi = min(min(image)); %minimum intensity 
-            if bin_resolution==0 %changeable bin_resolution
+            if bin_resolution==0 %set to changeable bin_resolution
                 bin_resolution = (ma-mi)/divide;
             end
             %else bin_resolution is the same as the input
             
             % binning each datapoint
             temp = floor(image/bin_resolution)+1;
-        else
-            %define threshold
+        else %define threshold
+            
             threshold = prctile(combined(i,:),thresh);
             %pad a layer of NaN
             temp = [NaN(dim1,1) image NaN(dim1,1)];

@@ -104,7 +104,7 @@ if(~isempty(dir(Args.RequiredFile)))
         keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
         for row = 2:size(full_arr,1)
             full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime full_arr(row,1:keepers(row))];
-            full_arr(row,:) = full_arr(row, randperm(length(spiketimes))); %new shuffle
+            full_arr(row,:) = full_arr(row, randperm(length(spiketimes))); %more thorough random shuffle. No really effective. See 'old vs new shuffle' sheet.
         end
         flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
         temp = full_arr';

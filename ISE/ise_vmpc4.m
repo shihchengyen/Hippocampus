@@ -1,3 +1,5 @@
+%This can be ignore. 
+%I use it to change various parameters to see their effect on ISE value.
 clear
 clc
 
@@ -8,7 +10,7 @@ list=['20181031'; '20181101';'20181102'];
 %For place map
 dim1 = 40;
 dim2 = 40;
-for i=2:size(list,1)
+for i=1:size(list,1)
     list=['20181031'; '20181101';'20181102'];
     
     cd(list(i,:));
@@ -60,22 +62,14 @@ for i=2:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                                    if bin(iii)==0 && divide(i4)==0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
+                                    if bin(iii)==0 && divide(i4)==0 %get rid of repetition
                                         continue
                                     elseif bin(iii)~=0 && divide(i4)~=0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
                                         continue   
+                                    elseif threshold(iii)==0 && change(i4)~=1
+                                        continue
+                                    elseif threshold(iii)==0 && change(i4)~=0
+                                        continue
                                     end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
@@ -153,22 +147,14 @@ for i=2:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                                    if bin(iii)==0 && divide(i4)==0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
+                                    if bin(iii)==0 && divide(i4)==0 %get rid of repetition
                                         continue
                                     elseif bin(iii)~=0 && divide(i4)~=0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
                                         continue   
+                                    elseif threshold(iii)==0 && change(i4)~=1
+                                        continue
+                                    elseif threshold(iii)==0 && change(i4)~=0
+                                        continue
                                     end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
@@ -245,22 +231,14 @@ for i=2:size(list,1)
                         for i5 = 1: size(threshold,1)
                             for i6 = 1: size(change,1)
                                 for i7 = 1: size(pixel,1)
-                                    if bin(iii)==0 && divide(i4)==0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
+                                    if bin(iii)==0 && divide(i4)==0 %get rid of repetition
                                         continue
                                     elseif bin(iii)~=0 && divide(i4)~=0
-                                        ise(ii, c) = NaN;
-                                        ise_sh(:,c,ii) = NaN(shu,1);
-                                        ise_2_5(ii, c) = NaN;
-                                        ise_97(ii, c) = NaN;
-                                        z(ii, c) = NaN;
-                                        h(ii, c)=2;
                                         continue   
+                                    elseif threshold(iii)==0 && change(i4)~=1
+                                        continue
+                                    elseif threshold(iii)==0 && change(i4)~=0
+                                        continue
                                     end
                                     ise_out = ise_threshold(actual, sh, dim1, dim2, bin(iii), divide(i4), threshold(i5), change(i6), pixel(i7));
                                     ise(ii, c) = ise_out(1);
@@ -290,9 +268,3 @@ for i=2:size(list,1)
        cd .. %back one directory
     end
 end
-% % % map
-% load('vmpc.mat')
-% figure; plotmap(vmp.data.maps_raw,'place')
-% figure; plotmap(vmp.data.maps_adsm,'place')
-% figure; plotmap(vmp.data.maps_adsm1,'place')
-% figure; plotmap(vmp.data.maps_adsm2,'place')

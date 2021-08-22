@@ -1,5 +1,7 @@
+% Use QMRF
+
 function [ise_out] = ise_QMRF(actual_image, shuffled_images, dim1, dim2, bin_resolution)
-    % Use QMRF
+    
     tic; %show how long ise caculation will take
     
     % parameters to discretize maps
