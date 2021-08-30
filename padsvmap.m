@@ -3,15 +3,15 @@ function [out,retrievemap] = padsvmap(n,gridmap,gazeSections)
 % This function pads each section of a spatial view map with bins from
 % adjoining sections
 % Spatial view map should be in 9 sections
-%  - Grid 1: Cue
-%  - Grid 2: Hint
-%  - Grid 3: Floor 40 x 40
-%  - Grid 4: Ceiling 40 x 40 (top down view) 
-%  - Grid 5: Walls 8 x 160, starting from bottom left corner
-%  - Grid 6: Pillar 1 bottom right 8 x 32, starting from bottom left corner
-%  - Grid 7: Pillar 2 bottom left 8 x 32
-%  - Grid 8: Pillar 3 top right 8 x 32
-%  - Grid 9: Pillar 4 top left 8 x 32
+%  - Grid 1: Cue 1 x 1 x nshuff
+%  - Grid 2: Hint 1 x 1 x nshuff
+%  - Grid 3: Floor 40 x 40 x nshuff
+%  - Grid 4: Ceiling 40 x 40 x nshuff (top down view) 
+%  - Grid 5: Walls 8 x 160 x nshuff, starting from bottom left corner
+%  - Grid 6: Pillar 1 bottom right 8 x 32 x nshuff, starting from bottom left corner
+%  - Grid 7: Pillar 2 bottom left 8 x 32 x nshuff
+%  - Grid 8: Pillar 3 top right 8 x 32 x nshuff
+%  - Grid 9: Pillar 4 top left 8 x 32 x nshuff
 
 if size(gridmap,1) ~= 9
 %     gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
