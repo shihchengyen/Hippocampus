@@ -48,8 +48,10 @@ else
         r.data.spatialviewsel = [p.data.spatialviewsel; q.data.spatialviewsel];
         r.data.place = [p.data.place; q.data.place];
         r.data.spatialview = [p.data.spatialview; q.data.spatialview];
-        r.data.UseCorr = [p.data.Args.UseCorr; q.data.Args.UseCorr];
         r.data.Args = p.data.Args;
+        r.data.Args.UseCorr = [p.data.Args.UseCorr; q.data.Args.UseCorr]; % overwrite
+        r.data.Args.FieldThr = [p.data.Args.FieldThr; q.data.Args.FieldThr]; % overwrite
+        r.data.Args.FieldSplitThr = [p.data.Args.FieldSplitThr; q.data.Args.FieldSplitThr]; % overwrite
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
