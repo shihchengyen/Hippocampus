@@ -205,11 +205,11 @@ function [elTrials, missingData, flag] = completeData(edfdata, m, messageEvent, 
             missing (r,c) = 0;  
             if (contains(messages(i,1), {'Start Trial'})==1)
                 elTrials (r,1) = eltimes(i,1) - expTime;
-            elseif (contains(messages(i,1), {'End Trial'}) == 1)
+            elseif (contains(messages(i,1), {'Reward'}) == 1)
                 elTrials (r,3) = eltimes(i,1) - expTime;
-            elseif (contains(messages(i,1), {'Timeout'}) == 1)
+            elseif (contains(messages(i,1), {'Penalty'}) == 1)
                 elTrials (r,3) = eltimes(i,1) - expTime;
-            elseif (contains(messages(i,1), {'Cue Offset'}) == 1)
+            elseif (contains(messages(i,1), {'Movement'}) == 1)
                 elTrials (r,2) = eltimes(i,1) - expTime;
             end
             
