@@ -25,7 +25,7 @@ switch var
             error('Incorrect dimensions specified for grid size');
         end
         gridmap = cell(1,1);
-    case 'spatialview'
+    case 'view'
         if size(gridSize,1) ~= 9 || size(linmap,1) ~= sum(gridSize(:,1).*gridSize(:,2))
             error('Incorrect dimensions specified for grid size');
         end

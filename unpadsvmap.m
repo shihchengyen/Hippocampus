@@ -31,6 +31,7 @@ for jj = 1:size(padgrid_sm,1)
     end
     if jj == 3 % remove the pillar fills if unpadding floor
         temp(unpadgrid_raw{jj} == 0) = nan;
+        temp(isnan(unpadgrid_raw{jj})) = nan;
     end
     unpadgrid_sm{jj} = temp;
 end
