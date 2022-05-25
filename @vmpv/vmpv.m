@@ -14,7 +14,7 @@ function [obj, varargout] = vmpv(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','binData.hdf', ...
+				'ObjectLevel','Session','RequiredFile','1binData.hdf', ...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -70,7 +70,8 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
-    viewdata = h5read('binData.hdf','/data');
+%     viewdata = h5read('binData.hdf','/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
+    viewdata = h5read('1binData.hdf','/data');
     size(viewdata)
     cd(ori);
 
@@ -79,8 +80,8 @@ if(~isempty(dir(Args.RequiredFile)))
     pst = uma.data.sessionTime;
     vst = viewdata';
     vst(:,1) = vst(:,1)/1000;
-    cst_1 = [pst(:,1:2) nan(size(pst,1),1) ones(size(pst,1),1)];
-    cst_2 = [vst(:,1) nan(size(vst,1),1) vst(:,2) 2.*ones(size(vst,1),1)];
+    cst_1 = [pst(:,1:3) nan(size(pst,1),1) ones(size(pst,1),1)];
+    cst_2 = [vst(:,1) nan(size(vst,1),2) vst(:,2) 2.*ones(size(vst,1),1)];
     cst = [cst_2; cst_1];
     
     % hybrid insertion sort instead of default sortrows for speed
@@ -121,7 +122,8 @@ if(~isempty(dir(Args.RequiredFile)))
     disp('filling (no progress marker)');
     tic;
     cst(:,2) = fillmissing(cst(:,2),'previous'); % fills in view rows with place it current is at
-    place_rows = find(cst(:,4) == 1);
+    cst(:,3) = fillmissing(cst(:,3),'previous');
+    place_rows = find(cst(:,5) == 1);
     disp(['filling done, time elapsed: ' num2str(toc)]);
     disp('place pruning start (no progress marker)');
     tic;
@@ -143,11 +145,12 @@ if(~isempty(dir(Args.RequiredFile)))
     % now we need to replace surviving place rows, with duplicates of
     % itself, corresponding to the number of views in the previous time
     % bin
-    place_rows = find(cst(:,4) == 1);
-    first_non_nan = find(isnan(cst(:,3))==0);
+    place_rows = find(cst(:,5) == 1);
+    first_non_nan = find(isnan(cst(:,4))==0);
     first_non_nan = first_non_nan(1);
     place_rows(place_rows < first_non_nan) = [];
     place_bins = cst(place_rows,2);
+    hd_bins = cst(place_rows,3);
     
     reference_rows = place_rows - 1; 
     reference_times = cst(reference_rows,1); % timestamps from which to pull view bins from
@@ -159,7 +162,7 @@ if(~isempty(dir(Args.RequiredFile)))
     disp('counting max array size');
     tic;
     membership = ismember(cst(:,1),reference_times);
-    cst_full = nan(size(cst,1)+sum(membership)-length(place_rows),4);
+    cst_full = nan(size(cst,1)+sum(membership)-length(place_rows),5);
     searching_portion = cst(membership,:);
     % size of gaps needed is calculated here
     insertion_gaps = nan(length(reference_times),1);
@@ -192,13 +195,14 @@ if(~isempty(dir(Args.RequiredFile)))
     inserting_portion = searching_portion;
     inserting_portion(:,1) = repelem(actual_times,insertion_gaps);
     inserting_portion(:,2) = repelem(place_bins,insertion_gaps);
-    inserting_portion(:,4) = 4;
+    inserting_portion(:,3) = repelem(hd_bins,insertion_gaps);
+    inserting_portion(:,5) = 5;
     cst_full(isnan(cst_full(:,1)),:) = inserting_portion;
     disp(['inserting end, time elapsed: ' num2str(toc)]);
     if ~isempty(find(diff(cst_full(:,1))<0))
         error('combined sessiontime misaligned!');
     end
-    cst_full = cst_full(:,1:3);
+    cst_full = cst_full(:,1:4);
     disp('guaranteeing unique and ascending');
     tic;
     dti = find(diff(cst_full(:,1)));
@@ -207,7 +211,7 @@ if(~isempty(dir(Args.RequiredFile)))
     dti = [dti; [dti(end,2)+1 size(cst_full,1)]];
     to_remove = [];
     for chunk = 1:size(dti, 1)
-        cst_full(dti(chunk, 1): dti(chunk,2),:) = sortrows(cst_full(dti(chunk, 1): dti(chunk,2),:), [1 3]);
+        cst_full(dti(chunk, 1): dti(chunk,2),:) = sortrows(cst_full(dti(chunk, 1): dti(chunk,2),:), [1 4]);
         identify_dup = diff(cst_full(dti(chunk, 1): dti(chunk,2),:));
         if dti(chunk, 1) - dti(chunk, 2) ~= 0
             if ~isempty(find(sum(identify_dup,2)==0))
@@ -246,25 +250,28 @@ if(~isempty(dir(Args.RequiredFile)))
     % 5th col - timestamps with exact same view bins as predecessor (to be
     % filled now)
     possible = find(time_repeats(:,4)==1);
-    cst_full(isnan(cst_full(:,3)),3) = -10; % convert nan views to -10 for now
+    cst_full(isnan(cst_full(:,4)),4) = -10; % convert nan views to -10 for now
     for idx = 1:length(possible)
         if rem(idx,100000)==0
             disp(['view ' num2str(100*idx/length(possible))]); % percentage done output
         end
         % long formula basically checks for perfectly identical view bins
-        checker = ismember(cst_full(time_repeats(possible(idx),1):time_repeats(possible(idx),1)+time_repeats(possible(idx),3)-1,3), cst_full(time_repeats(possible(idx)-1,1):time_repeats(possible(idx)-1,1)+time_repeats(possible(idx),3)-1,3));
+        checker = ismember(cst_full(time_repeats(possible(idx),1):time_repeats(possible(idx),1)+time_repeats(possible(idx),3)-1,4), ...
+            cst_full(time_repeats(possible(idx)-1,1):time_repeats(possible(idx)-1,1)+time_repeats(possible(idx),3)-1,4));
         if sum(checker) == length(checker)
             time_repeats(possible(idx),5) = 1;
         end
     end
-    % last column - 6th filters for same place bin
+    % last column - 6th filters for same place bin+head direction bin
     time_repeats = [time_repeats zeros(size(time_repeats,1),1)];
     possible = find(time_repeats(:,5)==1);
     for idx = 1:length(possible)
         if rem(idx,100000)==0
             disp(['place ' num2str(100*idx/length(possible))]); % percentage done output
         end
-        if cst_full(time_repeats(possible(idx),1),2) == cst_full(time_repeats(possible(idx)-1,1),2)
+        % Check, for view bins that repeat, if the place and head direction is also unchanging
+        if cst_full(time_repeats(possible(idx),1),2) == cst_full(time_repeats(possible(idx)-1,1),2) && ...
+                cst_full(time_repeats(possible(idx),1),3) == cst_full(time_repeats(possible(idx)-1,1),3)
             time_repeats(possible(idx),6) = 1;
         end        
     end
@@ -274,7 +281,7 @@ if(~isempty(dir(Args.RequiredFile)))
     disp(['removing ' num2str(length(cst_indices)) ' rows']);
     cst_full(cst_indices,:) = [];   
 
-    cst_full(cst_full(:,3)==-10,3) = NaN; % back-conversion
+    cst_full(cst_full(:,4)==-10,4) = NaN; % back-conversion
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
@@ -295,18 +302,19 @@ if(~isempty(dir(Args.RequiredFile)))
 %             if stc(row,1) > 18
 %                 disp('stopper');
 %             end
-            if ~isnan(stc(row,3))
+            if ~isnan(stc(row,4)) % if there is view sample
                 if stc(row,1) ~= last_processed_time(2)
                     last_processed_time = [last_processed_time(2) stc(row,1)];
                 end
-                target = stc(row,3);
+                target = stc(row,4);
                 if view_split3(target) == 0 % && stc(row,2) ~= -1
                     if stc(row,2) > 0 || stc(row,2) == -1 %~= 0 % mod line (was > 0)
                         view_split1(target,view_split2(target),1) = stc(row,1);
                         view_split3(target) = stc(row,1);
                         idx_tracker(target,view_split2(target)) = row;
                     end
-                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || stc(row,2) == 0 %== 0 % mod line (was < 1) % should be < 1
+                elseif (view_split3(target)~=last_processed_time(1) && view_split3(target)~=last_processed_time(2)) || ...
+                        stc(row,2) == 0 %== 0 % mod line (was < 1) % should be < 1
 
                         for subr = idx_tracker(target,view_split2(target)):size(stc,1)
                             if stc(subr,1) > stc(idx_tracker(target,view_split2(target)),1)
@@ -321,7 +329,7 @@ if(~isempty(dir(Args.RequiredFile)))
                             idx_tracker = cat(2, idx_tracker, nan(5122,max_allo));
                         end
                         view_split2(target) = view_split2(target) + 1;
-                        if stc(row,2) > 0 || stc(row,2) == -1 %~= 0 % mod line (was > 0)
+                        if stc(row,2) > 0 || stc(row,2) == -1 %~= 0 % mod line (was > 0) ###??? above if already specifies stc(row,2) == 0
                             view_split3(target) = stc(row,1);
                             view_split1(target, view_split2(target), 1) = stc(row,1);
                             idx_tracker(target,view_split2(target)) = row;
@@ -335,9 +343,14 @@ if(~isempty(dir(Args.RequiredFile)))
                 end  
             end
         end
+        
+        % debug
+        if max(view_split2) >= max_allo
+            error('not enough max allo');
+        end
 
         for view = 1:5122
-            disp(['view shifting: ' num2str(view)]);
+%             disp(['view shifting: ' num2str(view)]);
             if sum(isnan(view_split1(view, view_split2(view),:)))==1
                 found = 0;
                 for subr = idx_tracker(view,view_split2(view)):size(stc,1)
@@ -374,6 +387,10 @@ if(~isempty(dir(Args.RequiredFile)))
     curr_start_time = 0;
 
     for row = 1:size(sessionTimeC,1)
+        
+%         if row == size(sessionTimeC,1)
+%             disp(row);
+%         end
 
         if sessionTimeC(row,2) ~= curr_place && sessionTimeC(row,2) ~= -1
             interval = [curr_start_time; sessionTimeC(row,1)];
@@ -388,9 +405,11 @@ if(~isempty(dir(Args.RequiredFile)))
             curr_place = sessionTimeC(row,2);
             curr_start_time = sessionTimeC(row,1);
             if row == size(sessionTimeC,1) % in the rare case that the place changes on the last stc row
-                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
-                place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = uma.data.sessionTime(end,1);
-                place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+                if curr_place ~= 0 && curr_place ~= -1
+                    place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),1) = curr_start_time;
+                    place_ignore_speed_intervals(curr_place,place_ignore_speed_intervals_count(curr_place),2) = sessionTimeC(end,1); % uma.data.sessionTime(end,1);
+                    place_ignore_speed_intervals_count(curr_place) = place_ignore_speed_intervals_count(curr_place) + 1;
+                end
             end
         elseif row == size(sessionTimeC,1)
             if curr_place ~= 0 && curr_place ~= -1
@@ -422,7 +441,7 @@ if(~isempty(dir(Args.RequiredFile)))
         for strow = 1:size(sessionTimeC,1)
 
             timestamp = sessionTimeC(strow,1);
-            view_bin = sessionTimeC(strow,3);
+            view_bin = sessionTimeC(strow,4);
 
             if isnan(view_bin)
                 continue;
@@ -549,6 +568,9 @@ if(~isempty(dir(Args.RequiredFile)))
     % misc section, for shuffling and stuff
     
     data.rplmaxtime = rp.data.timeStamps(end,3);
+    data.placebins = Args.GridSteps*Args.GridSteps;
+    data.viewbins = 5122;
+    data.headdirectionbins = uma.data.dirSteps;
     
 	% create nptdata so we can inherit from it    
 	data.numSets = 1;
