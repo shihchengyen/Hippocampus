@@ -15,6 +15,7 @@ function [obj, varargout] = umaze(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session', ...
 				'GridSteps',40, 'overallGridSize',25, ...
+                'DirSteps',60,'overallDirSize',360, 'DirBins',60,...
                 'MinObs',5);
             
 % GridSteps: number of bins to cut the maze into
@@ -82,7 +83,8 @@ if(dnum>0)
     unityTrialTime = ufdata.data.unityTrialTime;
     totTrials = size(unityTriggers,1); % total trials inluding repeated trials due to error/timeout
 
-	% default grid is 5 x 5 but can be changed 
+    %%% Bin positions 
+	% default position grid is 5 x 5 but can be changed 
 	gridSteps = Args.GridSteps;
     overallGridSize = Args.overallGridSize;  
     
@@ -103,13 +105,30 @@ if(dnum>0)
 		
 	% will be filled with duration spent in each bin, for each trial
 	gpDurations = zeros(gridBins,totTrials);
-        
+    
+    %%% Bin directions 
+	% default direction bin size is 6 degrees but can be changed 
+    dirBins = Args.DirBins;
+    overallDirSize = Args.overallDirSize;  
+    
+    dirBinSize = overallDirSize/dirBins; % size of each partition
+    dirgpEdges = 1:(dirBins+1);
+    
+	dirGridBound = 0:dirBinSize:360;
 
+	% get gridpositions (resolution of unityData lowered and allocated to bins)
+    [dirCounts,dirGridBound,dirBin] = histcounts(unityData(:,5),dirGridBound);
+
+	% will be filled with duration spent in each bin, for each trial
+	dirDurations = zeros(dirBins,totTrials);
+    
+    
     trialCounter = 0; % set up trial counter
     % initialize index for setting non-navigating gridPositions to 0
     % (marks the cue onset index), to be used in conjunction with cue
     % offset later to form range to set to 0.
     gpreseti = 1;
+%     dirreseti = 1;
 
     % sessionTime will have the start and end timestamps of each trial
     % along with when the grid position changed in the 1st column and 
@@ -141,13 +160,19 @@ if(dnum>0)
     % trial at 27.2817 s is marked with position 0, and is immediately
     % followed by the end of the trial at 36.2458 s, marked as before
     % with a 0 in the 2nd column.  
-    sessionTime = zeros(size(gridPosition,1),3); % was 5, with the coarse direction
+    % HM edit: For now, place and heading are treated independently, each
+    % will have their own condensed sessionTime that will contain only
+    % values where bins have changed. But in the future, will need to add
+    % in averaged dir values for each place bin change. 
+    sessionTime = zeros(size(gridPosition,1),4); % was 5, with the coarse direction + magnitude vector
+%     sessionTimeDir = zeros(size(gridPosition,1),3); 
 
     % start the array with 0 to make sure any spike times before the 
     % first trigger	are captured 
     % tracks row number for sessionTime
     sTi = 2;
-
+%     sTiDir = 2;
+    
     for a = 1:totTrials
         trialCounter = trialCounter + 1;
 
@@ -174,6 +199,8 @@ if(dnum>0)
 
         % get grid positions for this trial
         tgp = gridPosition(uDidx);
+        % get heading dirs for this trial
+        tdir = dirBin(uDidx);
 
         % if tempTrialTime's last-first is 0, it means that the discrepency between
         % unity trial duration and ripple trial duration was too large,
@@ -181,20 +208,29 @@ if(dnum>0)
         % by setting timestamps in the trial to the initial timestamp.
 
         if tempTrialTime(end)-tempTrialTime(1) ~= 0
-
-            sessionTime(sTi,1:3) = [tstart tgp(1) 0];
+    
+            % Get starting time and bin for position
+            sessionTime(sTi,1:3) = [tstart tgp(1) tdir(1)];
             sTi = sTi + 1;
+%             % Get starting time and bin for direction
+%             sessionTimeDir(sTiDir,1:2) = [tstart tdir(1)];
+%             sTiDir = sTiDir + 1;
 
-            % find the timepoints where grid positions changed
-            gpc = find(diff(tgp)~=0);
+            % find the timepoints where grid positions and heading dir changed
+            gpc = find(diff(tgp)~=0 | diff(tdir)~=0);
             ngpc = size(gpc,1);
+%             % find timepoints where heading dir changed
+%             dirc = find(diff(tdir)~=0);
+%             ndirc = size(dirc,1);
             
             % add the Unity frame intervals to the starting timestamp to
             % create corrected version of unityTime, which will also be the
             % bin limits for the histogram function call
-            sessionTime(sTi:(sTi+ngpc-1),1:2) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1)];            
+            sessionTime(sTi:(sTi+ngpc-1),1:3) = [unityTrialTime(gpc+2,a)+tstart tgp(gpc+1) tdir(gpc+1)];            
 %             sessionTime(sTi:(sTi+ngpc-1),4:5) = [binVt(gpc+1)-binVt(gpc) binHt(gpc)-binHt(gpc+1)];
             sTi = sTi + ngpc;
+%             sessionTimeDir(sTiDir:(sTiDir+ndirc-1),1:2) = [unityTrialTime(dirc+2,a)+tstart tdir(dirc+1)];
+%             sTiDir = sTiDir + ndirc;
 
             % occasionally we will get a change in grid position in the frame interval
             % when we get the end of trial message. In that case, we will get an entry
@@ -204,19 +240,29 @@ if(dnum>0)
             if( (~isempty(gpc)) && (gpc(end) == (numUnityFrames-1)) )
                 sTi = sTi - 1;
             end
+%             if( (~isempty(dirc)) && (dirc(end) == (numUnityFrames-1)) )
+%                 sTiDir = sTiDir - 1;
+%             end
         else
             % leave the 2nd column as 0 to indicate this was a skipped trial
             sessionTime(sTi,1) = tstart;
-            sTi = sTi + 1;			
+            sTi = sTi + 1;		
+%             sessionTimeDir(sTiDir,1) = tstart;
+%             sTiDir = sTiDir + 1;	
         end			
 
         % add an entry for the end of the trial
-        sessionTime(sTi,1:2) = [tend 0];
+        sessionTime(sTi,1:3) = [tend 0 0];
         sTi = sTi + 1;
+%         sessionTimeDir(sTiDir,1:2) = [tend 0];
+%         sTiDir = sTiDir + 1;
 
         % get unique positions
         utgp = unique(tgp);
+        % get unique heading directions
+        udir = unique(tdir);
 
+        % position
         for pidx = 1:size(utgp,1)
             tempgp = utgp(pidx);
             % find indices that have this grid position
@@ -224,29 +270,45 @@ if(dnum>0)
             utgpidx = uDidx(utgpidx);
             gpDurations(tempgp,a) = sum(unityData(utgpidx+1,2)); % kw mod to utgpidx+1 was utgpidx alone
         end
+        % direction
+        for pidx = 1:size(udir,1)
+            tempdir = udir(pidx);
+            % find indices that have this grid position
+            utdiridx = find(tdir==tempdir);
+            utdiridx = uDidx(utdiridx);
+            dirDurations(tempdir,a) = sum(unityData(utdiridx+1,2)); % kw mod to utgpidx+1 was utgpidx alone
+        end
         
         % set gridPositions when not navigating to 0
         % subtract 1 from uDidx(1) as we set the start of uDidx to 1
         % row after unityTrigger(a,2)
         gridPosition(gpreseti:(uDidx(1)-1)) = 0;
+        dirBin(gpreseti:(uDidx(1)-1)) = 0;
         gpreseti = unityTriggers(a,3)+1;
+%         
+%         dirreseti = unityTriggers(a,3)+1;
 
-    end % for a = 1:totTrials    
+    end % for a = 1:totTrials  
  
     % get number of rows in sessionTime
     snum = sTi - 1;
+%     snumDir = sTiDir - 1;
     % reduce memory for sessionTime
-    sTime = sessionTime(1:snum,:);    
+    sTime = sessionTime(1:snum,:);  
+%     sTimeDir = sessionTimeDir(1:snumDir,:);  
     
     % fill in 3rd column with time interval so it will be easier to compute
     % firing rate
-    sTime(1:(snum-1),3) = diff(sTime(:,1));
+    sTime(1:(snum-1),4) = diff(sTime(:,1));
+%     sTimeDir(1:(snumDir-1),3) = diff(sTimeDir(:,1));
     
     % sort the 2nd column so we can extract the firing rates by position
     [sTP,sTPi] = sort(sTime(:,2));
+    % sort the 3rd column so we can extract the firing rates by direction
+    [sTD,sTDi] = sort(sTime(:,3));
     
-    % find the number of observations per position by looking for 
-    % the indices when position changes. The first change should be from
+    % find the number of observations per position/direction by looking for 
+    % the indices when position/direction changes. The first change should be from
     % position 0 to 1st non-zero position. Add 1 to adjust for the change
     % in index when using diff. These will be the starting indices for 
     % the unique positions not including 0.
@@ -254,39 +316,57 @@ if(dnum>0)
     if sTP(1) == -1
         sTPsi = sTPsi(2:end);
     end
+    sTDsi = find(diff(sTD)~=0) + 1;
+    if sTD(1) == -1
+        sTDsi = sTDsi(2:end);
+    end
     % find the ending indices by subtracting 1 from sTPsi, and adding
     % snum at the end
     sTPind = [sTPsi [ [sTPsi(2:end)-1]; size(sTP,1)]];
-    % compute the number of observations per position
+    sTDind = [sTDsi [ [sTDsi(2:end)-1]; size(sTD,1)]];
+    % compute the number of observations per position/direction
     sTPin = diff(sTPind,1,2) + 1;
+    sTDin = diff(sTDind,1,2) + 1;
     % arrange the information into a matrix for easier access
     sortedGPindinfo = [sTP(sTPsi) sTPind sTPin];
+    sortedDIRindinfo = [sTD(sTDsi) sTDind sTDin];
     % set up the conversion from grid position to index to make accessing the information
     % easier
     [~,gp2ind] = ismember(1:gridBins,sortedGPindinfo(:,1));
+    [~,dir2ind] = ismember(1:dirBins,sortedDIRindinfo(:,1));
     % find positions (excluding 0) with more than MinReps observations
     sTPinm = find(sTPin>(Args.MinObs-1));
-    
+    sTDinm = find(sTDin>(Args.MinObs-1));
     
     
     % create temporary variable that will be used for calculations below
     % this is not a variable that we will save
     sTPsi2 = sTPsi(sTPinm);
+    sTDsi2 = sTDsi(sTDinm);
     % save the number of observations for the positions that exceed the
     % minimum number of observations
     sTPin2 = sTPin(sTPinm);
+    sTDin2 = sTDin(sTDinm);
     % save the position numbers
     sTPu = sTP(sTPsi2);
+    sTDu = sTD(sTDsi2);
     % find number of positions
     nsTPu = size(sTPu,1);	
+    nsTDu = size(sTDu,1);
     % save the subset of starting and ending indices for sTime
     sTPind2 = sTPind(sTPinm,:);
+    sTDind2 = sTDind(sTDinm,:);
     % compute occupancy proportion
     ou_i = zeros(nsTPu,1);
     for pi = 1:nsTPu
-        ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),3));
-    end    
+        ou_i(pi) = sum(sTime(sTPi(sTPind2(pi,1):sTPind2(pi,2)),4));
+    end  
+    ou_i_dir = zeros(nsTDu,1);
+    for pi = 1:nsTDu
+        ou_i_dir(pi) = sum(sTime(sTDi(sTDind2(pi,1):sTDind2(pi,2)),4));
+    end  
     
+        % Store data - Position
 		data.gridSteps = gridSteps; 
 		data.overallGridSize = overallGridSize;
 		data.oGS2 = oGS2;
@@ -294,14 +374,10 @@ if(dnum>0)
 		data.horGridBound = horGridBound;
 		data.vertGridBound = vertGridBound;
 		data.gpEdges = gpEdges;
-
-		data.gridPosition = gridPosition;
-		data.gpDurations = gpDurations;
-		data.setIndex = [0; totTrials];
-
-        %data.processTrials = find(ufdata.data.sumCost(:,6)==1);
-        data.processTrials = 1:totTrials; % should be top, but now unityfile.m still doesn't do shortest path calculation, placeholder variable
         
+        data.gridPosition = gridPosition;
+		data.gpDurations = gpDurations;
+       
         data.sessionTime = sTime;
         data.sortedGPindices = sTPi;
         data.sortedGPindinfo = sortedGPindinfo;
@@ -311,6 +387,30 @@ if(dnum>0)
         data.ou_i = ou_i;
         data.P_i = ou_i / sum(ou_i); 
         data.gp2ind = gp2ind;
+        
+        % Store data - Direction
+        data.dirSteps = dirBins;
+        data.overallDirSize = overallDirSize;
+        data.dirBinSize = dirBinSize;
+		data.dirgpEdges = dirgpEdges;
+        
+        data.dir = dirBin;
+		data.dirDurations = dirDurations;
+       
+%         data.sessionTimeDir = sTimeDir;
+        data.sortedDIRindices = sTDi;
+        data.sortedDIRindinfo = sortedDIRindinfo;
+        data.sDIRi_minobs = sTDinm;
+        data.sTDu = sTDu;
+        data.nsTDu = nsTDu;
+        data.ou_i_dir = ou_i_dir;
+        data.D_i = ou_i_dir / sum(ou_i_dir); 
+        data.dir2ind = dir2ind;
+
+        % Store data - general
+        data.setIndex = [0; totTrials];
+        %data.processTrials = find(ufdata.data.sumCost(:,6)==1);
+        data.processTrials = 1:totTrials; % should be top, but now unityfile.m still doesn't do shortest path calculation, placeholder variable
         
         %%% temporary, for sfn generation %%%
         data.unityTriggers = ufdata.data.unityTriggers;
