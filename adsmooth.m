@@ -1,5 +1,6 @@
 function [smoothedRate,smoothedSpk,smoothedDur]=adsmooth(dur,spk,alpha)
 % Adaptive smoothing of rate maps.
+% *** Modified to work for n shuffles. dur = b x b x n for each grid
 %
 %       [smoothedRate,smoothedSpk,smoothedPos]=rates_adaptivesmooth(posMap,spkMap,alpha)
 %
@@ -13,8 +14,20 @@ function [smoothedRate,smoothedSpk,smoothedDur]=adsmooth(dur,spk,alpha)
 % smoothedRate, smoothedSpk, smoothedPos are the smoothed maps (spike and pos maps are smoothed 
 % with the same kernal group as for the rate map.
 
-% Check for empty spk maps %
-if sum(sum(spk))==0
+% % Check for empty spk maps %
+% for ii = 1:size(spk,3)
+%     if sum(sum(spk(:,:,ii)))==0
+%         smoothedDur = zeros(size(dur));
+%         smoothedSpk = zeros(size(spk));
+%         smoothedRate = zeros(size(spk));
+%         smoothedDur(:,:,ii)=dur(:,:,ii);    smoothedDur(dur(:,:,ii)==0,ii)=nan;
+%         smoothedSpk(:,:,ii)=spk(:,:,ii);    smoothedSpk(dur(:,:,ii)==0,ii)=nan;
+%         smoothedRate(:,:,ii)=spk(:,:,ii);   smoothedRate(dur(:,:,ii)==0,ii)=nan;
+%         return
+%     end
+% end
+% Check for empty spk maps % Only for no shuffles
+if size(spk,3)==1 && sum(sum(spk))==0
     smoothedDur=dur;    smoothedDur(dur==0)=nan;
     smoothedSpk=spk;    smoothedSpk(dur==0)=nan;
     smoothedRate=spk;   smoothedRate(dur==0)=nan;
@@ -30,15 +43,17 @@ vis(dur>0)=1;
 smoothedCheck=false(size(dur));
 smoothedCheck(dur==0)=true; % Disregard unvisited - mark as already done.
 % Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
-radiiUsedList=nan(1,sum(sum(dur>0)));
+radiiUsedList=nan(1,sum(sum(sum(dur>0)))); %%% FIX
+% radiiUsedList=nan(1,sum(sum(dur>0)));
 radiiUsedCount=1;
 
 %%% Run increasing radius iterations %%%
 r=1; % Circle radius
 boundary=0; % IMFILTER boundary condition
-while any(any(~smoothedCheck))
+while any(any(any(~smoothedCheck)))
     % Check radius isn't getting too big (if >map/2, stop running) %
-    if r>max(size(dur))/2
+    if r>max(size(dur(:,:,1)))/2
+%     if r>max(size(dur))/2
 %     if r>20
         smoothedSpk(~smoothedCheck)=nan;
         smoothedDur(~smoothedCheck)=nan;
@@ -59,7 +74,8 @@ while any(any(~smoothedCheck))
     warning('on', 'MATLAB:divideByZero');
     binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
     % Add these to list of radii used %
-    nBins=sum(binsPassed(:));
+    nBins=sum(sum(sum(binsPassed)));
+%     nBins=sum(binsPassed(:));
     radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
     radiiUsedCount=radiiUsedCount+nBins;
     % Assign values to smoothed maps %

@@ -17,7 +17,8 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, 'DirSteps',60,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
+                'NumFRBins',4,'SmoothType','Boxcar', 'SelectiveCriteria','RV', ...
+                'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -71,320 +72,276 @@ if(~isempty(dir(Args.RequiredFile)))
 
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
-    pwd;
- 
+    ufile = unityfile('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
+    
+    %%%% PATCH
+    cd ..; cd ..; cd ..;
+    pv = load('vmpv.mat');
+    pv = pv.pv;
+    %%%%%%%
+    
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    nTrials = size(uma.data.dirDurations,2);
-    midTrial = ceil(nTrials/2);
-    sessionTimeInds = find(uma.data.sessionTimeDir(:,2) == 0); % Look for trial end markers
-    sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
+%     nTrials = size(uma.data.dirDurations,2);
+%     midTrial = ceil(nTrials/2);
+%     sessionTimeInds = find(uma.data.sessionTimeDir(:,2) == 0); % Look for trial end markers
+%     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
 
+    NumShuffles = Args.NumShuffles;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
-        if repeat > 1
-            Args.NumShuffles = 0;
+        if repeat == 1
+            disp('Full session:');
+        elseif repeat == 2
+            disp('First half:');
+        elseif repeat == 3
+            disp('Second half:');
         end
         
+        if repeat > 1
+            NumShuffles = 0;
+        end
+        
+        if repeat == 1
+            stc = pv.data.sessionTimeC;
+        end
+        
+        % spike shuffling
+        
         spiketimes = spiketrain.timestamps/1000; % now in seconds
-        maxTime = rp.data.timeStamps(end,3);
-        tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-        full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
+%         maxTime = rp.data.timeStamps(end,3);
+        maxTime = pv.data.rplmaxtime;
+        tShifts = [0 ((rand([1,NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+        full_arr = repmat(spiketimes, NumShuffles+1, 1);
         full_arr = full_arr + tShifts';
         keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
         for row = 2:size(full_arr,1)
-
-            full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime-1 full_arr(row,1:keepers(row))];
-
+            full_arr(row,:) = [full_arr(row,1+keepers(row):end)-maxTime full_arr(row,1:keepers(row))];
         end
-        
-        % Restrict spike array to either 1st or 2nd half if needed
-        if repeat == 2
-            full_arr( full_arr > uma.data.sessionTimeDir(sessionTimeInds(midTrial),1) ) = [];
-        elseif repeat == 3
-            full_arr( full_arr <= uma.data.sessionTimeDir(sessionTimeInds(midTrial),1) ) = [];
-        end
-
-        % calculating proportion of occupied time in each grid position across
-        % entire session.
-
-        if Args.FiltLowOcc
-            bins_sieved = uma.data.sTDu;
-            data.MinTrials = uma.data.Args.MinObs;
-        else
-            bins_sieved = uma.data.sortedDirindinfo(:,1);
-            data.MinTrials = NaN;
-        end
-        
-        % Restrict durations to either 1st or 2nd half if needed
-        if repeat == 1
-            dirdur = sum(uma.data.dirDurations, 2);
-        elseif repeat == 2
-            dirdur = sum(uma.data.dirDurations(:,1:midTrial), 2);
-        elseif repeat == 3
-            dirdur = sum(uma.data.dirDurations(:,midTrial+1:end), 2);
-        end
-        dirdur = dirdur(bins_sieved)'; 
-        Pi = dirdur/sum(dirdur);
-
         flat_spiketimes = NaN(2,size(full_arr,1)*size(full_arr,2));
         temp = full_arr';
         flat_spiketimes(1,:) = temp(:);
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
-        edge_end = 0.5+size(full_arr,1);
-        [N,Hedges,Vedges] = histcounts2(flat_spiketimes(1,:), flat_spiketimes(2,:), uma.data.sessionTimeDir(:,1), 0.5:1:edge_end);
-        size(full_arr)
-        N1 = N';
-        N(uma.data.zero_indices_d(1:end-1),:) = [];
-        N = N';
-
-        non_shuffle_details = NaN(3,size(N1,2));
-        non_shuffle_details(2,:) = N1(1,:);
-        non_shuffle_details(3,:) = uma.data.sessionTimeDir(1:end-1,3)';
-        non_shuffle_details(3,:) = uma.data.sessionTimeDir(1:end-1,3)';
-        non_shuffle_details(1,:) = uma.data.sessionTimeDir(1:end-1,2)';
-        non_shuffle_details(:,find(non_shuffle_details(1,:)==0)) = [];
-        non_shuffle_details(:,find(isnan(non_shuffle_details(1,:))==1)) = [];
-        non_shuffle_data = sortrows(non_shuffle_details.',1).';
-        non_shuffle_data = [non_shuffle_data; NaN(1,size(non_shuffle_data,2))];
-        non_shuffle_data(4,:) = non_shuffle_data(2,:)./non_shuffle_data(3,:);
+        flat_spiketimes = flat_spiketimes'; 
+        flat_spiketimes = sortrows(flat_spiketimes);
+        
+        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];
+        
+        % selecting rows from sessionTimeC
         if repeat == 1
-            data.detailed_fr = {non_shuffle_data};   
+            disp('    Filtering...');
+            stc(:,5) = [diff(stc(:,1)); 0];
+        end
+        
+        conditions = ones(size(stc,1),1);
+
+        if Args.UseAllTrials == 0
+            conditions = conditions & pv.data.good_trial_markers;
+        end
+        
+        if repeat == 2
+            conditions = conditions & (pv.data.halving_markers==1);
+        elseif repeat == 3
+            conditions = conditions & (pv.data.halving_markers==2);
         end
 
-        headingDir = uma.data.sessionTimeDir(:,2)';
-        headingDir(uma.data.zero_indices_d) = [];
-        duration1 = uma.data.sessionTimeDir(:,3)';
-        duration1(uma.data.zero_indices_d) = [];
+        if Args.ThresVel > 0
+            conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
+        end
+        
+        if Args.UseMinObs
+            bins_sieved = 1:Args.DirSteps; % Currently don't have a threshold for min number of obs for head dir bins
+%             bins_sieved = pv.data.place_good_bins; 
+            conditions = conditions & (pv.data.pv_good_rows); % Make sure minobs take into account both place and view
+        else
+            bins_sieved = 1:Args.DirSteps;
+        end
+        
+%         % calculating proportion of occupied time in each grid position across
+%         % entire session.
+% 
+%         if Args.FiltLowOcc
+%             bins_sieved = uma.data.sTDu;
+%             data.MinTrials = uma.data.Args.MinObs;
+%         else
+%             bins_sieved = uma.data.sortedDirindinfo(:,1);
+%             data.MinTrials = NaN;
+%         end
+        
+        if repeat == 1 
+            % Group into intervals those consecutive rows where same head dir bin is occupied
+            dstc = diff(stc(:,1));
+            stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+            stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+            stc_changing_ind = stc_changing_ind(1:end-1,:);
+        end
+        
+        consol_arr = zeros(Args.DirSteps,NumShuffles + 1);
+        interval = 1;
+        if repeat == 1
+            disp('    Assigning spikes to bins...');
+        end
+        for sp = 1:size(flat_spiketimes,1)
 
-        bin_numbers = bins_sieved;
-        firing_counts_full = NaN(size(full_arr,1), length(bin_numbers));
-
-    %     median_stats = NaN(Args.GridSteps^2,1);
-    %     var_stats = NaN(Args.GridSteps^2,1);
-    %     perc_stats = NaN(Args.GridSteps^2,5);
-        occ_data = cell(length(bin_numbers), 2);
-
-        for bin_ind = 1:length(bin_numbers)
-            tmp = N(:,headingDir==bin_numbers(bin_ind));
-            tmp1 = N(1,headingDir==bin_numbers(bin_ind));
-            tmp2 = duration1(headingDir==bin_numbers(bin_ind));
-            tmp3 = tmp1./tmp2;
-            occ_data(bin_ind,:) = {bin_numbers(bin_ind), tmp3};
-    %         var_stats(grid_numbers(grid_ind)) = var(tmp3);
-    %         median_stats(grid_numbers(grid_ind)) = median(tmp3);
-    %         perc_stats(grid_numbers(grid_ind),:) = prctile(tmp3, [2.5 25 50 75 97.5]);
-            firing_counts_full(:,bin_ind) = sum(tmp,2);
-        end   
-
-        if Args.AdaptiveSmooth
-
-            firing_rates_full_raw = firing_counts_full./repmat(dirdur,size(firing_counts_full,1),1);
-            to_save = NaN(1,Args.DirSteps);
-            to_save(bins_sieved) = firing_rates_full_raw(1,:);
-            if repeat == 1
-                data.maps_raw = to_save;
-            elseif repeat == 2
-                data.maps_raw1 = to_save;
-            elseif repeat == 3
-                data.maps_raw2 = to_save;
-            end
-
-            alpha = 1e2;
-    %         valid = zeros(1,Args.GridSteps^2);
-    %         valid(bins_sieved) = 1;
-    %         valid = reshape(valid, Args.GridSteps,Args.GridSteps);
-
-
-            % smoothing part here, need to reshape to 3d matrix
-            % 1. add in nan values for pillar positions (variables with ones suffix)
-            % 2. reshape each row to 5x5
-            % after permute step, now structured 5x5x10001, with each grid in a
-            % slice as following:
-            % 
-            % 1 6 11 16 21
-            % 2 - 12 -  22
-            % 3 8 13 18 23
-            % 4 - 14 -  24
-            % 5 10 15 20 25
-            %
-            % but will be reverted back to usual linear representation by the
-            % end of the smoothing chunk
-
-            wip = ones(Args.NumShuffles+1,1);
-
-            dirdur1 = zeros(1,Args.DirSteps);
-            dirdur1(bins_sieved) = dirdur;
-
-            preset_to_zeros = reshape(dirdur1, Args.DirSteps, 1); % will be set to nans afterwards, just swapped to zero to quickly cut 'done' shuffles
-            preset_to_zeros(find(preset_to_zeros>0)) = 1;
-            preset_to_zeros = ~preset_to_zeros;
-            preset_to_zeros = repmat(preset_to_zeros, 1,1,Args.NumShuffles+1);
-
-            dirdur1 = repmat(dirdur1,Args.NumShuffles + 1,1);
-            dirdur1 = reshape(dirdur1, Args.NumShuffles + 1, Args.DirSteps,1);
-            dirdur1 = permute(dirdur1,[2,3,1]);
-
-            firing_counts_full1 = zeros(Args.NumShuffles + 1, Args.DirSteps);
-            firing_counts_full1(:,bins_sieved) = firing_counts_full;
-            firing_counts_full1 = reshape(firing_counts_full1, Args.NumShuffles + 1, Args.DirSteps,1);
-            firing_counts_full1 = permute(firing_counts_full1,[2,3,1]);
-
-            to_compute = 1:0.5:Args.DirSteps/2;
-            possible = NaN(length(to_compute),2,Args.DirSteps,1,Args.NumShuffles + 1);
-            to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
-            to_fill(preset_to_zeros) = 0;
-            to_fill_time = NaN(size(possible,3), size(possible,4), size(possible,5));
-            to_fill_time(preset_to_zeros) = 0;        
-
-            for idx = 1:length(to_compute)
-
-                f=fspecial('disk',to_compute(idx));
-                f(f>=(max(max(f))/3))=1;
-                f(f~=1)=0;
-
-                possible(idx,1,:,:,:) = repmat(imfilter(dirdur1(:,:,1), f), 1,1,Args.NumShuffles+1);   %./scaler;
-                possible(idx,2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f);   %./scaler;
-
-    %             logic1 = squeeze(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
-    %             slice1 = squeeze(possible(idx,1,:,:,:));
-    %             slice2 = squeeze(possible(idx,2,:,:,:));
-                [logic1,~] = shiftdim(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
-                slice1 = shiftdim(possible(idx,1,:,:,:));
-                slice2 = shiftdim(possible(idx,2,:,:,:));
-
-
-                to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
-                to_fill_time(logic1 & isnan(to_fill_time)) = slice1(logic1 & isnan(to_fill_time));
-
-                disp('smoothed with kernel size:');
-                disp(to_compute(idx));
-                disp('grids left');
-                disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
-
-                check = squeeze(sum(sum(isnan(to_fill),2),1));
-                wip(check==0) = 0;
-
-                if sum(sum(sum(isnan(to_fill(:,:,:))))) == 0
-                    disp('breaking');
+            while interval < size(stc_changing_ind,1)
+                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && ... % > start timestamp of this interval but < start timestamp of next
+                        flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
                     break;
                 end
+                interval = interval + 1; % didn't fall in this interval, search in the next interval
+            end   
 
-    %             if sum(sum(sum(isnan(to_fill(:,:,:))))) <= 0.05*(Args.GridSteps^2)*Args.NumShuffles % engage secondary mode of calculating
-    %                 to_fill = fill_remainder(to_fill, gpdur1, firing_counts_full1, to_compute(idx)+0.5, round(max(to_compute)), alpha);
-    %                 break;
-    %             end
+%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2); % find the relevant place bin
+%             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2)))); % take out bins that don't satisfy filters
+%             bins_hit(~(bins_hit>0)) = []; % take out bins where place bin = 0 
+%             consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
 
+            
+%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3]); % find the relevant place and view bin
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]);
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+%             if ~isempty(bins_hit)
+%                 disp('debug');
+%             end
+            if any(~(bins_hit(:,2)>0))
+                bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
+%                 if any(~(bins_hit(:,1)>0)) || any(~(bins_hit(:,3)>0)) % If want to only consider samples with place and view data
+%                     disp('problem place/view bins still exist');
+%                     bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+%                     bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
+%                 end
             end
+            consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) + 1;
 
-            to_fill(isnan(to_fill)) = 0;
-            to_fill = permute(to_fill, [3 1 2]);
-    %         to_fill = reshape(to_fill, Args.NumShuffles + 1, Args.GridSteps^2);
-            to_fill = to_fill(:,bins_sieved);
+        end        
+        
+        firing_counts = consol_arr';
 
-            to_fill_time(isnan(to_fill_time)) = 0;
-            to_fill_time = permute(to_fill_time, [3 1 2]);
-    %         to_fill_time = reshape(to_fill_time, Args.NumShuffles + 1, Args.GridSteps^2);
-            to_fill_time = to_fill_time(:,bins_sieved);
+        % Remove non-place and non-view rows for duration
+        stc_ss = stc(find(conditions==1),[2 3 4 5]); % [place hd view dur] with new vmpv that has head dir
+%         stc_ss(~(stc_ss(:,1) > 0),:) = []; % remove place bin = 0
+%         stc_ss(isnan(stc_ss(:,3)),:) = []; % remove NaN view bins
+        stc_ss(~(stc_ss(:,2) > 0),:) = []; % remove hd bin = 0
+        stc_ss(:,[1 3]) = []; % [place dur];
+        stc_ss = [stc_ss; [60 0]];
+        gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        
+        % Remove low observation bins
+        firing_counts_full = zeros(NumShuffles+1,Args.DirSteps);
+        gpdur = zeros(1,Args.DirSteps);
+        firing_counts_full(:,bins_sieved) = firing_counts(:,bins_sieved);
+        gpdur(1,bins_sieved) = gpdurfull(1,bins_sieved);
+        
+        firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
 
-            firing_rates_full = to_fill;
-
-            % smoothing part ends
-            to_save = NaN(1,Args.DirSteps);
-            to_save(bins_sieved) = firing_rates_full(1,:);
-            if repeat == 1
-                data.maps_adsmooth = to_save;
-            elseif repeat == 2
-                data.maps_adsmooth1 = to_save;
-            elseif repeat == 3
-                data.maps_adsmooth2 = to_save;
-            end
-
-            % Rayleigh vector
-            binSize=(pi*2)/length(to_save);
-            binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
-            binWeights=firing_rates_full./(max(firing_rates_full,[],2));
-            S=sum( sin(binAngles).*binWeights , 2 );
-            C=sum( cos(binAngles).*binWeights , 2 );
-            R=sqrt(S.^2+C.^2);
-            meanR=R./sum(binWeights, 2 );
-
-        else
-            firing_rates_full = firing_counts_full./repmat(dirdur,size(firing_counts_full,1),1);
-            to_fill_time = repmat(dirdur,size(firing_counts_full,1),1); % HM added
-
-            to_save = NaN(1,Args.DirSteps);
-            to_save(bins_sieved) = firing_rates_full(1,:);
-            if repeat == 1
-                data.maps_raw = to_save;
-            elseif repeat == 2
-                data.maps_raw1 = to_save;
-            elseif repeat == 3
-                data.maps_raw2 = to_save;
-            end
+        % Save raw maps
+        to_save = firing_rates_full_raw(1,:);
+        dur_raw = gpdur;
+        spk_raw = firing_counts_full(1,:);
+        if repeat == 1
+            data.maps_raw = to_save;
+            data.dur_raw = dur_raw;
+            data.spk_raw = spk_raw;
+        elseif repeat == 2
+            data.maps_raw1 = to_save;
+            data.dur_raw1 = dur_raw;
+            data.spk_raw1 = spk_raw;
+        elseif repeat == 3
+            data.maps_raw2 = to_save;
+            data.dur_raw2 = dur_raw;
+            data.spk_raw2 = spk_raw;
         end
 
-            dirdur1 = zeros(Args.NumShuffles+1,Args.DirSteps);
-            dirdur1(:,bins_sieved) = to_fill_time;
-            Pi1 = dirdur1./sum(dirdur1,2);
-    %         Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
+%             if Args.AdaptiveSmooth
+                
+                if repeat == 1
+                    disp('Smoothing...');
+                end
+%                 nan_track = isnan(to_save);
+                
+                % Reshape shuffled maps
+                to_smooth = firing_rates_full_raw;
+                % Smooth with moving window average of n bins
+                n = 5;
+                [firing_rates_full]=smoothDirMap(to_smooth,n,Args.DirSteps);
+                % smoothing part ends
+                
+                if repeat == 1
+%                     data.maps_adsm = firing_rates_full(1,:);
+%                     data.maps_adsmsh = firing_rates_full(2:end,:);
+%                     data.dur_adsm = to_fill_time(1,:);
+%                     data.dur_adsmsh = to_fill_time(2:end,:);
+%                     data.radii = to_fill_radius(1,:);
+%                     data.radiish = to_fill_radius(2:end,:);
+                    data.maps_sm = firing_rates_full(1,:);
+                    data.maps_smsh = firing_rates_full(2:end,:);
+%                     data.maps_dksm = maps_dksm(1,:);
+%                     data.maps_dksmsh = maps_dksm(2:end,:);
+                elseif repeat == 2
+%                     data.maps_adsm1 = firing_rates_full(1,:);
+%                     data.dur_adsm1 = to_fill_time(1,:); 
+%                     data.radii1 = to_fill_radius(1,:);
+                    data.maps_sm1 = firing_rates_full(1,:);
+%                     data.maps_dksm1 = maps_dksm(1,:);
+                elseif repeat == 3
+%                     data.maps_adsm2 = firing_rates_full(1,:);
+%                     data.dur_adsm2 = to_fill_time(1,:);
+%                     data.radii2 = to_fill_radius(1,:);
+                    data.maps_sm2 = firing_rates_full(1,:);
+%                     data.maps_dksm2 = maps_dksm(1,:);
+                end
 
-            lambda_i = NaN(Args.NumShuffles+1,Args.DirSteps);
-            lambda_i(:,bins_sieved) = firing_rates_full;
-            lambda_i(isnan(lambda_i)) = 0;
-            lambda_bar = sum(Pi1 .* lambda_i,2);
-            % divide firing for each position by the overall mean
-            FRratio = lambda_i./repmat(lambda_bar,1,Args.DirSteps);
-            % compute first term in SIC
-            SIC1 = Pi1 .* lambda_i; 
-            SIC2 = log2(FRratio);
-            zeros_placing = SIC1==0;  
+%             else
+%                 firing_rates_full = firing_rates_full_raw;
+%                 to_fill_time = repmat(gpdur,NumShuffles+1,1); % HM added
+% 
+%             end
 
-            bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-            bits_per_sec(zeros_placing) = NaN;
-            lambda_bar_ok = lambda_bar>0;
-            lambda_bar_bad = ~lambda_bar_ok;
-            sic_out = nansum(bits_per_sec, 2);
-            sic_out(lambda_bar_bad) = NaN;
+            % Rayleigh vector
+            binSize=(pi*2)/length(firing_rates_full(1,:));
+            binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
+            binWeights=firing_rates_full./(max(firing_rates_full,[],2));
+            S=sum( sin(binAngles).*binWeights , 2);
+            C=sum( cos(binAngles).*binWeights , 2);
+            R=sqrt(S.^2+C.^2);
+            meanR=R./sum(binWeights,2);
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+
+        if repeat == 1
+%             data.SIC_adsm = sic_adsm(1);
+%             data.SICsh_adsm = sic_adsm(2:end,1);
+            data.crit_sm = meanR(1,1);
+            data.critsh_sm = meanR(2:end,1);
+%             data.SIC_dksm = sic_dksm(1);
+%             data.SICsh_dksm = sic_dksm(2:end,1);
+        %     data.median_occ_firings = median_stats';
+        %     data.variance_occ_firings = var_stats';
+        %     data.perc_occ_firings = perc_stats';
+        %     data.occ_data = occ_data;
+        elseif repeat == 2
+%             data.SIC_adsm1 = sic_adsm;
+            data.crit_bcsm1 = meanR;
+%             data.SIC_dksm1 = sic_dksm;
+        elseif repeat == 3
+%             data.SIC_adsm2 = sic_adsm;
+            data.crit_bcsm2 = meanR;
+%             data.SIC_dksm2 = sic_dksm;
+        end
             
-
-    %         % Rayleigh vector
-    %         binSize=(pi*2)/length(to_save);
-    %         binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
-    %         binWeights=to_save./(max(to_save));
-    %         S=sum( sin(binAngles).*binWeights);
-    %         C=sum( cos(binAngles).*binWeights);
-    %         R=sqrt(S^2+C^2);
-    %         meanR=R/sum(binWeights);
-
-    %     histogram(sic_out);
         
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if repeat == 1
-                data.SIC = sic_out(1);
-                data.SICsh = sic_out;
-                data.RV = meanR(1);
-                data.RVsh = meanR;
-            %     data.median_occ_firings = median_stats';
-            %     data.variance_occ_firings = var_stats';
-            %     data.perc_occ_firings = perc_stats';
-            %     data.occ_data = occ_data;
-            elseif repeat == 2
-                data.SIC1 = sic_out;
-                data.RV1 = meanR;
-            elseif repeat == 3
-                data.SIC2 = sic_out;
-                data.RV2 = meanR;
-            end
+        
     
     end
 
             % create nptdata so we can inherit from it   
-            data.DirSteps = Args.DirSteps;
+            data.DirBins = Args.DirSteps;
             data.numSets = 1;
             data.Args = Args;
             n = nptdata(1,0,pwd);
@@ -412,3 +369,25 @@ data.Args = Args;
 n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
+
+function [map_sm]=smoothDirMap(map_raw,n,dirSteps)
+% Sliding window average of n bins
+% raw map input needs to be in column form. 
+% M dir bins by N shuffles
+dim1 = size(map_raw,1);
+dim2 = size(map_raw,2);
+flip = false;
+if dim1 ~= dirSteps
+    flip = true;
+    map_raw = map_raw';
+end
+% Smooth a dir map.
+if n==1; map_sm=map_raw; return; end
+p = (n-1)/2;                                               % Pad for circular smooth
+pad_map = [map_raw(end-p+1:end,:); map_raw; map_raw(1:p,:)];                    %  ..
+map_sm = mean( im2col(pad_map, [n 1], 'sliding') );
+% Reshape
+map_sm = reshape(map_sm,dirSteps,size(map_sm,2)/dirSteps);
+if flip
+    map_sm = map_sm';
+end

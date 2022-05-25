@@ -1,5 +1,5 @@
 function [obj, varargout] = vmcorr(varargin)
-%@vmpc Constructor function for vmpc class
+%@vmcorr Constructor function for vmcorr class
 %   OBJ = vmcorr(varargin)
 %
 %   OBJ = vmcorr('auto') attempts to create a vmcorr object by ...
@@ -17,8 +17,8 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',0, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'StartOrig',0,'AlphaPlace',10000,'AlphaView',1000,...
-                'ConvergeLim',0.001,'LLHIterLim',1000,'UseIterLim',0);
+                'NumFRBins',4, 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'StartOrig',0,'AlphaPlace',10000,'AlphaView',1000,...
+                'ConvergeLim',0.001,'LLHIterLim',1000,'UseIterLim',0); 
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -74,767 +74,1035 @@ if(~isempty(dir(Args.RequiredFile)))
 %     pv = vmpv('auto', varargin{:});
         % Temporary workaround so that we can use file named '1vmpv.mat'
         cd ..; cd ..; cd ..;
-        pv = load('1vmpv.mat');
+        pv = load('vmpv.mat');
         pv = pv.pv;
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
+    binDepths = [1 1;
+        1 1;
+        40 40;
+        40 40;
+        8 160;
+        5 32;
+        5 32;
+        5 32;
+        5 32];
 
-    Args.NumShuffles = 0;
-%     for repeat = 1:1 % 1 = full session, 2 = 1st half, 3 = 2nd half
+    % Numbers of pair permutations given input numbers of spatial variables
+    spatialvars = {'place','view','headdirection'};
+    spatialvarpairs = {{'place','view'}, {'place','headdirection'}}; % FIX - for now place has to be var1
 
-%% Consolidate pv array into view by place bin array
+    % Filter
 
-%         if repeat == 1
-            stc = pv.data.sessionTimeC;
-%         end
+    for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
-        % spike shuffling
-
-        spiketimes = spiketrain.timestamps/1000; % now in seconds
-        spiketimes = spiketimes';
-
-        spiketimes(spiketimes(:,1) < stc(1,1),:) = [];      
+        for combi = 1:size(spatialvarpairs,2) % For each pair of spatial vars
+            
+            Var1 = spatialvarpairs{combi}{1};
+            Var2 = spatialvarpairs{combi}{2};
+            combiname = [lower(Var1(1)) lower(Var2(1))];
         
-        % selecting rows from sessionTimeC
-        stc(:,4) = [diff(stc(:,1)); 0];
-        
-        conditions = ones(size(stc,1),1);
-
-        if Args.UseAllTrials == 0
-            conditions = conditions & pv.data.good_trial_markers;
-        end
-
-        if Args.ThresVel > 0
-            conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
-        end
-        
-        if Args.UseMinObs
-            bins_sieved_p = pv.data.place_good_bins;
-            bins_removed_p = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_p);
-            bins_sieved_sv = pv.data.view_good_bins;
-            bins_removed_sv = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_sv);
-            conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
-        else
-            bins_sieved_p = 1:(Args.GridSteps * Args.GridSteps);
-            bins_removed_p = [];
-            bins_sieved_sv = 1:size(pv.data.view_intervals_count,1);
-            bins_removed_sv = [];
-        end
-
-        disp('conditioning done');
-
-        dstc = diff(stc(:,1));
-        stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
-        stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
-        stc_changing_ind = stc_changing_ind(1:end-1,:);
-
-        % Initialise storage
-        view_spikes = zeros(size(pv.data.view_intervals_count,1),Args.GridSteps * Args.GridSteps);
-        place_spikes = zeros(1,Args.GridSteps * Args.GridSteps);
-        interval = 1;
-        for sp = 1:size(spiketimes,1)
-
-            if rem(sp, 10000000) == 0
-                disp(num2str(100*sp/size(spiketimes,1)))
+            if repeat == 1
+    %             stc = pv.data.sessionTimeC;
+                disp('Full session:');
+            elseif repeat == 2
+                disp('1st half:');
+            elseif repeat == 3
+                disp('2nd half:');
             end
 
-            while interval < size(stc_changing_ind,1)
-                if spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+            stc = pv.data.sessionTimeC; % time, place, hd, view
+            stc(:,5) = [diff(stc(:,1)); 0]; % column 5 as duration
+
+            % spike binning
+            disp('Binning spikes ...');
+            spiketimes = spiketrain.timestamps/1000; % now in seconds
+            spiketimes = spiketimes';
+            spiketimes(spiketimes(:,1) < stc(1,1),:) = [];   
+            binned = histcounts(spiketimes, stc(:,1))'; % Method 1 of 2 for binning spikes
+            stc(:,6) = [binned; 0];
+
+            % filtering rows from sessionTimeC
+            disp('Filtering ...');
+            conditions = ones(size(stc,1),1);
+            if Args.UseAllTrials == 0
+                conditions = conditions & pv.data.good_trial_markers;
+            end
+            if Args.ThresVel > 0
+                conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
+            end
+            if Args.UseMinObs %%%% FIX
+                bins_sieved_var1 = pv.data.place_good_bins;
+                bins_removed_var1 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var1);
+                bins_sieved_var2 = pv.data.view_good_bins;
+                bins_removed_var2 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var2);
+                conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+            else
+                bins_sieved_var1 = 1:pv.data.([Var1 'bins']);
+                bins_removed_var1 = [];
+                bins_sieved_var2 = 1:pv.data.([Var1 'bins']);
+                bins_removed_var2 = [];
+            end
+            if repeat == 2
+                conditions = conditions & (pv.data.halving_markers==1);
+            elseif repeat == 3
+                conditions = conditions & (pv.data.halving_markers==2);
+            end
+
+    %         if repeat == 1 % Full session
+
+    %         % Method 2 of 2 for binning spikes - 
+    %         % Used for checking for consistency against the main Method 1 which follows from vmpc/sv
+    %         dstc = diff(stc(:,1));
+    %         stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+    %         stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+    %         stc_changing_ind = stc_changing_ind(1:end-1,:);
+    % 
+    %         full_spikes2 = zeros(size(pv.data.view_intervals_count,1),Args.GridSteps * Args.GridSteps);
+    %         place_spikes2 = zeros(1,Args.GridSteps * Args.GridSteps);
+    %         view_spikes2 = zeros(1,size(pv.data.view_intervals_count,1));
+    %         interval = 1;
+    %         for sp = 1:size(spiketimes,1)
+    % 
+    %             while interval < size(stc_changing_ind,1)
+    %                 if spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+    %                     break;
+    %                 end
+    %                 interval = interval + 1;
+    %             end   
+    % 
+    %             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3]);
+    %             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:);
+    %             bins_hit(~(bins_hit(:,1)>0),:) = [];
+    %             bins_hit(~(bins_hit(:,2)>0),:) = [];
+    % 
+    %             place_spikes2(1,bins_hit(:,1)) = place_spikes2(1,bins_hit(:,1)) + 1;
+    %             view_spikes2(1,bins_hit(:,2)) = view_spikes2(1,bins_hit(:,2)) + 1;
+    %             full_spikes2(bins_hit(:,2),bins_hit(:,1)) = full_spikes2(bins_hit(:,2),bins_hit(:,1)) + 1;
+    % 
+    %         end        
+    % 
+    %         % Backfill duration for view bins that occupy the same time bin
+    %         stc_v = stc; 
+    %         stc_v(stc_v(:,4)==0,4) = nan;
+    %         stc_v(:,4) = fillmissing(stc_v(:,4), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+    % 
+    %         % Remove non-place and non-view rows for duration
+    %         stc_p = stc;
+    %         stc_p = stc_p(find(conditions==1),[2 3 4 5]); % [place view dur spk]
+    %         stc_p(~(stc_p(:,1)>0),:) = []; % remove place bin = 0
+    %         stc_p(~(stc_p(:,2)>0),:) = []; % remove NaN view bins
+    %         stc_p = [stc_p; [size(pv.data.place_intervals_count,1) size(pv.data.view_intervals_count,1) 0 0]];
+    %         stc_v = stc_v(find(conditions==1),[2 3 4 5]); % [place view dur spk]
+    %         stc_v(~(stc_v(:,1)>0),:) = []; % remove place bin = 0
+    %         stc_v(~(stc_v(:,2)>0),:) = []; % remove NaN view bins
+    %         stc_v = [stc_v; [size(pv.data.place_intervals_count,1) size(pv.data.view_intervals_count,1) 0 0]];
+    %         gpdurplace = accumarray(stc_p(:,1),stc_p(:,3))';
+    %         gpdurview = accumarray(stc_v(:,2),stc_v(:,3))';
+    % 
+    %         % Remove low observation bins
+    %         place_spikes_full = zeros(1,Args.GridSteps*Args.GridSteps);
+    %         gpdurp = zeros(1,Args.GridSteps*Args.GridSteps);
+    %         place_spikes_full(:,bins_sieved_p) = place_spikes2(:,bins_sieved_p);
+    %         gpdurp(1,bins_sieved_p) = gpdurplace(1,bins_sieved_p);
+    %         view_spikes_full = zeros(1,size(pv.data.view_intervals_count,1));
+    %         gpdursv = zeros(1,size(pv.data.view_intervals_count,1));
+    %         view_spikes_full(:,bins_sieved_sv) = view_spikes2(:,bins_sieved_sv);
+    %         gpdursv(1,bins_sieved_sv) = gpdurview(1,bins_sieved_sv);
+    % 
+    %         rates_place = place_spikes_full./gpdurp;
+    %         rates_view = view_spikes_full./gpdursv;
+    %         end
+
+            % Method 1 of 2 for binning spikes - 
+            % Uses a more efficient method than that used in vmpc/sv
+            % Since it's different from previous objects, I've included Method
+            % 2 for checking consistency with vmpc/sv objects 
+
+            %% Consolidate pv array into view by place bin array
+
+            % remove filtered rows
+            switch Var2
+                case 'view'
+                    stc_ssv = stc(find(conditions==1),[2 4 5 6]); % [place view dur spk]
+                case 'headdirection'
+                    stc_ssv = stc(find(conditions==1),[2 3 5 6]); % [place hd dur spk]
+            end
+            % Initialise variables
+            var1_durations1 = nan(1,pv.data.([Var1 'bins']));
+            var1_spikes1 = zeros(1,pv.data.([Var1 'bins']));
+            full_durations1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+            full_spikes1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+            for ii = 1:pv.data.([Var1 'bins'])
+
+                inds = stc_ssv(:,1)==ii;
+                subsample = [stc_ssv(inds,:)]; % [place view dur]
+                % Consider only samples where both variables are sampled
+                subsample(isnan(subsample(:,2)),:) = [];
+                if ~isempty(subsample) 
+                    % Get spikes and duration for place only
+                    var1_durations1(1,ii) = sum(subsample(:,3));
+                    var1_spikes1(1,ii) = sum(subsample(:,4));
+                    % back-filling spikes for Var2
+                    subsample(subsample(:,4)==0,4) = nan;
+    %                 subsample(:,5) = circshift(subsample(:,3)~=0 ,-1); % Use only if spike is recorded in first bin of view set and time in last bin (like how it was before)
+                    subsample(:,5) = subsample(:,3)~=0;
+                    subsample(isnan(subsample(:,4)) & subsample(:,5), 4) = 0;
+                    subsample(:,5) = [];
+                    subsample(:,4) = fillmissing(subsample(:,4), 'next');
+                    % back-filling time for Var2
+                    subsample(subsample(:,3)==0,3) = nan;
+                    subsample(:,3) = fillmissing(subsample(:,3), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+                    % padding with max Var2 bin
+                    if subsample(end,2) ~= pv.data.([Var2 'bins'])
+    %                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
+                        subsample = [subsample; [ii pv.data.([Var2 'bins']) 0 0]];
+                    end
+                    % remove bad view spots
+                    subsample(isnan(subsample(:,2)),:) = [];
+                    % sum durations
+    %                 full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
+                    full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],0);
+                    % sum spikes % Method 1 of 2 to bin spikes (counter check Method 2
+                    full_spikes1(:,ii) = accumarray(subsample(:,2), subsample(:,4),[],[],0);
+                end
+            end
+
+            % Filter out low-sampled bins
+            var1_durations1(isnan(var1_durations1)) = 0; % Necessary because NaNs seem to mess up the smoothing. Can't do the same for full_durations because it is being used to compute llh and will erroneously give inf. 
+    %         full_durations(isnan(full_durations)) = 0; 
+            full_durations1(isnan(full_durations1)) = 0;
+            var1_durations1(bins_removed_var1) = 0;
+            full_durations1(bins_removed_var2,:) = 0;
+            full_durations1(:,bins_removed_var1) = 0;
+            var1_spikes1(bins_removed_var1) = 0;
+            full_spikes1(bins_removed_var2,:) = 0;
+            full_spikes1(:,bins_removed_var1) = 0;
+
+            var1_array_orig = var1_spikes1./var1_durations1;
+            var2_array_orig = sum(full_spikes1,2)./sum(full_durations1,2);
+
+    %         % Consistency check between Methods 1 and 2 for binning spikes
+    %         temp_p = rates_place - p_array_orig;
+    %         temp_p(isnan(temp_p)) = 0;
+    %         temp_v = rates_view - sv_array_orig';
+    %         temp_v(1,1:2) = 0;
+    %         temp_v(isnan(temp_v)) = 0;
+    %         if repeat == 1 && (sum(temp_p)~=0 || sum(temp_v)~=0)
+    %             disp(sum(temp_p));
+    %             disp(sum(temp_v));
+    %         end
+
+            %% Compute covariance matrix
+            if repeat == 1
+                disp('Computing covariance matrix');
+                var2mappervar1bin = nan(size(full_durations1));
+                for ii = 1:size(var1_durations1,2)
+                    var2mappervar1bin(:,ii) = full_spikes1(:,ii)./full_durations1(:,ii);
+                end
+                covmat = cov(var2mappervar1bin,'partialrows');
+                covmat_norm = covmat./nanmax(nanmax(abs(covmat)));
+                % Replace NaNs with zeros in covariance matrix for norm calculations
+                covmat_nonan = covmat;
+                covmat_nonan(isnan(covmat_nonan)) = 0;
+                % Calculate norms
+                l1norm = norm(covmat_nonan,1); % maximum of column sum
+                l2norm = norm(covmat_nonan,2); % maximum single value
+            end
+
+            %% Distributive hypothesis testing
+
+            % Null hypothesis: no influence of view other than that caused by a
+            % place effect. Vice versa, no influence of place other than
+            % that caused by a view effect. 
+
+            % Removing hint and cue effects
+            var2_array_orig_trun = var2_array_orig;
+            full_durations1_trun = full_durations1;
+            if strcmp('Var2','view')
+                 % disregard cue and hint bins
+                var2_array_orig_trun(1:2) = nan;
+                full_durations1_trun(1:2,:) = 0;
+            end
+
+            % Predicted rate as a function of var2
+            topterm = nansum(var1_array_orig.*full_durations1_trun,2);
+            bottomterm = nansum(full_durations1_trun,2);
+            var2_array_pred = topterm./bottomterm; % raw map
+
+            switch Var2
+                case 'view'
+                    % Adaptive smooth predicted view map
+                    % transform from linear to grid
+                    toptermG = lineartogrid(topterm,'view',binDepths);
+                    bottomtermG = lineartogrid(bottomterm,'view',binDepths);
+                    % Pad sv map with 5 extra rows
+                    n = 5;
+                    padpillar = false;
+                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    padpillar = true;
+                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    [toptermGpad,~] = padsvmap(n,toptermG,gazeSections,padpillar);
+                    sv_array_pred_adsmGpad = cell(size(binDepths,1),1);
+                    for gg = 1:size(binDepths,1)
+                        if gg == 1 || gg == 2
+                            sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
+                        else
+                            sv_array_pred_adsmGpad{gg} = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
+                        end
+                    end
+                    % Unpad
+                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
+                    % Linearise
+                    var2_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',binDepths);
+                case 'headdirection'
+                    n = 5; % Boxcar window of 5
+                    [var2_array_pred_adsm] = smoothDirMap(var2_array_pred,n,pv.data.([Var2 'bins']));
+                case 'place'
+                    toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
+                    bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
+                    [p_array_pred_adsmG,~,~] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
+                    var2_array_pred_adsm = gridtolinear({p_array_pred_adsmG},'place',[Args.GridSteps Args.GridSteps])';
+
+            end
+
+            % If place cell firing is only mod by location, and view influence is attributable only to inhomogeous sampling, 
+            % then dr = 0. If dr is significant, place cell is view-modulated.
+            ratio = log((1+var2_array_orig_trun)./(1+var2_array_pred)); % Muller 1994 
+    %         ratio = log(1+sv_array_orig_trun)./(1+sv_array_pred); % Cacucci 2004
+            dr_var2 = nansum(abs(ratio))/sum(bottomterm>0); 
+            % Correlation between orig and predicted view maps
+            vis = ~isnan(var2_array_orig_trun);
+            dcorr_var2 = corr2(var2_array_orig_trun(vis),var2_array_pred(vis));
+
+            % Predicted rate as a function of var1
+            topterm = nansum(var2_array_orig_trun.*full_durations1_trun,1);
+            bottomterm = nansum(full_durations1_trun,1);
+            var1_array_pred = topterm./bottomterm; % raw map
+
+            % Adaptive smooth predicted var1 map
+            switch Var1
+                case 'place' 
+                    toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
+                    bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
+                    [p_array_pred_adsmG,~,~] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
+                    var1_array_pred_adsm = gridtolinear({p_array_pred_adsmG},'place',[Args.GridSteps Args.GridSteps])';
+                case 'headdirection'
+                    n = 5; % Boxcar window of 5
+                    [var1_array_pred_adsm] = smoothDirMap(var1_array_pred,n,pv.data.([Var1 'bins']));
+                case 'view'
+                    % Adaptive smooth predicted view map
+                    % transform from linear to grid
+                    toptermG = lineartogrid(topterm,'view',binDepths);
+                    bottomtermG = lineartogrid(bottomterm,'view',binDepths);
+                    % Pad sv map with 5 extra rows
+                    n = 5;
+                    padpillar = false;
+                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    padpillar = true;
+                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    [toptermGpad,~] = padsvmap(n,toptermG,gazeSections,padpillar);
+                    sv_array_pred_adsmGpad = cell(size(binDepths,1),1);
+                    for gg = 1:size(binDepths,1)
+                        if gg == 1 || gg == 2
+                            sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
+                        else
+                            sv_array_pred_adsmGpad{gg} = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
+                        end
+                    end
+                    % Unpad
+                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
+                    % Linearise
+                    var1_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',binDepths);
+            end
+
+            % If view cell firing is only mod by view location, and place influence is attributable only to inhomogeous sampling, 
+            % then dr = 0. If dr is significant, view cell is place-modulated.
+            ratio = log((1+var1_array_orig)./(1+var1_array_pred)); % Muller 1994
+    %         ratio = log(1+p_array_orig)./(1+p_array_pred); % Cacucci 2004 
+            dr_var1 = nansum(abs(ratio))/sum(bottomterm>0);
+            % Correlation between orig and predicted place maps
+            vis = ~isnan(var1_array_orig);
+            dcorr_var1 = corr2(var1_array_orig(vis)',var1_array_pred(vis)');
+
+
+            %% Establish independence of place and view maps
+            disp('Maximising llh ...');
+            mlm = true;
+            initialwith = Var2;
+            convergewithvar2 = false;
+            convergewithvar1 = false;
+            while mlm == true
+
+                llh_vec = [];
+                reinitialise = false;
+
+                var2_spikes_temp = full_spikes1;
+                var2_spikes_temp(isnan(full_spikes1)) = 0; % to prevent error on factorial
+
+                % Maximum-likelihood maps. 
+                if Args.StartOrig
+                    % Start with Original maps
+                    var1_array = var1_array_orig;  
+                    var2_array = var2_array_orig;
+                    var1_spk = var1_spikes1;
+                    var2_spk = nansum(full_spikes1,2);
+                else
+                    % Start with uniform array
+                    var1_array = ones(1,size(var1_spikes1,2));
+                    var1_array(isnan(var1_array_orig)) = nan;
+                    var2_array = ones(size(full_durations1,1),1);
+                    var2_array(isnan(var2_array_orig)) = nan;
+                    var1_spk = var1_array.*nansum(full_durations1,1);
+                    var1_spk(isnan(var1_spk)) = 0;
+                    var2_spk = var2_array.*nansum(full_durations1,2);
+                    var2_spk(isnan(var2_spk)) = 0;
+                end
+                % Initialise storage. % Pad with original raw map first in
+                % both cases so we can smooth them too for comparison with
+                % pc/sv smoothed maps
+                var1_array_set = [var1_array_orig; var1_array];
+                var2_array_set = [var2_array_orig, var2_array];
+                var1_spk_set = [var1_spikes1; var1_spk];
+                var2_spk_set = [nansum(full_spikes1,2), var2_spk];
+
+                % Starting llh ( upper limit of factorial 170, anything beyond that becomes Inf )
+    %             full_durations1(full_durations1==0) = nan; % zeros mess up llh calculation
+                for ii = 1:size(var1_array_set,1)
+                    llh = sum( nansum(full_spikes1.*log(var1_array_set(ii,:).*full_durations1.*var2_array_set(:,ii))) - nansum(var1_array_set(ii,:).*full_durations1.*var2_array_set(:,ii)) - nansum(log(factorial(var2_spikes_temp))) );
+                    llh_vec(end+1,1) = llh;
+                end
+                if isinf(llh) % Evaluate the 2nd llh in the set since that is the starting point of the iterations
+                    pick = 2;
+                    if max(max(var2_spikes_temp)) > 170
+                        picklabel = ['spikecount' num2str(max(max(var2_spikes_temp)))];
+                        disp(['llh inf from start: spike count ' num2str(max(max(var2_spikes_temp)))]);
+                    else
+                        picklabel = 'inf1';
+                        disp('llh inf from start: other reasons');
+                    end
+                    % end iterations
+                    mlm = false;
                     break;
                 end
-                interval = interval + 1;
-            end   
 
-            bins_hit_place = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2);
-            bins_hit_place = bins_hit_place(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
-            bins_hit_place(~(bins_hit_place>0)) = [];
+                while strcmp(initialwith,Var2) && ~convergewithvar2 % Try to find max llh first with flat sv array. If fail to converge, try with flat p array
 
-            bins_hit_view = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),3);
-            bins_hit_view = bins_hit_view(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
-            bins_hit_view(~(bins_hit_view>0)) = [];
-            
-            if ~isempty(bins_hit_view) && ~isempty(bins_hit_place) % Only spikes where both place and view are sampled are considered
-                place_spikes(1,bins_hit_place) = place_spikes(1,bins_hit_place) + 1;
-                view_spikes(bins_hit_view,bins_hit_place) = view_spikes(bins_hit_view,bins_hit_place) + 1;
-            end
-         
-        end        
-        
-        stc_ssv = stc(find(conditions==1),[2 3 4]); % [place view dur]
-        stc_ssv(~(stc_ssv(:,1) > 0),:) = [];
-        stc_ssv = [stc_ssv; [0 size(pv.data.view_intervals_count,1) 0]];
-        
-        place_durations = nan(size(place_spikes,1), size(place_spikes,2));
-        view_durations = nan(size(pv.data.view_intervals_count,1),size(place_spikes,2));
-        for ii = 1:Args.GridSteps*Args.GridSteps
-            
-            inds = stc_ssv(:,1)==ii;
-            subsample = [stc_ssv(inds,:)]; % [place view dur]
-            % Consider only samples where both place and view are sampled
-            subsample(isnan(subsample(:,2)),:) = [];
-            if ~isempty(subsample) 
-                % Get spikes and duration for place only
-                place_durations(1,ii) = sum(subsample(:,3));
-                % back-filling time for view
-                subsample(subsample(:,3)==0,3) = nan;
-                subsample(:,3) = fillmissing(subsample(:,3), 'previous');
-                % padding with 5122 bin
-                if subsample(end,1) ~= 5122
-%                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
-                    subsample = [subsample; [ii 5122 0]];
-                end
-                % remove bad view spots
-                subsample(isnan(subsample(:,2)),:) = [];
-                % sum durations
-                view_durations(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
-            end
-        end
-        % Filter out low-sampled bins
-        place_durations(isnan(place_durations)) = 0; % Necessary because NaNs seem to mess up the smoothing. Can't do the same for view_durations because it is being used to compute llh and will erroneously give inf. 
-%         view_durations(isnan(view_durations)) = 0; 
-        place_durations(bins_removed_p) = 0;
-        view_durations(bins_removed_sv,:) = 0;
-        view_durations(:,bins_removed_p) = 0;
-        place_spikes(bins_removed_p) = 0;
-        view_spikes(bins_removed_sv,:) = 0;
-        view_spikes(:,bins_removed_p) = 0;
-        
-        p_array_orig = place_spikes./place_durations;
-        sv_array_orig = nansum(view_spikes,2)./nansum(view_durations,2);
-        
-        %% Compute covariance matrix
-        disp('Computing covariance matrix');
-        viewmapperplacebin = nan(size(view_durations));
-        for ii = 1:size(place_durations,2)
-            viewmapperplacebin(:,ii) = view_spikes(:,ii)./view_durations(:,ii);
-        end
-        covmat = cov(viewmapperplacebin,'partialrows');
-        covmat_norm = covmat./nanmax(nanmax(abs(covmat)));
-        % Replace NaNs with zeros in covariance matrix for norm calculations
-        covmat_nonan = covmat;
-        covmat_nonan(isnan(covmat_nonan)) = 0;
-        % Calculate norms
-        norml1 = norm(covmat_nonan,1); % maximum of column sum
-        norml2 = norm(covmat_nonan,2); % maximum single value
-            
-        %% Establish independence of place and view maps
-        mlm = true;
-        initialwith = 'spatialview';
-        convergewithsv = false;
-        convergewithp = false;
-        llh_vec = [];
-        while mlm == true
-        
-            reinitialise = false;
-            
-            view_spikes_temp = view_spikes;
-            view_spikes_temp(isnan(view_spikes)) = 0; % to prevent error on factorial
-
-            % Maximum-likelihood maps. 
-            if Args.StartOrig
-                % Start with Original maps
-                p_array = p_array_orig;  
-                sv_array = sv_array_orig;
-                p_spk = place_spikes;
-                sv_spk = nansum(view_spikes,2);
-            else
-                % Start with uniform array
-                p_array = ones(1,size(place_spikes,2));
-                p_array(isnan(p_array_orig)) = nan;
-                sv_array = ones(size(view_durations,1),1);
-                sv_array(isnan(sv_array_orig)) = nan;
-                p_spk = p_array.*nansum(view_durations,1);
-                p_spk(isnan(p_spk)) = 0;
-                sv_spk = sv_array.*nansum(view_durations,2);
-                sv_spk(isnan(sv_spk)) = 0;
-            end
-            % Initialise storage. % Pad with original raw map first in
-            % both cases so we can smooth them too for comparison with
-            % pc/sv smoothed maps
-            p_array_set = [p_array_orig; p_array];
-            sv_array_set = [sv_array_orig, sv_array];
-            p_spk_set = [place_spikes; p_spk];
-            sv_spk_set = [nansum(view_spikes,2), sv_spk];
-            
-            % Starting llh ( upper limit of factorial 170, anything beyond that becomes Inf )
-            for ii = 1:size(p_array_set,1)
-                llh = sum( nansum(view_spikes.*log(p_array_set(ii,:).*view_durations.*sv_array_set(:,ii))) - nansum(p_array_set(ii,:).*view_durations.*sv_array_set(:,ii)) - nansum(log(factorial(view_spikes_temp))) );
-                llh_vec(end+1,1) = llh;
-            end
-            if isinf(llh) % Evaluate the 2nd llh in the set since that is the starting point of the iterations
-                pick = 2;
-                if max(max(view_spikes_temp)) > 170
-                    picklabel = ['spikecount' num2str(max(max(view_spikes_temp)))];
-                    disp(['llh inf from start: spike count ' num2str(max(max(view_spikes_temp)))]);
-                else
-                    picklabel = 'inf1';
-                    disp('llh inf from start: other reasons');
-                end
-                % end iterations
-                mlm = false;
-                break;
-            end
-            disp('maximising llh');
-
-            while strcmp(initialwith,'spatialview') && ~convergewithsv % Try to find max llh first with flat sv array. If fail to converge, try with flat p array
-                
-                dur_adj = nan(size(view_durations,1),size(view_durations,2));
-                for ii = 1:size(view_durations,2) % place
-                    for jj = 1:size(view_durations,1) % view
-                        if ~isnan(view_durations(jj,ii))
-                            if isnan(sv_array(jj))
-                                dur_adj(jj,ii) = 0;
-                            elseif sv_array(jj) == 0
-                                dur_adj(jj,ii) = view_durations(jj,ii); 
-                            else
-                                dur_adj(jj,ii) = view_durations(jj,ii)*sv_array(jj);
+                    dur_adj = nan(size(full_durations1,1),size(full_durations1,2));
+                    for ii = 1:size(full_durations1,2) % var1 (place)
+                        for jj = 1:size(full_durations1,1) % var2
+                            if ~isnan(full_durations1(jj,ii))
+                                if isnan(var2_array(jj))
+    %                                 dur_adj(jj,ii) = nan;
+                                    dur_adj(jj,ii) = 0;
+                                elseif var2_array(jj) == 0
+                                    dur_adj(jj,ii) = full_durations1(jj,ii); 
+                                else
+                                    dur_adj(jj,ii) = full_durations1(jj,ii)*var2_array(jj);
+                                end
                             end
                         end
                     end
-                end
-                p_array = nansum(view_spikes,1)./nansum(dur_adj,1);
-                spk = p_array.*nansum(view_durations,1);
-                spk(isnan(spk)) = 0;
-                p_array_set = [p_array_set; p_array];
-                p_spk_set = [p_spk_set; spk];
+                    var1_array = nansum(full_spikes1,1)./nansum(dur_adj,1);
+                    spk = var1_array.*nansum(full_durations1,1);
+                    spk(isnan(spk)) = 0;
+                    var1_array_set = [var1_array_set; var1_array];
+                    var1_spk_set = [var1_spk_set; spk];
 
-                dur_adj = nan(size(view_durations,1),size(view_durations,2));
-                for jj = 1:size(view_durations,1) % view
-                    for ii = 1:size(view_durations,2) % place
-                        if ~isnan(view_durations(jj,ii))
-                            if isnan(p_array(ii))
-                                dur_adj(jj,ii) = 0;
-                            elseif p_array(ii) == 0
-                                dur_adj(jj,ii) = view_durations(jj,ii); 
-                            else
-                                dur_adj(jj,ii) = view_durations(jj,ii)*p_array(ii);
+                    dur_adj = nan(size(full_durations1,1),size(full_durations1,2));
+                    for jj = 1:size(full_durations1,1) % var2
+                        for ii = 1:size(full_durations1,2) % var1 (place)
+                            if ~isnan(full_durations1(jj,ii))
+                                if isnan(var1_array(ii))
+                                    dur_adj(jj,ii) = 0;
+    %                                 dur_adj(jj,ii) = nan;
+                                elseif var1_array(ii) == 0
+                                    dur_adj(jj,ii) = full_durations1(jj,ii); 
+                                else
+                                    dur_adj(jj,ii) = full_durations1(jj,ii)*var1_array(ii);
+                                end
                             end
                         end
                     end
-                end
-                sv_array = nansum(view_spikes,2)./nansum(dur_adj,2);
-                spk = sv_array.*nansum(view_durations,2);
-                spk(isnan(spk)) = 0;
-                sv_array_set = [sv_array_set sv_array];
-                sv_spk_set = [sv_spk_set spk];
+                    var2_array = nansum(full_spikes1,2)./nansum(dur_adj,2);
+                    spk = var2_array.*nansum(full_durations1,2);
+                    spk(isnan(spk)) = 0;
+                    var2_array_set = [var2_array_set var2_array];
+                    var2_spk_set = [var2_spk_set spk];
 
-                llh = sum( nansum(view_spikes.*log(p_array.*view_durations.*sv_array)) - nansum(p_array.*view_durations.*sv_array) - nansum(log(factorial(view_spikes_temp))) );
-                llh_vec(end+1,1) = llh;
-                
-                
-                if Args.UseIterLim % Converge if can find max within 1000 iterations
+                    llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
+                    llh_vec(end+1,1) = llh;
+    %                 llh = sum( nansum(full_spikes1.*log(p_array_set(ii,:).*full_durations1.*sv_array_set(:,ii))) - nansum(p_array_set(ii,:).*full_durations1.*sv_array_set(:,ii)) - nansum(log(factorial(view_spikes_temp))) );
 
-                    % Run iterations in sets of 100. 
-                    % Stop if maximum of llh lands in second-to-last set
-                    % For every set of 100 iterations
-                    if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
+                    if Args.UseIterLim % Converge if can find max within 1000 iterations
 
-                        % Find max of last and next-to-last sets
-                        maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
-                        disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
+                        % Run iterations in sets of 100. 
+                        % Stop if maximum of llh lands in second-to-last set
+                        % For every set of 100 iterations
+                        if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
 
-                        if size(llh_vec,1) >= 201 
-                            maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
-                            % If llh doesn't converge
-                            if size(llh_vec,1) > Args.LLHIterLim
-                                % Switch to using flat view array to start iterating
-                                initialwith = 'place';
+                            % Find max of last and next-to-last sets
+                            maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
+                            disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
+
+                            if size(llh_vec,1) >= 201 
+                                maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
+                                % If llh doesn't converge
+                                if size(llh_vec,1) > Args.LLHIterLim
+                                    % Switch to using flat view array to start iterating
+                                    initialwith = Var1;
+                                    reinitialise = true;
+                                    disp(['LLH did not converge with initial ' Var2 ' array. Try initialising with ' ...
+                                        Var1 ' array.']);
+                                    break;
+                                end
+                                % Test if global max is found
+                                if maxnextlast > maxlast 
+                                    convergewithvar2 = true;
+                                    % Record global max
+                                    pick = find(llh_vec == max(llh_vec(2:end)));
+                                    if size(pick,1) > 1
+                                        pick = pick(1);
+                                        picklabel = ['undiff'];
+                                    elseif isinf(pick)
+                                        % Skip on to using differnt initial array
+                                        initialwith = Var1;
+                                        reinitialise = true;
+                                        disp(['Failed to converge to non-infinite values with initial ' Var2  ...
+                                            'array. Try initialising with ' Var1 ' array']);
+                                        break;
+                                    else
+                                        picklabel = num2str(pick);
+                                        % display results
+                                        disp(['Converged with initial view array, pick = ' num2str(pick)]);
+                                        % break out of loop
+                                        mlm = false;
+                                        break;
+                                    end
+                                end
+                            end
+                        end
+
+                    else % Converge if subsequent iterations < 0.1% of delta between iterations 1 and 2
+
+                        % Report every set of 100 iterations
+                        if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
+                            disp(['Iter ' num2str(size(llh_vec,1))]);
+                        end
+                        % Check for convergence
+                        if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
+                            convergewithvar2 = true;
+                            % Record global max
+                            pick = find(llh_vec == max(llh_vec(2:end)));
+                            if size(pick,1) > 1
+                                pick = pick(1);
+                                picklabel = 'undiff';
+                            elseif isinf(pick)
+                                % Skip to using different initial array
+                                initialwith = Var1;
                                 reinitialise = true;
-                                disp('LLH did not converge with initial view array. Try initialising with place array.');
+                                disp(['Failed to converge to non-infinite values with initial ' ...
+                                    Var2 'array. Try initialising with ' Var1 ' array']);
+                                break;
+                            else
+                                picklabel = num2str(pick);
+                                % display results
+                                disp(['Converged with initial ' Var2 ' array, pick = ' ...
+                                    num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
+                                % break out of loop
+                                mlm = false;
                                 break;
                             end
-                            % Test if global max is found
-                            if maxnextlast > maxlast 
-                                convergewithsv = true;
-                                % Record global max
-                                pick = find(llh_vec == max(llh_vec(2:end)));
-                                if size(pick,1) > 1
-                                    pick = pick(1);
-                                    picklabel = ['undiff'];
-                                elseif isinf(pick)
-                                    % Skip on to using differnt initial array
-                                    initialwith = 'place';
-                                    reinitialise = true;
-                                    disp('Failed to converge to non-infinite values with initial view array. Try initialising with place array');
-                                    break;
+                        elseif isinf(llh)
+                            % Skip to using different initial array
+                            initialwith = Var1;
+                            reinitialise = true;
+                            disp(['Failed to converge to non-infinite values with initial ' ...
+                                Var2 ' array. Try initialising with ' Var1 ' array']);
+                            break;
+                        elseif size(llh_vec,1) > Args.LLHIterLim
+                            % No convergence. Switch to using flat view array to start iterating
+                            initialwith = Var1;
+                            reinitialise = true;
+                            disp(['LLH did not converge with initial ' ...
+                                Var2 ' array. Try initialising with ' Var1 ' array.']);
+                            break;
+                        end
+                    end
+
+                end
+                if reinitialise
+                    continue;
+                end
+
+                while strcmp(initialwith,Var1) && ~convergewithvar1 % If first try with flat sv array fails to converge, try with flat p array
+
+                    dur_adj = nan(size(full_durations1,1),size(full_durations1,2));
+                    for jj = 1:size(full_durations1,1) % view
+                        for ii = 1:size(full_durations1,2) % place
+                            if ~isnan(full_durations1(jj,ii))
+                                if isnan(var1_array(ii))
+                                    dur_adj(jj,ii) = 0;
+                                elseif var1_array(ii) == 0
+                                    dur_adj(jj,ii) = full_durations1(jj,ii); 
                                 else
-                                    picklabel = num2str(pick);
-                                    % display results
-                                    disp(['Converged with initial view array, pick = ' num2str(pick)]);
+                                    dur_adj(jj,ii) = full_durations1(jj,ii)*var1_array(ii);
+                                end
+                            end
+                        end
+                    end
+                    var2_array = nansum(full_spikes1,2)./nansum(dur_adj,2);
+                    spk = var2_array.*nansum(full_durations1,2);
+                    spk(isnan(spk)) = 0;
+                    var2_array_set = [var2_array_set var2_array];
+                    var2_spk_set = [var2_spk_set spk];
+
+                    dur_adj = nan(size(full_durations1,1),size(full_durations1,2));
+                    for ii = 1:size(full_durations1,2) % var1 (place)
+                        for jj = 1:size(full_durations1,1) % var2
+                            if ~isnan(full_durations1(jj,ii))
+                                if isnan(var2_array(jj))
+                                    dur_adj(jj,ii) = 0;
+                                elseif var2_array(jj) == 0
+                                    dur_adj(jj,ii) = full_durations1(jj,ii); 
+                                else
+                                    dur_adj(jj,ii) = full_durations1(jj,ii)*var2_array(jj);
+                                end
+                            end
+                        end
+                    end
+                    var1_array = nansum(full_spikes1,1)./nansum(dur_adj,1);
+                    spk = var1_array.*nansum(full_durations1,1);
+                    spk(isnan(spk)) = 0;
+                    var1_array_set = [var1_array_set; var1_array];
+                    var1_spk_set = [var1_spk_set; spk];
+
+                    llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
+                    llh_vec(end+1,1) = llh;
+
+                    if Args.UseIterLim % Converge if can find max within 1000 iterations
+
+                        % Run iterations in sets of 100. 
+                        % Stop if maximum of llh lands in second-to-last set
+                        % For every set of 100 iterations
+                        if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
+
+                            % Find max of last and next-to-last sets
+                            maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
+                            disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
+
+                            if size(llh_vec,1) >= 201
+                                maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
+                                % If llh doesn't converge
+                                if size(llh_vec,1) > Args.LLHIterLim
+                                    pick = size(llh_vec,1);
+                                    picklabel = 'nonconverged';
+                                    disp('LLH did not converge with either initial arrays. Abandon.');
+                                    mlm = false;
+                                    break;
+                                end
+                                % Test if global max is found
+                                if maxnextlast > maxlast % Yes, global max is found
+                                    % Record global max
+                                    convergewithvar1 = true;
+                                    pick = find(llh_vec == max(llh_vec(2:end)));
+                                    if size(pick,1) > 1
+                                        pick = pick(1);
+                                        picklabel = ['undiff'];
+                                    elseif isinf(pick)
+                                        picklabel = 'inf';
+                                        disp('Failed to converge to non-infinite values with either initial arrays. Abandon');
+                                    else
+                                        picklabel = num2str(pick);
+                                        % display results
+                                        disp(['Converged with initial ' Var1 ' array, pick = ' num2str(pick)]);
+                                    end
                                     % break out of loop
                                     mlm = false;
                                     break;
                                 end
                             end
                         end
-                    end
-                    
-                else % Converge if subsequent iterations < 0.1% of delta between iterations 1 and 2
-                
-                    % Report every set of 100 iterations
-                    if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
-                        disp(['Iter ' num2str(size(llh_vec,1))]);
-                    end
-                    % Check for convergence
-                    if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
-                        convergewithsv = true;
-                        % Record global max
-                        pick = find(llh_vec == max(llh_vec(2:end)));
-                        if size(pick,1) > 1
-                            pick = pick(1);
-                            picklabel = 'undiff';
-                        elseif isinf(pick)
-                            % Skip to using different initial array
-                            initialwith = 'place';
-                            reinitialise = true;
-                            disp('Failed to converge to non-infinite values with initial view array. Try initialising with place array');
-                            break;
-                        else
-                            picklabel = num2str(pick);
-                            % display results
-                            disp(['Converged with initial view array, pick = ' num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
-                            % break out of loop
-                            mlm = false;
-                            break;
+
+                    else % Converge if subsequent iterations < 0.1% of delta between iterations 1 and 2
+
+                        % Report every set of 100 iterations
+                        if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
+                            disp(['Iter ' num2str(size(llh_vec,1))]);
                         end
-                    elseif isinf(llh)
-                        % Skip to using different initial array
-                        initialwith = 'place';
-                        reinitialise = true;
-                        disp('Failed to converge to non-infinite values with initial view array. Try initialising with place array');
-                        break;
-                    elseif size(llh_vec,1) > Args.LLHIterLim
-                        % No convergence. Switch to using flat view array to start iterating
-                        initialwith = 'place';
-                        reinitialise = true;
-                        disp('LLH did not converge with initial view array. Try initialising with place array.');
-                        break;
-                    end
-                end
-
-            end
-            if reinitialise
-                continue;
-            end
-            
-            while strcmp(initialwith,'place') && ~convergewithsv % If first try with flat sv array fails to converge, try with flat p array
-
-                dur_adj = nan(size(view_durations,1),size(view_durations,2));
-                for jj = 1:size(view_durations,1) % view
-                    for ii = 1:size(view_durations,2) % place
-                        if ~isnan(view_durations(jj,ii))
-                            if isnan(p_array(ii))
-                                dur_adj(jj,ii) = 0;
-                            elseif p_array(ii) == 0
-                                dur_adj(jj,ii) = view_durations(jj,ii); 
-                            else
-                                dur_adj(jj,ii) = view_durations(jj,ii)*p_array(ii);
-                            end
-                        end
-                    end
-                end
-                sv_array = nansum(view_spikes,2)./nansum(dur_adj,2);
-                spk = sv_array.*nansum(view_durations,2);
-                spk(isnan(spk)) = 0;
-                sv_array_set = [sv_array_set sv_array];
-                sv_spk_set = [sv_spk_set spk];
-                
-                dur_adj = nan(size(view_durations,1),size(view_durations,2));
-                for ii = 1:size(view_durations,2) % place
-                    for jj = 1:size(view_durations,1) % view
-                        if ~isnan(view_durations(jj,ii))
-                            if isnan(sv_array(jj))
-                                dur_adj(jj,ii) = 0;
-                            elseif sv_array(jj) == 0
-                                dur_adj(jj,ii) = view_durations(jj,ii); 
-                            else
-                                dur_adj(jj,ii) = view_durations(jj,ii)*sv_array(jj);
-                            end
-                        end
-                    end
-                end
-                p_array = nansum(view_spikes,1)./nansum(dur_adj,1);
-                spk = p_array.*nansum(view_durations,1);
-                spk(isnan(spk)) = 0;
-                p_array_set = [p_array_set; p_array];
-                p_spk_set = [p_spk_set; spk];
-
-                llh = sum( nansum(view_spikes.*log(p_array.*view_durations.*sv_array)) - nansum(p_array.*view_durations.*sv_array) - nansum(log(factorial(view_spikes_temp))) );
-                llh_vec(end+1,1) = llh;
-                
-                if Args.UseIterLim % Converge if can find max within 1000 iterations
-
-                    % Run iterations in sets of 100. 
-                    % Stop if maximum of llh lands in second-to-last set
-                    % For every set of 100 iterations
-                    if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
-
-                        % Find max of last and next-to-last sets
-                        maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
-                        disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
-
-                        if size(llh_vec,1) >= 201
-                            maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
-                            % If llh doesn't converge
-                            if size(llh_vec,1) > Args.LLHIterLim
-                                pick = size(llh_vec,1);
-                                picklabel = 'nonconverged';
-                                disp('LLH did not converge with either initial arrays. Abandon.');
+                        % Check for convergence
+                        if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
+                            convergewithvar1 = true;
+                            % Record global max
+                            pick = find(llh_vec == max(llh_vec(2:end)));
+                            if size(pick,1) > 1
+                                pick = pick(1);
+                                picklabel = 'undiff';
+                            elseif isinf(pick)
+                                % Terminate
+                                picklabel = 'inf';
+                                disp('Failed to converge to non-infinite values with either array. Terminate');
                                 mlm = false;
-                                break;
-                            end
-                            % Test if global max is found
-                            if maxnextlast > maxlast % Yes, global max is found
-                                % Record global max
-                                convergewithp = true;
-                                pick = find(llh_vec == max(llh_vec(2:end)));
-                                if size(pick,1) > 1
-                                    pick = pick(1);
-                                    picklabel = ['undiff'];
-                                elseif isinf(pick)
-                                    picklabel = 'inf';
-                                    disp('Failed to converge to non-infinite values with either initial arrays. Abandon');
-                                else
-                                    picklabel = num2str(pick);
-                                    % display results
-                                    disp(['Converged with initial place array, pick = ' num2str(pick)]);
-                                end
+                            else
+                                picklabel = num2str(pick);
+                                % display results
+                                disp(['Converged with initial ' ...
+                                    Var1 ' array, pick = ' num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
                                 % break out of loop
                                 mlm = false;
-                                break;
                             end
-                        end
-                    end
-
-                else % Converge if subsequent iterations < 0.1% of delta between iterations 1 and 2
-                    
-                    % Report every set of 100 iterations
-                    if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
-                        disp(['Iter ' num2str(size(llh_vec,1))]);
-                    end
-                    % Check for convergence
-                    if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
-                        convergewithp = true;
-                        % Record global max
-                        pick = find(llh_vec == max(llh_vec(2:end)));
-                        if size(pick,1) > 1
-                            pick = pick(1);
-                            picklabel = 'undiff';
-                        elseif isinf(pick)
+                        elseif isinf(llh)
                             % Terminate
+                            pick = size(llh_vec,1);
                             picklabel = 'inf';
                             disp('Failed to converge to non-infinite values with either array. Terminate');
                             mlm = false;
-                        else
-                            picklabel = num2str(pick);
-                            % display results
-                            disp(['Converged with initial place array, pick = ' num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
-                            % break out of loop
+                        elseif size(llh_vec,1) > Args.LLHIterLim % No convergence
+                            pick = size(llh_vec,1);
+                            picklabel = 'nonconverged';
+                            disp('LLH did not converge with either initial arrays. Terminate.');
                             mlm = false;
                         end
-                    elseif isinf(llh)
-                        % Terminate
-                        pick = size(llh_vec,1);
-                        picklabel = 'inf';
-                        disp('Failed to converge to non-infinite values with either array. Terminate');
-                        mlm = false;
-                    elseif size(llh_vec,1) > Args.LLHIterLim % No convergence
-                        pick = size(llh_vec,1);
-                        picklabel = 'nonconverged';
-                        disp('LLH did not converge with either initial arrays. Terminate.');
-                        mlm = false;
                     end
+
                 end
 
+            end
+
+            % Scale each map to match total observed number of spikes
+            var1fac = repmat(nansum(nansum(full_spikes1)),size(var1_spk_set,1),1) ./ nansum(var1_spk_set,2);
+            var2fac = repmat(nansum(nansum(full_spikes1)),1,size(var2_spk_set,2))./ nansum(var2_spk_set,1);
+            var1fac(1) = 1; % Original place map
+            var2fac(1) = 1; % Original view map
+            if Args.StartOrig 
+                var1fac(2) = 1;
+                var2fac(2) = 1;
+            end
+            var1_array_set = repmat(var1fac,1,size(var1_array_set,2)) .* var1_array_set;
+            var1_spk_set = repmat(var1fac,1,size(var1_spk_set,2)) .* var1_spk_set;
+            var2_array_set = repmat(var2fac,size(var2_array_set,1),1) .* var2_array_set;
+            var2_spk_set = repmat(var2fac,size(var2_spk_set,1),1) .* var2_spk_set;
+
+            % Remove low obs bins
+            var1_array_set(:,bins_removed_var1) = nan;
+            var1_spk_set(:,bins_removed_var1) = nan;
+            var2_array_set(bins_removed_var2,:) = nan;
+            var2_spk_set(bins_removed_var2,:) = nan;
+
+            % Limit output map set so as not to overwhelm file size
+            numIterLlh = size(var1_array_set,1);
+            maxNumSmooth = 10;
+            if pick <= maxNumSmooth
+                smoothset = 1:pick;
+            else
+                smoothset = [1 pick-maxNumSmooth+2:pick];
+            end
+            numIterSm = length(smoothset);
+            smoothpick = numIterSm;
+
+            var1_array_smoothset = var1_array_set(smoothset,:);
+            var1_spk_smoothset = var1_spk_set(smoothset,:);
+            var2_array_smoothset = var2_array_set(:,smoothset);
+            var2_spk_smoothset = var2_spk_set(:,smoothset);
+
+            %%%%%%%%%%%%%%%
+
+
+
+            % NOTE: Currently unable to make Kian Wei's batch smoothing code
+            % work. 
+            % So for now just looping
+
+            disp('Smoothing ...');
+
+            %% PLACE Smoothing
+
+            placesmooth = 'adaptive';
+
+            switch placesmooth
+
+                case 'adaptive'
+
+                    % Adaptive Smoothing
+                    var1_maps_sm = nan(size(var1_array_smoothset,1),size(var1_array_smoothset,2));
+                    var1_dur_sm = nan(size(var1_array_smoothset,1),size(var1_array_smoothset,2));
+                    var1_durationsG = lineartogrid(var1_durations1','place',[Args.GridSteps Args.GridSteps]);
+                    var1_durationsG = var1_durationsG{1};
+                    for ii = 1:numIterSm
+                        var1_spikesG = lineartogrid(var1_spk_smoothset(ii,:)','place',[Args.GridSteps Args.GridSteps]);
+                        var1_spikesG = var1_spikesG{1};
+                        [maps_adsmG,~,dur_adsmG] = adsmooth(var1_durationsG,var1_spikesG,Args.AlphaPlace);
+                        dur_adsmG(isnan(dur_adsmG)) = 0;
+                        var1_maps_sm(ii,:) = gridtolinear({maps_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                        var1_dur_sm(ii,:) = gridtolinear({dur_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                    end
+                    % Adaptive SIC
+                    var1_crit_out = skaggs_sic(var1_maps_sm',var1_dur_sm');
+
+                case 'boxcar'
+
+                    var1_array_smoothsetG = cell2mat(lineartogrid(var1_array_smoothset','place',[Args.GridSteps Args.GridSteps]));
+                    var1_durationsG = repmat(var1_durationsG,1,1,size(var1_array_smoothset,1));
+                    unvis = ~(var1_durationsG > 0);
+
+                    % Boxcar smoothing
+                    maps_bcsmG = smooth(var1_array_smoothsetG,5,unvis,'boxcar');
+                    dur_bcsmG = smooth(var1_durationsG,5,unvis,'boxcar');
+                    var1_maps_sm = (gridtolinear({maps_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
+                    dur_bcsm = (gridtolinear({dur_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
+                    dur_bcsm(isnan(dur_bcsm)) = 0;
+                    % Boxcar SIC
+                    var1_crit_out = skaggs_sic(var1_maps_sm',dur_bcsm');
+
+                case 'disk'
+
+                    % Disk smoothing
+                    maps_dksmG = smooth(var1_array_smoothsetG,5,unvis,'disk');
+                    dur_dksmG = smooth(var1_durationsG,5,unvis,'disk');
+                    var1_maps_sm = (gridtolinear({maps_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
+                    dur_dksm = (gridtolinear({dur_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
+                    dur_dksm(isnan(dur_dksm)) = 0;
+                    % Disk SIC
+                    var1_crit_out = skaggs_sic(var1_maps_sm',dur_dksm');
+            end
+
+    %         % ISE 
+    %         lambda_i = var1_maps_adsm; 
+    %         var1_ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+
+            %% Var2 Smoothing
+
+            var2durlin = nansum(full_durations1,2);
+            
+            if strcmp(Var2,'view')
+
+                viewsmooth = 'adaptive';
+
+                var2_maps_sm = nan(numIterSm,size(var2_array_smoothset,1));
+                var2_dur_sm = nan(numIterSm,size(var2_array_smoothset,1));
+    %             var2_maps_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
+    %             var2_dur_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
+    %             var2_maps_dksm = nan(numIterSm,size(var2_array_smoothset,1));
+    %             var2_dur_dksm = nan(numIterSm,size(var2_array_smoothset,1));
+                
+                for ii = 1:numIterSm % For each iteration
+
+                    % Assign linear bin to grid bin - left to right, bottom to top
+                    durG = lineartogrid(var2durlin,'view',binDepths);
+                    spkG = lineartogrid(var2_spk_smoothset(:,ii),'view',binDepths);
+                    ratesG = lineartogrid(var2_array_smoothset(:,ii),'view',binDepths);
+
+                    % Pad sv map with 5 extra rows
+                    n = 5;
+                    padpillar = false;
+                    [emptyfloorref_pad,~] = padsvmap(n,durG,gazeSections,padpillar);
+                    padpillar = true;
+                    [durGpad,retrievemap] = padsvmap(n,durG,gazeSections,padpillar);
+                    [spkGpad,~] = padsvmap(n,spkG,gazeSections,padpillar);
+                    [ratesGpad,~] = padsvmap(n,ratesG,gazeSections,padpillar);
+
+                    if strcmp(viewsmooth,'adaptive')
+
+                        % Adaptive smooth
+                        maps_adsmGpad = cell(size(durGpad));
+                        dur_adsmGpad = cell(size(durGpad));
+                        for jj = 1:size(binDepths,1)
+                            if jj == 1 || jj == 2
+                                maps_adsmGpad{jj} = spkGpad{jj}/durGpad{jj};
+                                dur_adsmGpad{jj} = durGpad{jj};
+                            else
+                                [maps_adsmGpad{jj},spk_adsmG,dur_adsmGpad{jj}] = adsmooth(durGpad{jj},spkGpad{jj},Args.AlphaView);
+                            end
+                        end
+                        % Unpad smoothed map
+                        maps_adsmG = unpadsvmap(maps_adsmGpad,retrievemap,durG);
+                        dur_adsmG = unpadsvmap(dur_adsmGpad,retrievemap,durG);
+                        % Convert grid map back to linear sv map
+                        var2_maps_sm(ii,:) = gridtolinear(maps_adsmG,'view',binDepths);
+                        var2_dur_sm(ii,:) = gridtolinear(dur_adsmG,'view',binDepths);
+                        var2_dur_sm(isnan(var2_dur_sm)) = 0;
+                        % Adaptive SIC 
+                        var2_crit_out = skaggs_sic(var2_maps_sm',var2_dur_sm');
+                    else 
+                        % Boxcar/disk smooth
+                        maps_bcsmGpad = cell(size(durGpad));
+                        dur_bcsmGpad = cell(size(durGpad));
+                        maps_dksmGpad = cell(size(durGpad));
+                        dur_dksmGpad = cell(size(durGpad));
+                        for jj = 1:size(binDepths,1)
+                            if jj == 1 || jj == 2
+                                maps_bcsmGpad{jj} = ratesGpad{jj};
+                                maps_dksmGpad{jj} = ratesGpad{jj};
+                                dur_bcsmGpad{jj} = durGpad{jj};
+                                dur_dksmGpad{jj} = durGpad{jj};
+                            else
+                                unvis = ~(emptyfloorref_pad{jj}>0) | isnan(ratesGpad{jj});
+                                if strcmp(viewsmooth,'boxcar')
+                                    % Boxcar smoothing
+                                    maps_bcsmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'boxcar');
+                                    dur_bcsmGpad{jj} = smooth(durGpad{jj},5,unvis,'boxcar');
+                                elseif strcmp(viewsmooth,'disk')
+                                    % Disk smoothing
+                                    maps_dksmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'disk');
+                                    dur_dksmGpad{jj} = smooth(durGpad{jj},5,unvis,'disk');
+                                end
+                            end
+                        end
+
+                        if strcmp(viewsmooth,'boxcar')
+                            % Unpad smoothed map
+                            maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap,durG);
+                            dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap,durG);
+                            % Convert grid map back to linear sv map
+                            var2_maps_sm(ii,:) = gridtolinear(maps_bcsmG,'view',binDepths);
+                            var2_dur_sm(ii,:) = gridtolinear(dur_bcsmG,'view',binDepths);
+                            var2_dur_sm(isnan(var2_dur_bcsm)) = 0;
+                            % Boxcar SIC
+                            var2_crit_out = skaggs_sic(var2_maps_bcsm',var2_dur_sm');
+                        elseif strcmp(viewsmooth,'disk')
+                            % Unpad smoothed map
+                            maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap,durG);
+                            dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap,durG);
+                            % Convert grid map back to linear sv map
+                            var2_maps_sm(ii,:) = gridtolinear(maps_dksmG,'view',binDepths);
+                            var2_dur_sm(ii,:) = gridtolinear(dur_dksmG,'view',binDepths);
+                            var2_dur_sm(isnan(var2_dur_dksm)) = 0;
+                            % Disk SIC
+                            var2_crit_out = skaggs_sic(var2_maps_dksm',var2_dur_sm');
+                        end
+                    end
+
+                end
+
+            elseif strcmp(Var2,'headdirection')
+                n = 5;
+                headdirectionsmooth = 'boxcar';
+                % Smooth
+                [var2_maps_sm] = smoothDirMap(var2_array_smoothset,n,pv.data.([Var2 'bins']));
+                [var2_dur_sm] = smoothDirMap(repmat(var2durlin,1,numIterSm),n,pv.data.([Var2 'bins']));
+                var2_maps_sm = var2_maps_sm';
+                var2_dur_sm = var2_dur_sm';
+
+                % Rayleigh vector
+                binSize=(pi*2)/length(var2_maps_sm(1,:));
+                binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
+                binWeights=var2_maps_sm./(max(var2_maps_sm,[],2));
+                S=sum( sin(binAngles).*binWeights , 2);
+                C=sum( cos(binAngles).*binWeights , 2);
+                R=sqrt(S.^2+C.^2);
+                meanR=R./sum(binWeights,2);
+                var2_crit_out = meanR';
             end
             
-        end
-        
-        % Scale each map to match total observed number of spikes
-        pfac = repmat(nansum(nansum(view_spikes)),size(p_spk_set,1),1) ./ nansum(p_spk_set,2);
-        svfac = repmat(nansum(nansum(view_spikes)),1,size(sv_spk_set,2))./ nansum(sv_spk_set,1);
-        pfac(1) = 1; % Original place map
-        svfac(1) = 1; % Original view map
-        if Args.StartOrig 
-            pfac(2) = 1;
-            svfac(2) = 1;
-        end
-        p_array_set = repmat(pfac,1,size(p_array_set,2)) .* p_array_set;
-        p_spk_set = repmat(pfac,1,size(p_spk_set,2)) .* p_spk_set;
-        sv_array_set = repmat(svfac,size(sv_array_set,1),1) .* sv_array_set;
-        sv_spk_set = repmat(svfac,size(sv_spk_set,1),1) .* sv_spk_set;
-        
-        % Remove low obs bins
-        p_array_set(:,bins_removed_p) = nan;
-        p_spk_set(:,bins_removed_p) = nan;
-        sv_array_set(bins_removed_sv,:) = nan;
-        sv_spk_set(bins_removed_sv,:) = nan;
-        
-        % Limit output map set so as not to overwhelm file size
-        numIterLlh = size(p_array_set,1);
-        maxNumSmooth = 10;
-        if pick <= maxNumSmooth
-            smoothset = 1:pick;
-        else
-            smoothset = [1 pick-maxNumSmooth+2:pick];
-        end
-        numIterSm = length(smoothset);
-        smoothpick = numIterSm;
-        
-        p_array_smoothset = p_array_set(smoothset,:);
-        p_spk_smoothset = p_spk_set(smoothset,:);
-        sv_array_smoothset = sv_array_set(:,smoothset);
-        sv_spk_smoothset = sv_spk_set(:,smoothset);
-        
-        %%%%%%%%%%%%%%%
-        
-        % Store llh output
-        data.convergewithsv = convergewithsv;
-        data.convergewithp = convergewithp;
-        data.llh = llh_vec;
-        data.llhpick = pick;
-        data.llhpicklabel = picklabel;
-        data.maps_raw_corrp = p_array_set(pick,:);
-        data.maps_raw_corrsv = sv_array_set(:,pick)';
-        data.maps_raw_corrpset = p_array_smoothset;
-        data.maps_raw_corrsvset = sv_array_smoothset';
 
-        
-        %% PLACE Smoothing
-        
-        % NOTE: Currently unable to make Kian Wei's batch smoothing code
-        % work. 
-        % So for now just looping
+            % Store output data
+            if repeat == 1
+                
+                data.(combiname).var1 = Var1;
+                data.(combiname).var2 = Var2;
+                data.(combiname).([lower(Var1) 'smooth']) = eval([lower(Var1) 'smooth']);
+                data.(combiname).([lower(Var2) 'smooth']) = eval([lower(Var2) 'smooth']);
 
-        % Smooth
-        p_maps_adsm = nan(size(p_array_smoothset,1),size(p_array_smoothset,2));
-        place_durationsG = reshape(place_durations,Args.GridSteps,Args.GridSteps);
-        for ii = 1:numIterSm
-            disp(['Smoothing place map ' num2str(smoothset(ii))]);
-            place_spikesG = reshape(p_spk_smoothset(ii,:),Args.GridSteps,Args.GridSteps);
-            [maps_adsmG,spk_adsmG,dur_adsmG] = adsmooth(place_durationsG,place_spikesG,Args.AlphaPlace);
-            p_maps_adsm(ii,:) = reshape(maps_adsmG,1,Args.GridSteps*Args.GridSteps);
-        end
-        
-        % SIC
-        pdur1 = repmat(place_durations,numIterSm,1);
-        Pi1 = pdur1./sum(pdur1,2); % consider nansum to play safe
-        lambda_i = p_maps_adsm;
-        lambda_i(isnan(lambda_i)) = 0;
-        lambda_bar = sum(Pi1 .* lambda_i,2);
-        % divide firing for each position by the overall mean
-        FRratio = lambda_i./repmat(lambda_bar,1,Args.GridSteps^2);
-        % compute first term in SIC
-        SIC1 = Pi1 .* lambda_i; 
-        SIC2 = log2(FRratio);
-        zeros_placing = SIC1==0;  
+                data.(combiname).(['maps_dist_' lower(Var1(1))]) = var1_array_pred;
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm']) = var1_array_pred_adsm;
+                data.(combiname).(['maps_dist_' lower(Var2(1))]) = var2_array_pred';
+                data.(combiname).(['maps_dist_' lower(Var2(1)) '_adsm']) = var2_array_pred_adsm';
+                data.(combiname).(['distratio_' lower(Var1(1))]) = dr_var1;
+                data.(combiname).(['distratio_' lower(Var2(1))]) = dr_var2;
+                data.(combiname).(['distcorr_' lower(Var1(1))]) = dcorr_var1;
+                data.(combiname).(['distcorr_' lower(Var2(1))]) = dcorr_var2;
 
-        bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-        bits_per_sec(zeros_placing) = NaN;
-        lambda_bar_ok = lambda_bar>0;
-        lambda_bar_bad = ~lambda_bar_ok;
-        sic_out = nansum(bits_per_sec, 2);
-        sic_out(lambda_bar_bad) = NaN;
+                data.(combiname).(['convergewith' lower(Var2(1))]) = convergewithvar2;
+                data.(combiname).(['convergewith' lower(Var1(1))]) = convergewithvar1;
+                data.(combiname).NumIterLlh = numIterLlh;
+                data.(combiname).smoothpick = smoothpick;
+                data.(combiname).llh = llh_vec;
+                data.(combiname).llhpick = pick;
+                data.(combiname).llhpicklabel = picklabel;
+                data.(combiname).(['maps_raw_corr' lower(Var1(1))]) = var1_array_set(pick,:);
+                data.(combiname).(['maps_raw_corr' lower(Var2(1))]) = var2_array_set(:,pick)';
+                data.(combiname).(['maps_raw_corr' lower(Var1(1)) 'set']) = var1_array_smoothset;
+                data.(combiname).(['maps_raw_corr' lower(Var2(1)) 'set']) = var2_array_smoothset';
+    %             data.ratesplaceMethod2 = rates_place;
+    %             data.ratesviewMethod2 = rates_view;
 
-        % ISE 
-        lambda_i = p_maps_adsm; 
-        ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-        
-        % Store output data
-        data.maps_adsm_corrp = p_maps_adsm(smoothpick,:);
-        data.maps_adsm_corrpset = p_maps_adsm;
-        data.SIC_corrp = sic_out(smoothpick);
-        data.SIC_corrpset = sic_out;
-        data.ISE_corrp = ise_out(smoothpick);
-        data.ISE_corrpset = ise_out;
-        
-        %% View Smoothing
+                data.(combiname).(['maps_sm_corr' lower(Var1(1))]) = var1_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var1(1)) 'set']) = var1_maps_sm;
+                data.(combiname).(['dur_sm_corr' lower(Var1(1))]) = var1_dur_sm(smoothpick,:);
+                data.(combiname).(['crit_sm_corr' lower(Var1(1))]) = var1_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var1(1)) 'set']) = var1_crit_out';
 
-        gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
-        binDepths = [1 1;
-            1 1;
-            40 40;
-            40 40;
-            8 160;
-            5 32;
-            5 32;
-            5 32;
-            5 32];
-        sv_maps_adsm = nan(size(sv_array_smoothset,1),size(sv_array_smoothset,2));
-        durG = cell(size(binDepths,1),1);
-        spkG = cell(size(binDepths,1),1);
-        mapG = cell(size(binDepths,1),1);
-        svdurlin = nansum(view_durations,2);
-        for ii = 1:numIterSm % For each iteration
-            disp(['Smoothing view map ' num2str(smoothset(ii))]);
-            for jj = 1:9 % For each grid
-                % Initialize empty grids
-                dur = nan(binDepths(jj,1),binDepths(jj,2));
-                spk = dur;
-                % Assign linear bin to grid bin. Note that this goes left
-                % to right, top to bottom
-                for mm = 1:binDepths(jj,1)*binDepths(jj,2) % For every point in linear map
-                    if mod(mm,binDepths(jj,2)) == 0
-                        y = binDepths(jj,2);
-                    else
-                        y = mod(mm,binDepths(jj,2));
-                    end
-                    x = ceil(mm/binDepths(jj,2));
-                    indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
-                    % Assign
-                    dur(x,y) = svdurlin(indbins_lin,1);
-                    spk(x,y) = sv_spk_smoothset(indbins_lin,ii);
-                end
-                % Collect output
-                durG{jj} = dur;
-                spkG{jj} = spk;
-            end
-            retrievemap = cell(size(binDepths,1),1);
-            durG_temp = durG; % keep original for reference during padding
-            spkG_temp = spkG;
-            for jj = 3:size(binDepths,1) % For each separate grid, minus the cue and hint
-                % Pad each grid map with adjoining bins from other grids
-                % Pad with <<5>> extra bin rows
-                n = 5;
-                [retrievemap{jj},durG{jj},spkG{jj}] = padgrids(n,durG_temp{jj},spkG_temp{jj},durG_temp,spkG_temp,gazeSections,jj);
-%                 [retrievemap{jj},durG{jj},spkG{jj}] = padgrids(n,durG{jj},spkG{jj},durG,spkG,gazeSections,jj);
-                % Smooth
-                [maps_adsmG,spk_adsmG,dur_adsmG] = adsmooth(durG{jj},spkG{jj},Args.AlphaView);
-                % Remove padding 
-                unpad_maps_adsmG = maps_adsmG(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2));
-                % Put grid map back into linear map
-                set = reshape(flipud(rot90(unpad_maps_adsmG)),size(unpad_maps_adsmG,1)*size(unpad_maps_adsmG,2),1);
-                lin_inds = sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2))+1:sum(binDepths(1:jj,1).*binDepths(1:jj,2));
-                sv_maps_adsm(lin_inds,ii) = reshape(set,1,binDepths(jj,1)*binDepths(jj,2));
+                data.(combiname).(['maps_sm_corr' lower(Var2(1))]) = var2_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var2(1)) 'set']) = var2_maps_sm;
+                data.(combiname).(['dur_sm_corr' lower(Var2(1))]) = var2_dur_sm(smoothpick,:);
+                data.(combiname).(['crit_sm_corr' lower(Var2(1))]) = var2_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var2(1)) 'set']) = var2_crit_out';
+
+                data.(combiname).covmat = covmat;
+                data.(combiname).covmat_norm = covmat_norm;
+                data.(combiname).l1norm = l1norm;
+                data.(combiname).l2norm = l2norm;
+            elseif repeat == 2
+
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '1']) = var1_array_pred;
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm' '1']) = var1_array_pred_adsm;
+                data.(combiname).(['maps_dist_' lower(Var2(1)) '1']) = var2_array_pred';
+                data.(combiname).(['maps_dist_' lower(Var2(1)) '_adsm' '1']) = var2_array_pred_adsm';
+                data.(combiname).(['distratio_' lower(Var1(1)) '1']) = dr_var1;
+                data.(combiname).(['distratio_' lower(Var2(1)) '1']) = dr_var2;
+                data.(combiname).(['distcorr_' lower(Var1(1)) '1']) = dcorr_var1;
+                data.(combiname).(['distcorr_' lower(Var2(1)) '1']) = dcorr_var2;
+
+                data.(combiname).(['maps_sm_corr' lower(Var1(1)) '1']) = var1_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var1(1)) 'set' '1']) = var1_maps_sm;
+                data.(combiname).(['crit_sm_corr' lower(Var1(1)) '1']) = var1_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var1(1)) 'set' '1']) = var1_crit_out';
+
+                data.(combiname).(['maps_sm_corr' lower(Var2(1)) '1']) = var2_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var2(1)) 'set' '1']) = var2_maps_sm;
+                data.(combiname).(['crit_sm_corr' lower(Var2(1)) '1']) = var2_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var2(1)) 'set' '1']) = var2_crit_out';
+                
+            elseif repeat == 3
+
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '2']) = var1_array_pred;
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm' '2']) = var1_array_pred_adsm;
+                data.(combiname).(['maps_dist_' lower(Var2(1)) '2']) = var2_array_pred';
+                data.(combiname).(['maps_dist_' lower(Var2(1)) '_adsm' '2']) = var2_array_pred_adsm';
+                data.(combiname).(['distratio_' lower(Var1(1)) '2']) = dr_var1;
+                data.(combiname).(['distratio_' lower(Var2(1)) '2']) = dr_var2;
+                data.(combiname).(['distcorr_' lower(Var1(1)) '2']) = dcorr_var1;
+                data.(combiname).(['distcorr_' lower(Var2(1)) '2']) = dcorr_var2;
+
+                data.(combiname).(['maps_sm_corr' lower(Var1(1)) '2']) = var1_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var1(1)) 'set' '2']) = var1_maps_sm;
+                data.(combiname).(['crit_sm_corr' lower(Var1(1)) '2']) = var1_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var1(1)) 'set' '2']) = var1_crit_out';
+
+                data.(combiname).(['maps_sm_corr' lower(Var2(1)) '2']) = var2_maps_sm(smoothpick,:);
+                data.(combiname).(['maps_sm_corr' lower(Var2(1)) 'set' '2']) = var2_maps_sm;
+                data.(combiname).(['crit_sm_corr' lower(Var2(1)) '2']) = var2_crit_out(smoothpick);
+                data.(combiname).(['crit_sm_corr' lower(Var2(1)) 'set' '2']) = var2_crit_out';
+                
             end
         end
         
-        % SIC 
-        svdur1 = repmat(svdurlin,1,numIterSm);
-        Pi1 = svdur1./sum(svdur1,1);
-        lambda_i = sv_maps_adsm;
-        lambda_bar = nansum(Pi1 .* lambda_i,1);
-        % divide firing for each position by the overall mean
-        FRratio = lambda_i./repmat(lambda_bar,5122,1);
-        % compute first term in SIC
-        SIC1 = Pi1 .* lambda_i; 
-        SIC2 = log2(FRratio);
-        zeros_placing = SIC1==0;  
-
-        bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-        bits_per_sec(zeros_placing) = NaN;
-        lambda_bar_ok = lambda_bar>0;
-        lambda_bar_bad = ~lambda_bar_ok;
-        sic_out = nansum(bits_per_sec, 1);
-        sic_out(lambda_bar_bad) = NaN;
-        sic_out = sic_out';
-
-        % ISE portion - taken directly from vmsv
-        % create overall map and insert padded portions in, to account for
-        % cross-portion pairs
-        tic;
-        canvas = nan(51, 161, numIterSm);
-        firing_rates = sv_maps_adsm';
-
-        % flooring
-        floor_padded = nan(42,42,numIterSm);
-        floor_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-        floor_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,3203:3203+39),[2 1]), 40, 1, numIterSm),1);
-        floor_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,3243:3243+39),[2 1]), 1, 40, numIterSm);
-        floor_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,3283:3283+39),[2 1]), 40, 1, numIterSm);
-        floor_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,3323:3323+39),[2 1]), 1, 40, numIterSm), 2);
-        canvas(10:end,1:42,:) = floor_padded;
-
-        % ceiling
-        ceiling_padded = nan(42,42,numIterSm);
-        ceiling_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,1603:3202),size(firing_rates,1),40,40), [3 2 1]), 1);
-        ceiling_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,4323:4323+39),[2 1]), 40, 1, numIterSm),1);
-        ceiling_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,4363:4363+39),[2 1]), 1, 40, numIterSm);
-        ceiling_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,4403:4403+39),[2 1]), 40, 1, numIterSm);
-        ceiling_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,4443:4443+39),[2 1]), 1, 40, numIterSm), 2);
-        canvas(10:end,44:85,:) = ceiling_padded;
-
-        % walls
-        walls_padded = nan(8,161,numIterSm);
-        walls_padded(:,1:end-1,:) = flip(permute(reshape(firing_rates(:,3203:3203+1280-1), numIterSm, 40*4, 8),[3 2 1]), 1);
-        walls_padded(:,end,:) = walls_padded(:,1,:);
-        canvas(1:8,:,:) = walls_padded;
-
-        % used to pad pillar base more easily
-        floor_base = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-
-        % pillars
-        PTL_padded = nan(6,33,numIterSm);
-        PTL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4963:4963+160-1), numIterSm, 8*4, 5),[3 2 1]), 1);
-        % small diagonal issue here, diagonal floor bins at the corners are put
-        % side by side, only 16 such occurrences in total, neglected for now.
-        PTL_padded(end,1:8,:) = flip(permute(floor_base(9:16,8,:),[2 1 3]),2);
-        PTL_padded(end,9:16,:) = floor_base(8,9:16,:);
-        PTL_padded(end,17:24,:) = permute(floor_base(9:16,17,:),[2 1 3]);
-        PTL_padded(end,25:32,:) = flip(floor_base(17,9:16,:),2);
-        PTL_padded(:,end,:) = PTL_padded(:,1,:);
-        canvas(10:10+6-1,87:87+32,:) = PTL_padded;
-
-        PTR_padded = nan(6,33,numIterSm);
-        PTR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4803:4803+160-1), numIterSm, 8*4, 5),[3 2 1]), 1);
-        PTR_padded(end,1:8,:) = flip(permute(floor_base(9:16,24,:),[2 1 3]),2);
-        PTR_padded(end,9:16,:) = floor_base(8,25:32,:);
-        PTR_padded(end,17:24,:) = permute(floor_base(9:16,33,:),[2 1 3]);
-        PTR_padded(end,25:32,:) = flip(floor_base(17,25:32,:),2);
-        PTR_padded(:,end,:) = PTR_padded(:,1,:);
-        canvas(10:10+6-1,121:121+32,:) = PTR_padded;
-
-        PBL_padded = nan(6,33,numIterSm);
-        PBL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4643:4643+160-1), numIterSm, 8*4, 5),[3 2 1]), 1);
-        PBL_padded(end,1:8,:) = flip(permute(floor_base(25:32,8,:),[2 1 3]),2);
-        PBL_padded(end,9:16,:) = floor_base(24,9:16,:);
-        PBL_padded(end,17:24,:) = permute(floor_base(25:32,17,:),[2 1 3]);
-        PBL_padded(end,25:32,:) = flip(floor_base(33,9:16,:),2);
-        PBL_padded(:,end,:) = PBL_padded(:,1,:);
-        canvas(17:17+6-1,87:87+32,:) = PBL_padded;
-
-        PBR_padded = nan(6,33,numIterSm);
-        PBR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4483:4483+160-1), numIterSm, 8*4, 5),[3 2 1]), 1);
-        PBR_padded(end,1:8,:) = flip(permute(floor_base(25:32,24,:),[2 1 3]),2);
-        PBR_padded(end,9:16,:) = floor_base(24,25:32,:);
-        PBR_padded(end,17:24,:) = permute(floor_base(25:32,33,:),[2 1 3]);
-        PBR_padded(end,25:32,:) = flip(floor_base(33,25:32,:),2);
-        PBR_padded(:,end,:) = PBR_padded(:,1,:);
-        canvas(17:17+6-1,121:121+32,:) = PBR_padded;
-
-        actual_image = canvas(:,:,1);
-        actual_image = actual_image(:)';
-        shuffled_images = canvas(:,:,2:end);
-        shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
-
-        disp(['time taken to pad map for ISE: ' num2str(toc)]);
-        tic;
-
-        ise_out = ise(actual_image, shuffled_images, 51, 161);
-        disp(['time taken to compute ISE: ' num2str(toc)]);
-
-        % Store output data
-        sv_maps_adsm = sv_maps_adsm';
-        data.maps_adsm_corrsv = sv_maps_adsm(smoothpick,:);
-        data.maps_adsm_corrsvset = sv_maps_adsm;
-        data.SIC_corrsv = sic_out(smoothpick);
-        data.SIC_corrsvset = sic_out;
-        data.ISE_corrsv = ise_out(smoothpick);
-        data.ISE_corrsvset = ise_out;
-        data.covmat = covmat;
-        data.covmat_norm = covmat_norm;
-        data.norml1 = norml1;
-        data.norml2 = norml2;
+    end
         
     %% SAVE   
     
     % create nptdata so we can inherit from it    
+    data.spatialvars = spatialvars;
+    data.spatialvarpairs = spatialvarpairs;
     data.gridSteps = Args.GridSteps;
-    data.NumIterLlh = numIterLlh;
-    data.smoothpick = smoothpick;
+    data.binDepths = binDepths;
+    data.placebins = pv.data.placebins;
+    data.viewbins = pv.data.viewbins;
+    data.headdirectionbins = pv.data.headdirectionbins;
     data.numSets = 1;
     data.Args = Args;
     n = nptdata(1,0,pwd);
@@ -863,356 +1131,24 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-function [smoothedRate,smoothedSpk,smoothedDur]=adsmooth(dur,spk,alpha)
-% Adaptive smoothing of rate maps.
-%
-%       [smoothedRate,smoothedSpk,smoothedPos]=rates_adaptivesmooth(posMap,spkMap,alpha)
-%
-% Each bin is smoothed using a flat, circular kernal. The circle radius 
-% is set for each bin, indivdually, such that 
-%
-%   radius => alpha ./ ( sqrt(nSpike) .* nDwell )
-%
-% where nSpike and nDwell are the number of spikes, and the amount of dwell time (in s) within the kernel.
-%
-% smoothedRate, smoothedSpk, smoothedPos are the smoothed maps (spike and pos maps are smoothed 
-% with the same kernal group as for the rate map.
-
-% Check for empty spk maps %
-if sum(sum(spk))==0
-    smoothedDur=dur;    smoothedDur(dur==0)=nan;
-    smoothedSpk=spk;    smoothedSpk(dur==0)=nan;
-    smoothedRate=spk;   smoothedRate(dur==0)=nan;
-    return
+function [map_sm]=smoothDirMap(map_raw,n,dirSteps)
+% Sliding window average of n bins
+% raw map input needs to be in column form. 
+% M dir bins by N shuffles
+dim1 = size(map_raw,1);
+dim2 = size(map_raw,2);
+flip = false;
+if dim1 ~= dirSteps
+    flip = true;
+    map_raw = map_raw';
 end
-% Pre-assign output %
-smoothedDur=zeros(size(dur));
-smoothedSpk=zeros(size(dur));
-% Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
-vis=zeros(size(dur));
-vis(dur>0)=1;
-% Pre-assign map which records which bins have passed %
-smoothedCheck=false(size(dur));
-smoothedCheck(dur==0)=true; % Disregard unvisited - mark as already done.
-% Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
-radiiUsedList=nan(1,sum(sum(dur>0)));
-radiiUsedCount=1;
-
-%%% Run increasing radius iterations %%%
-r=1; % Circle radius
-boundary=0; % IMFILTER boundary condition
-while any(any(~smoothedCheck))
-    % Check radius isn't getting too big (if >map/2, stop running) %
-    if r>max(size(dur))/2
-%     if r>20
-        smoothedSpk(~smoothedCheck)=nan;
-        smoothedDur(~smoothedCheck)=nan;
-        break
-    end
-    % Construct filter kernel ...
-    % Place: Flat disk, where r>=distance to bin centre %
-    f=fspecial('disk',r); 
-    f(f>=(max(max(f))/3))=1;
-    f(f~=1)=0;   
-    % Filter maps (get N spikes and pos sum within kernel) %
-    fSpk=imfilter(spk,f,boundary);
-    fDur=imfilter(dur,f,boundary);
-    fVis=imfilter(vis,f,boundary);
-    % Which bins pass criteria at this radius? %
-    warning('off', 'MATLAB:divideByZero');
-    binsPassed=alpha./(sqrt(fSpk).*fDur) <= r;
-    warning('on', 'MATLAB:divideByZero');
-    binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
-    % Add these to list of radii used %
-    nBins=sum(binsPassed(:));
-    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
-    radiiUsedCount=radiiUsedCount+nBins;
-    % Assign values to smoothed maps %
-    smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
-    smoothedDur(binsPassed)=fDur(binsPassed)./fVis(binsPassed);
-    % Record which bins were smoothed this iteration %
-    smoothedCheck(binsPassed)=true;
-    % Increase circle radius (half-bin steps) %
-    r=r+0.5; % Increase radius in 0.5 bin steps.
+% Smooth a dir map.
+if n==1; map_sm=map_raw; return; end
+p = (n-1)/2;                                               % Pad for circular smooth
+pad_map = [map_raw(end-p+1:end,:); map_raw; map_raw(1:p,:)];                    %  ..
+map_sm = mean( im2col(pad_map, [n 1], 'sliding') );
+% Reshape
+map_sm = reshape(map_sm,dirSteps,size(map_sm,2)/dirSteps);
+if flip
+    map_sm = map_sm';
 end
-
-% Assign Output %
-warning('off', 'MATLAB:divideByZero');
-smoothedRate=smoothedSpk./smoothedDur;
-warning('on', 'MATLAB:divideByZero');
-smoothedRate(dur==0)=nan;
-smoothedDur(dur==0)=nan;
-smoothedSpk(dur==0)=nan;
-
-% Report radii sizes %
-if 0
-    hAllFigs = get(0, 'children');
-    hFig = findobj(hAllFigs, 'flat', 'tag', 'adaptiveSmoothPlotWindow');
-    if isempty(hFig);
-        hFig=figure;
-        set(hFig,'tag','adaptiveSmoothPlotWindow');
-    else
-        figure(hFig);
-    end
-    hist(radiiUsedList,1:10);
-    uiwait(hFig,1.5);
-end
-
-
-
-% relic code
-% 
-function [retrievemap,o_i,spikeLoc,map] = padgrids(n,o_i,spikeLoc,grid_o_i,grid_spikeLoc,gazeSections,jj)
-
-% Pad maps with adjoining bins from adjacent maps
-
-switch gazeSections{jj}
-    case 'Ground'
-        wallsection_ind = strcmp(gazeSections,'Walls');
-        wall_o_i = grid_o_i{wallsection_ind};
-        wall_spikeLoc = grid_spikeLoc{wallsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with wall data
-        o_i_temp(1:n,n+1:n+size(o_i,1),:) = wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
-        o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
-        o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
-        o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
-        spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
-        spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
-        spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Ceiling'
-        wallsection_ind = strcmp(gazeSections,'Walls');
-        wall_o_i = grid_o_i{wallsection_ind};
-        wall_spikeLoc = grid_spikeLoc{wallsection_ind};
-
-        % Flip walldata upside down
-        wall_o_i = flipud(wall_o_i);
-        wall_spikeLoc = flipud(wall_spikeLoc);
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with wall data
-        o_i_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
-        o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
-        o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
-        o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
-        spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
-        spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
-        spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Walls'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        ceilingsection_ind = strcmp(gazeSections,'Ceiling');
-        ceiling_o_i = grid_o_i{ceilingsection_ind};
-        ceiling_spikeLoc = grid_spikeLoc{ceilingsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_o_i(:,1:n,:),-1);
-        o_i_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_o_i(1:n,:,:);
-        o_i_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_o_i(:,size(ground_o_i,1)-n+1:end,:),1);
-        o_i_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_o_i(size(ground_o_i,1)-n+1:end,:,:),2);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_spikeLoc(:,1:n,:),-1);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_spikeLoc(1:n,:,:);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_spikeLoc(:,size(ground_spikeLoc,1)-n+1:end,:),1);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_spikeLoc(size(ground_spikeLoc,1)-n+1:end,:,:),2);
-
-        % Pad with ceiling data
-        o_i_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_o_i(:,size(ceiling_o_i,1)-n+1:end,:),1));
-        o_i_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_o_i(1:n,:,:));
-        o_i_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(:,1:n,:),-1));
-        o_i_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(size(ceiling_o_i,1)-n+1:end,:,:),2));
-        spikeLoc_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_spikeLoc(:,size(ceiling_spikeLoc,1)-n+1:end,:),1));
-        spikeLoc_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_spikeLoc(1:n,:,:));
-        spikeLoc_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(:,1:n,:),-1));
-        spikeLoc_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(size(ceiling_spikeLoc,1)-n+1:end,:,:),2));
-
-        % Pad with wall data on either end
-        o_i_temp(n+1:n+size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(n+1:n+size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar1'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,25-n:24,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,25:32,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,33:32+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,25:32,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,25-n:24,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,25:32,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,33:32+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,25:32,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar2'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,9-n:8,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,9:16,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,17:16+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,9:16,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,9-n:8,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,9:16,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,17:16+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,9:16,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar3'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,25-n:24,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,25:32,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,33:32+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,25:32,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,25-n:24,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,25:32,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,33:32+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,25:32,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar4'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,9-n:8,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,9:16,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,17:16+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,9:16,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,9-n:8,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,9:16,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,17:16+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,9:16,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-end
-% Patch: Remove NaNs because adaptive smoothing seems to have trouble with
-% boundaries of NaNs
-o_i(isnan(o_i)) = 0;
-spikeLoc(isnan(spikeLoc)) = 0;

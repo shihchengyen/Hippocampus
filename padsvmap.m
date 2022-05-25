@@ -1,4 +1,4 @@
-function [out,retrievemap] = padsvmap(n,gridmap,gazeSections)
+function [out,retrievemap] = padsvmap(n,gridmap,gazeSections,padpillar)
 
 % This function pads each section of a spatial view map with bins from
 % adjoining sections
@@ -59,40 +59,42 @@ for jj = 1:size(gridmap,1)
             maptemp(n+1:n+size(map,1),size(map,1)+n+1:end,:) = rot90(wallmap(size(wallmap,1)-n+1:end,2*size(map,1)+1:3*size(map,1),:),-1); % right
             maptemp(size(map,1)+n+1:end,n+1:size(map,1)+n,:) = rot90(wallmap(size(wallmap,1)-n+1:end,3*size(map,1)+1:4*size(map,1),:),-2); % bottom
             maptemp(n+1:size(map,1)+n,1:n,:) = rot90(wallmap(size(wallmap,1)-n+1:end,0*size(map,1)+1:1*size(map,1),:),1); % left
-
-            % Pad with pillar1 data - additively, since I can't figure out how not to overlap the pixels
-            plpx = 4; % pad with 3, not 5 pixels, to leave a bit of space in the middle
-            temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
-            temp1(:,1:plpx,:) = flipud(rot90(pillar1map(5-plpx+1:end,1:8,:),-1));
-            temp2(1:plpx,:,:) = flipud(pillar1map(5-plpx+1:end,9:16,:));
-            temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar1map(5-plpx+1:end,17:24,:),-1));
-            temp4(8-plpx+1:8,:,:) = fliplr(pillar1map(5-plpx+1:end,25:end,:));
-            temp = (temp1+temp2+temp3+temp4)/4;
-            maptemp(n+25:n+32,n+25:n+32,:) = temp; % bottom right
-            % Pad with pillar2 data
-            temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
-            temp1(:,1:plpx,:) = flipud(rot90(pillar2map(5-plpx+1:end,1:8,:),-1));
-            temp2(1:plpx,:,:) = flipud(pillar2map(5-plpx+1:end,9:16,:));
-            temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar2map(5-plpx+1:end,17:24,:),-1));
-            temp4(8-plpx+1:8,:,:) = fliplr(pillar2map(5-plpx+1:end,25:end,:));
-            temp = (temp1+temp2+temp3+temp4)/4;
-            maptemp(n+25:n+32,n+9:n+16,:) = temp; % bottom left
-            % Pad with pillar 3 data
-            temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
-            temp1(:,1:plpx,:) = flipud(rot90(pillar3map(5-plpx+1:end,1:8,:),-1));
-            temp2(1:plpx,:,:) = flipud(pillar3map(5-plpx+1:end,9:16,:));
-            temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar3map(5-plpx+1:end,17:24,:),-1));
-            temp4(8-plpx+1:8,:,:) = fliplr(pillar3map(5-plpx+1:end,25:end,:));
-            temp = (temp1+temp2+temp3+temp4)/4;
-            maptemp(n+9:n+16,n+25:n+32,:) = temp; % top right
-            % Pad with pillar 4 data
-            temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
-            temp1(:,1:plpx,:) = flipud(rot90(pillar4map(5-plpx+1:end,1:8,:),-1));
-            temp2(1:plpx,:,:) = flipud(pillar4map(5-plpx+1:end,9:16,:));
-            temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar4map(5-plpx+1:end,17:24,:),-1));
-            temp4(8-plpx+1:8,:,:) = fliplr(pillar4map(5-plpx+1:end,25:end,:));
-            temp = (temp1+temp2+temp3+temp4)/4;
-            maptemp(n+9:n+16,n+9:n+16,:) = temp; % top left
+            
+            if padpillar
+                % Pad with pillar1 data - additively, since I can't figure out how not to overlap the pixels
+                plpx = 4; % pad with 3, not 5 pixels, to leave a bit of space in the middle
+                temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
+                temp1(:,1:plpx,:) = flipud(rot90(pillar1map(5-plpx+1:end,1:8,:),-1));
+                temp2(1:plpx,:,:) = flipud(pillar1map(5-plpx+1:end,9:16,:));
+                temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar1map(5-plpx+1:end,17:24,:),-1));
+                temp4(8-plpx+1:8,:,:) = fliplr(pillar1map(5-plpx+1:end,25:end,:));
+                temp = (temp1+temp2+temp3+temp4)/4;
+                maptemp(n+25:n+32,n+25:n+32,:) = temp; % bottom right
+                % Pad with pillar2 data
+                temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
+                temp1(:,1:plpx,:) = flipud(rot90(pillar2map(5-plpx+1:end,1:8,:),-1));
+                temp2(1:plpx,:,:) = flipud(pillar2map(5-plpx+1:end,9:16,:));
+                temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar2map(5-plpx+1:end,17:24,:),-1));
+                temp4(8-plpx+1:8,:,:) = fliplr(pillar2map(5-plpx+1:end,25:end,:));
+                temp = (temp1+temp2+temp3+temp4)/4;
+                maptemp(n+25:n+32,n+9:n+16,:) = temp; % bottom left
+                % Pad with pillar 3 data
+                temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
+                temp1(:,1:plpx,:) = flipud(rot90(pillar3map(5-plpx+1:end,1:8,:),-1));
+                temp2(1:plpx,:,:) = flipud(pillar3map(5-plpx+1:end,9:16,:));
+                temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar3map(5-plpx+1:end,17:24,:),-1));
+                temp4(8-plpx+1:8,:,:) = fliplr(pillar3map(5-plpx+1:end,25:end,:));
+                temp = (temp1+temp2+temp3+temp4)/4;
+                maptemp(n+9:n+16,n+25:n+32,:) = temp; % top right
+                % Pad with pillar 4 data
+                temp1 = zeros(8,8,size(map,3)); temp2 = temp1; temp3 = temp1; temp4 = temp1;
+                temp1(:,1:plpx,:) = flipud(rot90(pillar4map(5-plpx+1:end,1:8,:),-1));
+                temp2(1:plpx,:,:) = flipud(pillar4map(5-plpx+1:end,9:16,:));
+                temp3(:,8-plpx+1:8,:) = fliplr(rot90(pillar4map(5-plpx+1:end,17:24,:),-1));
+                temp4(8-plpx+1:8,:,:) = fliplr(pillar4map(5-plpx+1:end,25:end,:));
+                temp = (temp1+temp2+temp3+temp4)/4;
+                maptemp(n+9:n+16,n+9:n+16,:) = temp; % top left
+            end
 
             % Save indices of original grid [from_x to_x; from_y to_y]
             retrievemap{jj} = [n+1 n+size(map,1); ...

@@ -17,7 +17,8 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4,'AdaptiveSmooth',1, 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
+                'NumFRBins',4,'SmoothType','Adaptive', 'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1,...
+                'SelectiveCriteria','SIC','Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -70,7 +71,15 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
 
     data.origin = {pwd}; 
-    pv = vmpv('auto', varargin{:});
+%     pv = vmpv('auto', varargin{:});
+
+
+    %%%% PATCH
+    cd ..; cd ..; cd ..;
+    pv = load('vmpv.mat');
+    pv = pv.pv;
+    %%%%%%%
+
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
@@ -85,6 +94,14 @@ if(~isempty(dir(Args.RequiredFile)))
     
     NumShuffles_saved = Args.NumShuffles;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
+        
+        if repeat == 1
+            disp('Full session:');
+        elseif repeat == 2
+            disp('First half:');
+        elseif repeat == 3
+            disp('Second half:');
+        end
         
         if repeat > 1
             Args.NumShuffles = 0;
@@ -116,7 +133,11 @@ if(~isempty(dir(Args.RequiredFile)))
         
         % selecting rows from sessionTimeC
         if repeat == 1
-            stc(:,4) = [diff(stc(:,1)); 0];
+            disp('Filtering...');
+        end
+        if repeat == 1
+%             stc(:,4) = [diff(stc(:,1)); 0];
+            stc(:,5) = [diff(stc(:,1)); 0];
         end
         
         conditions = ones(size(stc,1),1);
@@ -137,64 +158,100 @@ if(~isempty(dir(Args.RequiredFile)))
         
         if Args.UseMinObs
             bins_sieved = pv.data.place_good_bins;
-            conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+            conditions = conditions & (pv.data.pv_good_rows); % Make sure minobs take into account both place and view
         else
             bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
         end
 
-        disp('conditioning done');
-        if repeat == 1
+        if repeat == 1 
+            % Group into intervals those consecutive rows where same place bin is occupied
             dstc = diff(stc(:,1));
             stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
             stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
             stc_changing_ind = stc_changing_ind(1:end-1,:);
         end
-
+        
         consol_arr = zeros(Args.GridSteps * Args.GridSteps,Args.NumShuffles + 1);
-
         interval = 1;
-
+        if repeat == 1
+            disp('Assigning spikes to bins...');
+        end
         for sp = 1:size(flat_spiketimes,1)
 
-%             if rem(sp, 10000000) == 0
-%                 disp(num2str(100*sp/size(flat_spiketimes,1)))
-%             end
-
             while interval < size(stc_changing_ind,1)
-                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && ... % > start timestamp of this interval but < start timestamp of next
+                        flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
                     break;
                 end
-                interval = interval + 1;
+                interval = interval + 1; % didn't fall in this interval, search in the next interval
             end   
 
-            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2);
-            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
+%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2); % find the relevant place bin
+%             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2)))); % take out bins that don't satisfy filters
+%             bins_hit(~(bins_hit>0)) = []; % take out bins where place bin = 0 
+%             consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
 
-            bins_hit(~(bins_hit>0)) = [];
-
-            consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
+            
+%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3]); % find the relevant place and view bin
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 4]);
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+            % debug
+%             if any(bins_hit(:,1)==1300)
+%                 disp('1300');
+%             end
+            bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where view bin = nan
+            consol_arr(bins_hit(:,1),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,1),flat_spiketimes(sp,2)) + 1;
 
         end        
         
-        firing_counts_full = consol_arr';
-        stc_ss = stc(find(conditions==1),[2 4]);
-        stc_ss(~(stc_ss(:,1) > 0),:) = [];
-        stc_ss = [stc_ss; [1600 0]];
-        gpdur = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        firing_counts = consol_arr';
         
-            
-            if Args.AdaptiveSmooth
-
-                firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
-                to_save = NaN(1,Args.GridSteps^2);
-                to_save(bins_sieved) = firing_rates_full_raw(1,bins_sieved);
+%         % Remove non-place rows for duration
+%         stc_ss = stc(find(conditions==1),[2 4]); % [place view dur]
+%         stc_ss(~(stc_ss(:,1) > 0),:) = []; % remove place bin = 0
+%         stc_ss = [stc_ss; [1600 0]];
+%         gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        
+        % Remove non-place and non-view rows for duration
+%         stc_ss = stc(find(conditions==1),[2 3 4]); % [place view dur]
+        stc_ss = stc(find(conditions==1),[2 4 5]); % [place view dur] with new vmpv that has head dir
+        stc_ss(~(stc_ss(:,1) > 0),:) = []; % remove place bin = 0
+        stc_ss(isnan(stc_ss(:,2)),:) = []; % remove NaN view bins
+        stc_ss(:,2) = []; % [place dur];
+        stc_ss = [stc_ss; [1600 0]];
+        gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        
+        % Remove low observation bins
+        firing_counts_full = zeros(Args.NumShuffles+1,Args.GridSteps*Args.GridSteps);
+        gpdur = zeros(1,Args.GridSteps*Args.GridSteps);
+        firing_counts_full(:,bins_sieved) = firing_counts(:,bins_sieved);
+        gpdur(1,bins_sieved) = gpdurfull(1,bins_sieved);
+        
+        firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
+        
+        % Save raw maps
+        to_save = firing_rates_full_raw(1,:);
+        dur_raw = gpdur;
+        spk_raw = firing_counts_full(1,:);
+        if repeat == 1
+            data.maps_raw = to_save;
+            data.dur_raw = dur_raw;
+            data.spk_raw = spk_raw;
+        elseif repeat == 2
+            data.maps_raw1 = to_save;
+            data.dur_raw1 = dur_raw;
+            data.spk_raw1 = spk_raw;
+        elseif repeat == 3
+            data.maps_raw2 = to_save;
+            data.dur_raw2 = dur_raw;
+            data.spk_raw2 = spk_raw;
+        end
+        
+            if 1 % Smoothing
                 
                 if repeat == 1
-                    data.maps_raw = to_save;
-                elseif repeat == 2
-                    data.maps_raw1 = to_save;
-                elseif repeat == 3
-                    data.maps_raw2 = to_save;
+                    disp('Adaptive smoothing...');
                 end
                 nan_track = isnan(to_save);
 
@@ -214,26 +271,25 @@ if(~isempty(dir(Args.RequiredFile)))
                 %
                 % but will be reverted back to usual linear representation by the
                 % end of the smoothing chunk
+                
+                gpdur1 = repmat(gpdur',1,Args.NumShuffles+1);
+                preset_to_zeros = gpdur1 == 0; 
+                
+                % Switch from linear maps to grid maps
+                gpdur1 = cell2mat(lineartogrid(gpdur1,'place',[Args.GridSteps Args.GridSteps]));
+                firing_counts_full1 = cell2mat(lineartogrid(firing_counts_full','place',[Args.GridSteps Args.GridSteps]));
+                preset_to_zeros = logical(cell2mat(lineartogrid(preset_to_zeros,'place',[Args.GridSteps Args.GridSteps])));
+                firing_rates_full_raw1 = cell2mat(lineartogrid(firing_rates_full_raw','place',[Args.GridSteps Args.GridSteps]));
+                
+                unvis = ~(gpdur1>0);
+                % Boxcar smoothing
+                maps_bcsm_grid = smooth(firing_rates_full_raw1,5,unvis,'boxcar');
+                pos_bcsm_grid = smooth(gpdur1,5,unvis,'boxcar');
+                % Disk smoothing
+                maps_dksm_grid = smooth(firing_rates_full_raw1,5,unvis,'disk');
+                pos_dksm_grid = smooth(gpdur1,5,unvis,'disk');
 
-                wip = ones(Args.NumShuffles+1,1);
-
-                gpdur1 = zeros(1,Args.GridSteps^2);
-                gpdur1(bins_sieved) = gpdur(bins_sieved);
-
-                preset_to_zeros = reshape(gpdur1, Args.GridSteps, Args.GridSteps); % will be set to nans afterwards, just swapped to zero to quickly cut 'done' shuffles
-                preset_to_zeros(find(preset_to_zeros>0)) = 1;
-                preset_to_zeros = ~preset_to_zeros;
-                preset_to_zeros = repmat(preset_to_zeros, 1,1,Args.NumShuffles+1);
-
-                gpdur1 = repmat(gpdur1,Args.NumShuffles + 1,1);
-                gpdur1 = reshape(gpdur1, Args.NumShuffles + 1, Args.GridSteps,Args.GridSteps);
-                gpdur1 = permute(gpdur1,[2,3,1]);
-
-                firing_counts_full1 = zeros(Args.NumShuffles + 1, Args.GridSteps^2);
-                firing_counts_full1(:,bins_sieved) = firing_counts_full(:,bins_sieved);
-                firing_counts_full1 = reshape(firing_counts_full1, Args.NumShuffles + 1, Args.GridSteps,Args.GridSteps);
-                firing_counts_full1 = permute(firing_counts_full1,[2,3,1]);
-
+                % Set up adaptive smoothing parameters and output vars
                 to_compute = 1:0.5:Args.GridSteps/2;
                 possible = NaN(length(to_compute),2,Args.GridSteps,Args.GridSteps,Args.NumShuffles + 1);
                 to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
@@ -242,7 +298,9 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_fill_time(preset_to_zeros) = 0; 
                 to_fill_radius = NaN(size(possible,3), size(possible,4), size(possible,5));
                 to_fill_radius(preset_to_zeros) = 0;
-
+                
+                wip = ones(Args.NumShuffles+1,1);
+                % Adaptive smoothing
                 for idx = 1:length(to_compute)
 
                     f=fspecial('disk',to_compute(idx));
@@ -268,150 +326,148 @@ if(~isempty(dir(Args.RequiredFile)))
                     check = squeeze(sum(sum(isnan(to_fill),2),1));
                     wip(check==0) = 0;
 
-%                     if sum(sum(sum(isnan(to_fill(:,:,:))))) == 0
-%                         disp('breaking');
-%                         break;
-%                     end
-
                 end
-
-                to_fill(isnan(to_fill)) = 0;
-                to_fill = permute(to_fill, [3 1 2]);
-                to_fill = reshape(to_fill, Args.NumShuffles + 1, Args.GridSteps^2);
-                to_fill = to_fill(:,bins_sieved);
-
-                to_fill_time(isnan(to_fill_time)) = 0;
-                to_fill_time = permute(to_fill_time, [3 1 2]);
-                to_fill_time = reshape(to_fill_time, Args.NumShuffles + 1, Args.GridSteps^2);
-                to_fill_time = to_fill_time(:,bins_sieved);
                 
-                to_fill_radius = permute(to_fill_radius, [3 1 2]);
-                to_fill_radius = reshape(to_fill_radius, Args.NumShuffles + 1, Args.GridSteps^2);
-
+                % Reshape from grid to linear maps
+                to_fill(preset_to_zeros) = nan; % unvisited bins should be nan
+                to_fill = gridtolinear({to_fill},'place',[Args.GridSteps Args.GridSteps]);
+                to_fill = to_fill';
+                to_fill_time(isnan(to_fill_time) | preset_to_zeros) = 0;
+                to_fill_time = gridtolinear({to_fill_time},'place',[Args.GridSteps Args.GridSteps]);
+                to_fill_time = to_fill_time';
+                to_fill_radius(preset_to_zeros) = nan;
+                to_fill_radius = gridtolinear({to_fill_radius},'place',[Args.GridSteps Args.GridSteps]);
+                to_fill_radius = to_fill_radius';
+                maps_bcsm = gridtolinear({maps_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                maps_bcsm = maps_bcsm';
+                maps_dksm = gridtolinear({maps_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                maps_dksm = maps_dksm';
+                pos_bcsm_grid(isnan(pos_bcsm_grid) | preset_to_zeros) = 0;
+                pos_bcsm = gridtolinear({pos_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                pos_bcsm = pos_bcsm';
+                pos_dksm_grid(isnan(pos_dksm_grid) | preset_to_zeros) = 0;
+                pos_dksm = gridtolinear({pos_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                pos_dksm = pos_dksm';
+                
                 firing_rates_full = to_fill;
 
                 % smoothing part ends
+                switch Args.SmoothType
+                    case 'Adaptive'
+                        maps_sm = firing_rates_full;
+                    case 'Boxcar'
+                        maps_sm = maps_bcsm;
+                    case 'Disk'
+                        maps_sm = maps_dksm;
+                end
                 
                 if repeat == 1
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(find(nan_track==1)) = nan;
-                    data.maps_adsm = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    data.maps_adsmsh = to_save;
-                    to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    data.dur_adsmsh = to_save;
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_adsm = to_save;
+                    data.maps_adsm = firing_rates_full(1,:);
+                    data.maps_adsmsh = firing_rates_full(2:end,:);
+                    data.dur_adsm = to_fill_time(1,:);
+                    data.dur_adsmsh = to_fill_time(2:end,:);
                     data.radii = to_fill_radius(1,:);
                     data.radiish = to_fill_radius(2:end,:);
+                    data.maps_bcsm = maps_bcsm(1,:);
+                    data.maps_bcsmsh = maps_bcsm(2:end,:);
+                    data.maps_dksm = maps_dksm(1,:);
+                    data.maps_dksmsh = maps_dksm(2:end,:);
+                    data.maps_sm = maps_sm(1,:);
+                    data.maps_smsh = maps_sm(2:end,:);
                 elseif repeat == 2
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(find(nan_track==1)) = nan;
-                    data.maps_adsm1 = to_save;
-                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    %data.maps_adsmsh1 = to_save;
-                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    %to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    %data.dur_adsmsh1 = to_save;
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_adsm1 = to_save;
-                    data.radii1 = to_fill_radius;
+                    data.maps_adsm1 = firing_rates_full(1,:);
+                    data.dur_adsm1 = to_fill_time(1,:); 
+                    data.radii1 = to_fill_radius(1,:);
+                    data.maps_bcsm1 = maps_bcsm(1,:);
+                    data.maps_dksm1 = maps_dksm(1,:);
+                    data.maps_sm1 = maps_sm(1,:);
+                    data.maps_smsh1 = maps_sm(2:end,:);
                 elseif repeat == 3
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = firing_rates_full(1,:);
-                    to_save(find(nan_track==1)) = nan;
-                    data.maps_adsm2 = to_save;
-                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    %to_save(:,bins_sieved) = firing_rates_full(2:end,:);
-                    %data.maps_adsmsh2 = to_save;
-                    %to_save = NaN(size(firing_rates_full,1)-1,Args.GridSteps^2);
-                    %to_save(:,bins_sieved) = to_fill_time(2:end,:);
-                    %data.dur_adsmsh2 = to_save;
-                    to_save = NaN(1,Args.GridSteps^2);
-                    to_save(bins_sieved) = to_fill_time(1,:);
-                    data.dur_adsm2 = to_save;
-                    data.radii2 = to_fill_radius;
+                    data.maps_adsm2 = firing_rates_full(1,:);
+                    data.dur_adsm2 = to_fill_time(1,:);
+                    data.radii2 = to_fill_radius(1,:);
+                    data.maps_bcsm2 = maps_bcsm(1,:);
+                    data.maps_dksm2 = maps_dksm(1,:);
+                    data.maps_sm2 = maps_sm(1,:);
+                    data.maps_smsh2 = maps_sm(2:end,:);
                 end
 
             else
-                firing_rates_full = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
-                to_fill_time = repmat(gpdur,size(firing_counts_full,1),1); % HM added
+                firing_rates_full = firing_rates_full_raw;
+                to_fill_time = repmat(gpdur,Args.NumShuffles+1,1); % HM added
 
-                to_save = NaN(1,Args.GridSteps^2);
-                to_save(bins_sieved) = firing_rates_full(1,:);
-                if repeat == 1
-                    data.maps_raw = to_save;
-                elseif repeat == 2
-                    data.maps_raw1 = to_save;
-                elseif repeat == 3
-                    data.maps_raw2 = to_save;
-                end
             end
 
-                gpdur1 = zeros(Args.NumShuffles+1,Args.GridSteps^2);
-                gpdur1(:,bins_sieved) = to_fill_time;
-                Pi1 = gpdur1./sum(gpdur1,2); % consider nansum to play safe
-        %         Pi1 = repmat(Pi1, Args.NumShuffles+1, 1);
+            % Calculating SIC for adaptive smoothing
+            disp('Calculating SIC...');
+            sic_adsm = skaggs_sic(firing_rates_full',to_fill_time');
+            sic_adsm = sic_adsm';
+            
+            % Calculating SIC for boxcar smoothing
+            sic_bcsm = skaggs_sic(maps_bcsm',pos_bcsm');
+            sic_bcsm = sic_bcsm';
+            
+            % Calculating SIC for disk smoothing
+            sic_dksm = skaggs_sic(maps_dksm',pos_dksm');
+            sic_dksm = sic_dksm';
 
-                lambda_i = NaN(Args.NumShuffles+1,Args.GridSteps^2);
-                lambda_i(:,bins_sieved) = firing_rates_full;
-                lambda_i(isnan(lambda_i)) = 0;
-                lambda_bar = sum(Pi1 .* lambda_i,2);
-                % divide firing for each position by the overall mean
-                FRratio = lambda_i./repmat(lambda_bar,1,Args.GridSteps^2);
-                % compute first term in SIC
-                SIC1 = Pi1 .* lambda_i; 
-                SIC2 = log2(FRratio);
-                zeros_placing = SIC1==0;  
+            % ISE part
+            lambda_i = firing_rates_full;
 
-                bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-                bits_per_sec(zeros_placing) = NaN;
-                lambda_bar_ok = lambda_bar>0;
-                lambda_bar_bad = ~lambda_bar_ok;
-                sic_out = nansum(bits_per_sec, 2);
-                sic_out(lambda_bar_bad) = NaN;
-
-        %     histogram(sic_out);
-
-                % ISE part
-                lambda_i = NaN(Args.NumShuffles+1,Args.GridSteps^2);
-                lambda_i(:,bins_sieved) = firing_rates_full;                
+            if repeat == 1
+                ise_adsm = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+                data.ISE_sm = ise_adsm(1);
+                data.ISEsh_sm = ise_adsm(2:end,1);
+            elseif repeat == 2
+                ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                data.ISE_sm1 = ise_adsm;
+            elseif repeat == 3
+                ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+                data.ISE_sm2 = ise_adsm;
+            end
+        
+        switch Args.SmoothType
+            case 'Adaptive'
+                sic_sm = sic_adsm;
+            case 'Boxcar'
+                sic_sm = sic_bcsm;
+            case 'Disk'
+                sic_sm = sic_dksm;
+        end
+        
+        switch Args.SelectiveCriteria
+            case 'SIC'
+                crit_sm = sic_sm;
+            case 'ISE'
                 
-                if repeat == 1
-                    ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-                    data.ISE = ise_out(1);
-                    data.ISEsh = ise_out(2:end,1);
-                elseif repeat == 2
-                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                    data.ISE1 = ise_out;
-                elseif repeat == 3
-                    ise_out = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                    data.ISE2 = ise_out;
-                end
-        
-        
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
         if repeat == 1
-            data.SIC = sic_out(1);
-            data.SICsh = sic_out(2:end,1);
+            data.SIC_adsm = sic_adsm(1);
+            data.SICsh_adsm = sic_adsm(2:end,1);
+            data.SIC_bcsm = sic_bcsm(1);
+            data.SICsh_bcsm = sic_bcsm(2:end,1);
+            data.SIC_dksm = sic_dksm(1);
+            data.SICsh_dksm = sic_dksm(2:end,1);
+            data.crit_sm = crit_sm(1);
+            data.critsh_sm = crit_sm(2:end,1);
         %     data.median_occ_firings = median_stats';
         %     data.variance_occ_firings = var_stats';
         %     data.perc_occ_firings = perc_stats';
         %     data.occ_data = occ_data;
         elseif repeat == 2
-            data.SIC1 = sic_out;
+            data.SIC_adsm1 = sic_adsm;
+            data.SIC_bcsm1 = sic_bcsm;
+            data.SIC_dksm1 = sic_dksm;
+            data.crit_sm1 = crit_sm;
         elseif repeat == 3
-            data.SIC2 = sic_out;
+            data.SIC_adsm2 = sic_adsm;
+            data.SIC_bcsm2 = sic_bcsm;
+            data.SIC_dksm2 = sic_dksm;
+            data.crit_sm2 = crit_sm;
         end
 
         %     data.median_occ_firings = median_stats';

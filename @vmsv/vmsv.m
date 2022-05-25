@@ -17,7 +17,8 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
-                'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 1, 'AdaptiveSmooth', 1, 'UseAllTrials',1,'Alpha',1000);
+                'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 1, 'SmoothType', 'Adaptive', 'SelectiveCriteria','SIC',...
+                'UseAllTrials',1,'Alpha',1000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -70,12 +71,14 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
 
     data.origin = {pwd}; 
-    pv = vmpv('auto', varargin{:});
-%     pv = vmpv('auto','save','MinObsView',5,'MinDurView',0.01);
-%     % Patch
-%     cd ..; cd ..; cd ..;
-%     pv = load('1vmpv.mat');
-%     pv = pv.pv;
+%     pv = vmpv('auto', varargin{:});
+% %     pv = vmpv('auto','save','MinObsView',5,'MinDurView',0.01);
+    %%%%%%%
+    % Patch %%%%%%
+    cd ..; cd ..; cd ..;
+    pv = load('vmpv.mat');
+    pv = pv.pv;
+    %%%%%%%%%%
     %
     cd(ori);
     spiketrain = load(Args.RequiredFile);   
@@ -91,6 +94,11 @@ if(~isempty(dir(Args.RequiredFile)))
 
         if repeat == 1
             stc = pv.data.sessionTimeC;
+            disp('Full session:');
+        elseif repeat == 2
+            disp('1st half:');
+        elseif repeat == 3
+            disp('2nd half:');
         end
         
         % spike shuffling
@@ -115,7 +123,9 @@ if(~isempty(dir(Args.RequiredFile)))
         
         % selecting rows from sessionTimeC
         if repeat == 1
-            stc(:,4) = [diff(stc(:,1)); 0];
+%             stc(:,4) = [diff(stc(:,1)); 0];
+            stc(:,5) = [diff(stc(:,1)); 0];
+            disp('    Filtering...')
         end
         
         conditions = ones(size(stc,1),1);
@@ -142,7 +152,7 @@ if(~isempty(dir(Args.RequiredFile)))
         end
 
 
-        disp('conditioning done');
+%         disp('conditioning done');
         if repeat == 1
             dstc = diff(stc(:,1));
             stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
@@ -152,42 +162,85 @@ if(~isempty(dir(Args.RequiredFile)))
 
         consol_arr = zeros(5122,Args.NumShuffles + 1);
 
+        if repeat == 1
+            disp(['    Assigning ' num2str(size(flat_spiketimes,1)) ' spikes to bins...']);
+        end
         interval = 1;
-
         for sp = 1:size(flat_spiketimes,1)
 
-            if rem(sp, 10000000) == 0
-                disp(100*sp/size(flat_spiketimes,1))
-            end
+%             if rem(sp, 10000000) == 0
+%                 disp(100*sp/size(flat_spiketimes,1))
+%             end
 
             while interval < size(stc_changing_ind,1)
-                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+                if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && ...
+                        flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
                     break;
                 end
                 interval = interval + 1;
             end   
 
-            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),3);
-            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
-
-            bins_hit(~(bins_hit>0)) = [];
-
-            consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
+%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),3);
+%             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))));
+%             bins_hit(~(bins_hit>0)) = [];
+%             consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
+            
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 4]); % find the relevant place and view bin
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+            bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where view bin = nan
+            consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) + 1;
 
         end        
 
-        spike_count = consol_arr;
+        spike_count_full = consol_arr;
         
-        stc(stc(:,4)==0,4) = nan;
-        stc(:,4) = fillmissing(stc(:,4),'next');
-        stc_ss = stc(find(conditions==1),[3 4]);
-        stc_ss(~(stc_ss(:,1) > 0),:) = [];
-        stc_ss(isnan(stc_ss(:,2)),:) = [];
+        % Backfill duration for view bins that occupy the same time bin
+        stc(stc(:,5)==0,5) = nan;
+        stc(:,5) = fillmissing(stc(:,5),'next'); %%%%%%%????????
+        
+        % Remove non-place and non-view rows for duration
+        stc_ss = stc(find(conditions==1),[2 4 5]); % [place view dur]
+        stc_ss(~(stc_ss(:,1) > 0),:) = []; % remove place bin = 0
+        stc_ss(isnan(stc_ss(:,2)),:) = []; % remove NaN view bins
+        stc_ss(:,1) = []; % [view dur];
         stc_ss = [stc_ss; [5122 0]];
         
-        gpdur1 = accumarray(stc_ss(:,1),stc_ss(:,2))';
+        gpdur1_full = accumarray(stc_ss(:,1),stc_ss(:,2))';
         
-        if Args.AdaptiveSmooth
+        % Remove low obs bins from rest of analysis
+        gpdur1 = zeros(size(gpdur1_full));
+        gpdur1(bins_sieved) = gpdur1_full(bins_sieved);
+        spike_count = zeros(size(spike_count_full));
+        spike_count(bins_sieved,:) = spike_count_full(bins_sieved,:);
+        
+        % Store raw map output
+        lin_o_i_Gaze = repmat(gpdur1', 1, Args.NumShuffles + 1);
+        lin_spikeLoc_Gaze = spike_count;
+        maps_raw = lin_spikeLoc_Gaze./lin_o_i_Gaze;
+%         if Args.NumShuffles > 0
+            maps_raw_out = maps_raw(:,1);
+%         end
+%         maps_raw_out = nan(size(maps_raw));
+%         maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
+        if repeat == 1
+            data.maps_raw = maps_raw_out';
+            data.dur_raw = gpdur1;
+            data.spk_raw = spike_count(:,1)';
+        elseif repeat == 2
+            data.maps_raw1 = maps_raw_out';
+            data.dur_raw1 = gpdur1;
+            data.spk_raw1 = spike_count(:,1)';
+        else
+            data.maps_raw2 = maps_raw_out';
+            data.dur_raw2 = gpdur1;
+            data.spk_raw2 = spike_count(:,1)';
+        end
+        
+        if repeat == 1
+            disp('    Adaptive smoothing...');
+        end
+        if 1
             
             gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
             binDepths = [1 1;
@@ -199,95 +252,64 @@ if(~isempty(dir(Args.RequiredFile)))
                 5 32;
                 5 32;
                 5 32];
-            
-            lin_o_i_Gaze = repmat(gpdur1', 1, Args.NumShuffles + 1);
-            lin_spikeLoc_Gaze = spike_count;
-            maps_raw = lin_spikeLoc_Gaze./lin_o_i_Gaze;
-            if Args.NumShuffles > 0
-                maps_raw = maps_raw(:,1);
-            end
-            maps_raw_out = nan(size(maps_raw));
-            maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-            if repeat == 1
-                data.maps_raw = maps_raw_out';
-                data.dur_raw = gpdur1;
-                data.spk_raw = spike_count(:,1)';
-            elseif repeat == 2
-                data.maps_raw1 = maps_raw_out';
-                data.dur_raw1 = gpdur1;
-                data.spk_raw2 = spike_count(:,1)';
-            else
-                data.maps_raw2 = maps_raw_out';
-                data.dur_raw2 = gpdur1;
-                data.spk_raw2 = spike_count(:,1)';
-            end
                 
             % Assign linear bin to grid
-            [grid_o_i_Gaze] = lineartogrid(lin_o_i_Gaze,'spatialview',binDepths);
-            [grid_spikeBin_Gaze] = lineartogrid(lin_spikeLoc_Gaze,'spatialview',binDepths);
-            emptyfloor = grid_o_i_Gaze{3}(:,:,:) == 0;
-            
-            
-%             grid_o_i_Gaze = cell(size(binDepths,1),1);
-%             grid_spikeBin_Gaze = grid_o_i_Gaze;
-%             
-%             for jj = 1:size(binDepths,1) % for each grid
-%                 % Initialise empty matrices
-%                 o_i = nan(binDepths(jj,1),binDepths(jj,2),Args.NumShuffles+1);
-%                 spikeBin = o_i;
-%                 map = o_i;
-%                 % Assign linear bin to grid bin
-%                 for mm = 1:binDepths(jj,1)*binDepths(jj,2) % For every point in linear map
-%                     if mod(mm,binDepths(jj,2)) == 0
-%                         y = binDepths(jj,2);
-%                     else
-%                         y = mod(mm,binDepths(jj,2));
-%                     end
-%                     x = ceil(mm/binDepths(jj,2));
-%                     indbins_lin = mm + sum(binDepths(1:jj-1,1).*binDepths(1:jj-1,2));
-%                     % Assign
-%                     o_i(x,y,:) = lin_o_i_Gaze(indbins_lin,:);
-%                     spikeBin(x,y,:) = lin_spikeLoc_Gaze(indbins_lin,:);
-%                     
-%                 end
-%                 % Collect output
-%                 grid_o_i_Gaze{jj} = o_i;
-%                 grid_spikeBin_Gaze{jj} = spikeBin;
-%             end
+%             unvis = ~(lin_o_i_Gaze>0);
+            [grid_o_i_Gaze] = lineartogrid(lin_o_i_Gaze,'view',binDepths);
+            [grid_spikeBin_Gaze] = lineartogrid(lin_spikeLoc_Gaze,'view',binDepths);
+            [grid_rate_Gaze] = lineartogrid(maps_raw,'view',binDepths);
+%             [grid_unvis] = lineartogrid(unvis,'view',binDepths);
+            emptyfloorref = grid_o_i_Gaze;
             
             % Pad grids with << 5 >> extra rows of adjoining grids
             n = 5;
-            [grid_o_i_Gaze,retrievemap] = padsvmap(n,grid_o_i_Gaze,gazeSections);
-            [grid_spikeBin_Gaze,~] = padsvmap(n,grid_spikeBin_Gaze,gazeSections);
-%             
-%             retrievemap = cell(size(grid_o_i_Gaze,1),1);
-%             grid_o_i_Gaze_temp = grid_o_i_Gaze; % keep original for reference during padding
-%             grid_spikeBin_Gaze_temp = grid_spikeBin_Gaze; % keep original for reference during padding
-%             for jj = 1:size(grid_o_i_Gaze,1) % For each separate grid
-%                 
-%                 if binDepths(jj,1)*binDepths(jj,2) > 2 % For non-cue/non-hint grids
-%                     % Pad each grid map with adjoining bins from other grids
-%                     % Pad with <<5>> extra bin rows
-%                     n = 5;
-%                     [retrievemap{jj},grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj}] = padgrids(n,grid_o_i_Gaze{jj},grid_spikeBin_Gaze{jj},grid_o_i_Gaze,grid_spikeBin_Gaze,gazeSections,jj);
-%                     
-%                 end
-%             end
+            padpillar = false;
+            [emptyfloorref_pad,~] = padsvmap(n,grid_o_i_Gaze,gazeSections,padpillar);
+            padpillar = true;
+            [grid_o_i_Gaze,retrievemap] = padsvmap(n,grid_o_i_Gaze,gazeSections,padpillar);
+            [grid_spikeBin_Gaze,~] = padsvmap(n,grid_spikeBin_Gaze,gazeSections,padpillar);
+            [grid_rate_Gaze,~] = padsvmap(n,grid_rate_Gaze,gazeSections,padpillar);
             
+            
+%             [grid_unvis,~] = padsvmap(n,grid_unvis,gazeSections);
+            
+            % Boxcar and disk smoothing of padded grids
+            grid_bcsm_rate = cell(size(binDepths,1),1);
+            grid_bcsm_rate{1} = grid_rate_Gaze{1}; % No need to smooth cue
+            grid_bcsm_rate{2} = grid_rate_Gaze{2}; % No need to smooth hint
+            grid_bcsm_pos = cell(size(binDepths,1),1);
+            grid_bcsm_pos{1} = grid_o_i_Gaze{1};
+            grid_bcsm_pos{2} = grid_o_i_Gaze{2};
+            grid_dksm_rate = cell(size(binDepths,1),1);
+            grid_dksm_rate{1} = grid_rate_Gaze{1}; % No need to smooth cue
+            grid_dksm_rate{2} = grid_rate_Gaze{2}; % No need to smooth hint
+            grid_dksm_pos = cell(size(binDepths,1),1);
+            grid_dksm_pos{1} = grid_o_i_Gaze{1};
+            grid_dksm_pos{2} = grid_o_i_Gaze{2};
+            for jj = 3:size(binDepths,1)
+                unvis = ~(emptyfloorref_pad{jj}>0) | isnan(grid_rate_Gaze{jj});
+                % Boxcar smooth
+                grid_bcsm_rate{jj} = smooth(grid_rate_Gaze{jj},5,unvis,'boxcar');
+                grid_bcsm_pos{jj} = smooth(grid_o_i_Gaze{jj},5,unvis,'boxcar');
+                % Disk smooth
+                grid_dksm_rate{jj} = smooth(grid_rate_Gaze{jj},5,unvis,'disk');
+                grid_dksm_pos{jj} = smooth(grid_o_i_Gaze{jj},5,unvis,'disk');
+            end
+
+            % Adaptive smoothing of padded grids
             alpha = Args.Alpha;
-            %         alpha = 1;
             grid_smoothed_Gaze = cell(size(binDepths,1),1);
-            grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1};
-            grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2};
+            grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1}; % No need to smooth cue
+            grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2}; % No need to smooth hint
             grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
             grid_smoothed_dur{1} = grid_o_i_Gaze{1};
             grid_smoothed_dur{2} = grid_o_i_Gaze{2};
             grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
-            grid_ad_size{1} = NaN;
-            grid_ad_size{2} = NaN;
-            
-            for jj = 3:size(grid_o_i_Gaze,1) % for each grid
+            grid_ad_size{1} = nan(size(grid_o_i_Gaze{1}));
+            grid_ad_size{2} = nan(size(grid_o_i_Gaze{1}));
+            for jj = 3:size(grid_o_i_Gaze,1) % for each grid, floor onwards
                 
+%                 disp(['    ...Smoothing grid ' num2str(jj)]);
                 wip = ones(Args.NumShuffles+1,1);
                 gpdur1 = grid_o_i_Gaze{jj};
                 preset_to_zeros = gpdur1(:,:,1);
@@ -334,68 +356,91 @@ if(~isempty(dir(Args.RequiredFile)))
                     
                     
                     remaining = sum(sum(sum(isnan(to_fill(:,:,:)))));
-                    disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
+%                     disp(['smoothed grid ' num2str(jj) ' with kernel size ' num2str(to_compute(idx)) ', leaving ' num2str(remaining) ' grids undone']);
                     
                     check = squeeze(sum(sum(isnan(to_fill),2),1));
                     wip(check==0) = 0;
                     
                     if remaining == 0
-                        disp('done');
+%                         disp('done');
                         break;
                     end
                 end
                 
-                to_fill(isnan(to_fill)) = 0;
-                to_fill = to_fill(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-                if jj == 3 % remove the pillar fills if unpadding floor
-                    to_fill(emptyfloor) = 0;
-                end
+                to_fill(preset_to_zeros) = nan;
+                to_fill_size(preset_to_zeros) = nan;
                 grid_smoothed_Gaze{jj} = to_fill;
-                to_fill_smoothed_duration(isnan(to_fill_smoothed_duration)) = 0;
-                to_fill_smoothed_duration = to_fill_smoothed_duration(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-                if jj == 3 % remove the pillar fills if unpadding floor
-                    to_fill_smoothed_duration(emptyfloor) = 0;
-                end
                 grid_smoothed_dur{jj} = to_fill_smoothed_duration;
-                to_fill_size = to_fill_size(retrievemap{jj}(1,1):retrievemap{jj}(1,2),retrievemap{jj}(2,1):retrievemap{jj}(2,2),:);
-                if jj == 3 % remove the pillar fills if unpadding floor
-                    to_fill_size(emptyfloor) = 0;
-                end
                 grid_ad_size{jj} = to_fill_size;
                 
             end
             
+            % Unpad smoothed maps
+            grid_smoothed_Gaze = unpadsvmap(grid_smoothed_Gaze,retrievemap,emptyfloorref);
+            grid_smoothed_dur = unpadsvmap(grid_smoothed_dur,retrievemap,emptyfloorref);
+            grid_ad_size = unpadsvmap(grid_ad_size,retrievemap,emptyfloorref);
+            grid_bcsm_rate = unpadsvmap(grid_bcsm_rate,retrievemap,emptyfloorref);
+            grid_bcsm_pos = unpadsvmap(grid_bcsm_pos,retrievemap,emptyfloorref);
+            grid_dksm_rate = unpadsvmap(grid_dksm_rate,retrievemap,emptyfloorref);
+            grid_dksm_pos = unpadsvmap(grid_dksm_pos,retrievemap,emptyfloorref);
             
-            total_grids = 0;
-            for jj = 1:size(grid_smoothed_Gaze,1)
-                total_grids = total_grids + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
+            % Convert from grid maps back to linear maps
+            gpdur1 = gridtolinear(grid_smoothed_dur,'view',binDepths);
+            gpdur1(isnan(gpdur1)) = 0;
+            gpdur1 = gpdur1';
+            lambda_i = gridtolinear(grid_smoothed_Gaze,'view',binDepths);
+            lambda_i = lambda_i';
+            radii = gridtolinear(grid_ad_size,'view',binDepths);
+            radii = radii';
+            maps_bcsm = gridtolinear(grid_bcsm_rate,'view',binDepths);
+            maps_bcsm = maps_bcsm';
+            pos_bcsm = gridtolinear(grid_bcsm_pos,'view',binDepths);
+            pos_bcsm(isnan(pos_bcsm)) = 0;
+            pos_bcsm = pos_bcsm';
+            maps_dksm = gridtolinear(grid_dksm_rate,'view',binDepths);
+            maps_dksm = maps_dksm';
+            pos_dksm = gridtolinear(grid_dksm_pos,'view',binDepths);
+            pos_dksm(isnan(pos_dksm)) = 0;
+            pos_dksm = pos_dksm';
+            
+            switch Args.SmoothType
+                case 'Adaptive'
+                    maps_sm = lambda_i;
+                case 'Boxcar'
+                    maps_sm = maps_bcsm;
+                case 'Disk'
+                    maps_sm = maps_dksm;
             end
-            gpdur1 = zeros(Args.NumShuffles+1,total_grids);
-            lambda_i = NaN(Args.NumShuffles+1,total_grids);
-            radii = zeros(Args.NumShuffles+1,total_grids);
-            filling_index = 0;
-            for jj = 1:size(grid_o_i_Gaze,1)
-%                 temp4 = reshape(permute(grid_smoothed_dur{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-%                 temp3 = reshape(permute(grid_smoothed_Gaze{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                temp4 = reshape(rot90(grid_smoothed_dur{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                temp3 = reshape(rot90(grid_smoothed_Gaze{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                gpdur1(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp4';
-                lambda_i(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp3';
-                
-                if jj > 2
-%                     temp5 = reshape(permute(grid_ad_size{jj},[2 1 3]), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                    temp5 = reshape(rot90(grid_ad_size{jj},-1), [size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2) Args.NumShuffles+1]);
-                    radii(:,filling_index+1:filling_index+size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2)) = temp5';
-                end
-                filling_index = filling_index + size(grid_smoothed_Gaze{jj},1)*size(grid_smoothed_Gaze{jj},2);
-            end
-            lambda_i(gpdur1==0) = nan;
             
             if repeat == 1
+                data.maps_adsm = lambda_i(1,:);
+                data.maps_adsmsh = lambda_i(2:end,:);
                 data.radii = radii(1,:);
                 data.radiish = radii(2:end,:);
                 data.dur_adsm = gpdur1(1,:);
                 data.dur_adsmsh = gpdur1(2:end,:);
+                data.maps_bcsm = maps_bcsm(1,:);
+                data.maps_bcsmsh = maps_bcsm(2:end,:);
+                data.maps_dksm = maps_dksm(1,:);
+                data.maps_dksmsh = maps_dksm(2:end,:);
+                data.maps_sm = maps_sm(1,:);
+                data.maps_smsh = maps_sm(2:end,:);
+            elseif repeat == 2
+                data.maps_adsm1 = lambda_i(1,:);
+                data.radii1 = radii(1,:);
+                data.dur_adsm1 = gpdur1(1,:);
+                data.maps_bcsm1 = maps_bcsm(1,:);
+                data.maps_dksm1 = maps_dksm(1,:);
+                data.maps_sm1 = maps_sm(1,:);
+                data.maps_smsh1 = maps_sm(2:end,:);
+            elseif repeat == 3
+                data.maps_adsm2 = lambda_i(1,:);
+                data.radii2 = radii(1,:);
+                data.dur_adsm2 = gpdur1(1,:);
+                data.maps_bcsm2 = maps_bcsm(1,:);
+                data.maps_dksm2 = maps_dksm(1,:);
+                data.maps_sm2 = maps_sm(1,:);
+                data.maps_smsh2 = maps_sm(2:end,:);
             end            
             
         else
@@ -408,31 +453,30 @@ if(~isempty(dir(Args.RequiredFile)))
   
             
             % SIC portion
+            if repeat == 1
+                disp('    Calculating SIC...');
+            end
+            % Adaptive smoothing SIC
+            sic_adsm = skaggs_sic(lambda_i',gpdur1');
+            sic_adsm = sic_adsm';
             
-            Pi1 = gpdur1./sum(gpdur1,2);
-            lambda_bar = nansum(Pi1 .* lambda_i,2);
-            % divide firing for each position by the overall mean
-            FRratio = lambda_i./repmat(lambda_bar,1,5122);
-            % compute first term in SIC
-            SIC1 = Pi1 .* lambda_i; 
-            SIC2 = log2(FRratio);
-            zeros_placing = SIC1==0;  
-
-            bits_per_sec = SIC1 .* SIC2 ./ lambda_bar;
-            bits_per_sec(zeros_placing) = NaN;
-            lambda_bar_ok = lambda_bar>0;
-            lambda_bar_bad = ~lambda_bar_ok;
-            sic_out = nansum(bits_per_sec, 2);
-            sic_out(lambda_bar_bad) = NaN;
-
-            tic;
+            % Boxcar smoothing SIC
+            sic_bcsm = skaggs_sic(maps_bcsm',pos_bcsm');
+            sic_bcsm = sic_bcsm';
+            
+            % Disk smoothing SIC
+            sic_dksm = skaggs_sic(maps_dksm',pos_dksm');
+            sic_dksm = sic_dksm';
 
             % ISE portion
             % create overall map and insert padded portions in, to account for
             % cross-portion pairs
-            canvas = nan(51, 161, Args.NumShuffles + 1);
+            tic;
             firing_rates = lambda_i;
-
+            if repeat == 1
+                disp('    Calculating ISE');
+            end
+            canvas = nan(51, 161, Args.NumShuffles + 1);
             % flooring
             floor_padded = nan(42,42,Args.NumShuffles+1);
             floor_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
@@ -510,80 +554,46 @@ if(~isempty(dir(Args.RequiredFile)))
             ise_out = ise(actual_image, shuffled_images, 51, 161);
             disp(['time taken to compute ISE: ' num2str(toc)]);
             
+            switch Args.SmoothType
+                case 'Adaptive'
+                    sic_sm = sic_adsm;
+                case 'Boxcar'
+                    sic_sm = sic_bcsm;
+                case 'Disk'
+                    sic_sm = sic_dksm;
+            end
+            
+            switch Args.SelectiveCriteria
+                case 'SIC'
+                    crit_sm = sic_sm;
+                case 'ISE'
+                    crit_sm = ise_out;
+            end
+            
             if repeat == 1
-                if ~Args.AdaptiveSmooth
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_raw = maps_raw_out;
-                else
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsm = maps_raw_out;                    
-                end
-                maps_all = firing_rates(2:end,:);
-                maps_all_out = nan(size(maps_all));
-                maps_all_out(:,bins_sieved) = maps_all(:,bins_sieved);
-                data.maps_adsmsh = maps_all_out;
-                
                 data.flattened = squeeze(canvas(:,:,1));
-                data.SIC = sic_out(1);
-                data.SICsh = sic_out(2:end,1);
-                data.ISE = ise_out(1);
-                data.ISEsh = ise_out(2:end,1);
+                data.SIC_adsm = sic_adsm(1);
+                data.SICsh_adsm = sic_adsm(2:end,1);
+                data.ISE_adsm = ise_out(1);
+                data.ISEsh_adsm = ise_out(2:end,1);
+                data.SIC_bcsm = sic_bcsm(1);
+                data.SICsh_bcsm = sic_bcsm(2:end,1);
+                data.SIC_dksm = sic_dksm(1);
+                data.SICsh_dksm = sic_dksm(2:end,1);
+                data.crit_sm = crit_sm(1);
+                data.critsh_sm = crit_sm(2:end,1);
             elseif repeat == 2
-                if ~Args.AdaptiveSmooth
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_raw1 = maps_raw_out;
-                else
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsm1 = maps_raw_out;                    
-                end
-                data.SIC1 = sic_out;
-                data.ISE1 = ise_out;
+                data.SIC_adsm1 = sic_adsm;
+                data.ISE_adsm1 = ise_out;
+                data.SIC_bcsm1 = sic_bcsm;
+                data.SIC_dksm1 = sic_dksm;
+                data.crit_sm1 = crit_sm;
             elseif repeat == 3
-                if ~Args.AdaptiveSmooth
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_raw2 = maps_raw_out;
-                else
-                    if Args.NumShuffles > 0
-                        maps_raw = firing_rates(1,:);
-                    else
-                        maps_raw = firing_rates;
-                    end
-                    maps_raw_out = nan(size(maps_raw));
-                    maps_raw_out(bins_sieved) = maps_raw(bins_sieved);
-                    data.maps_adsm2 = maps_raw_out;                    
-                end
-                data.SIC2 = sic_out;
-                data.ISE2 = ise_out;
+                data.SIC_adsm2 = sic_adsm;
+                data.ISE_adsm2 = ise_out;
+                data.SIC_bcsm2 = sic_bcsm;
+                data.SIC_dksm2 = sic_dksm;
+                data.crit_sm2 = crit_sm;
             end            
             
     end
@@ -622,258 +632,258 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-% relic code
+% % relic code
+% % 
+% function [retrievemap,o_i,spikeLoc,map] = padgrids(n,o_i,spikeLoc,grid_o_i,grid_spikeLoc,gazeSections,jj)
 % 
-function [retrievemap,o_i,spikeLoc,map] = padgrids(n,o_i,spikeLoc,grid_o_i,grid_spikeLoc,gazeSections,jj)
-
-% Pad maps with adjoining bins from adjacent maps
-
-switch gazeSections{jj}
-    case 'Ground'
-        wallsection_ind = strcmp(gazeSections,'Walls');
-        wall_o_i = grid_o_i{wallsection_ind};
-        wall_spikeLoc = grid_spikeLoc{wallsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with wall data
-        o_i_temp(1:n,n+1:n+size(o_i,1),:) = wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
-        o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
-        o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
-        o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
-        spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
-        spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
-        spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Ceiling'
-        wallsection_ind = strcmp(gazeSections,'Walls');
-        wall_o_i = grid_o_i{wallsection_ind};
-        wall_spikeLoc = grid_spikeLoc{wallsection_ind};
-
-        % Flip walldata upside down
-        wall_o_i = flipud(wall_o_i);
-        wall_spikeLoc = flipud(wall_spikeLoc);
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with wall data
-        o_i_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
-        o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
-        o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
-        o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
-        spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
-        spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
-        spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Walls'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        ceilingsection_ind = strcmp(gazeSections,'Ceiling');
-        ceiling_o_i = grid_o_i{ceilingsection_ind};
-        ceiling_spikeLoc = grid_spikeLoc{ceilingsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_o_i(:,1:n,:),-1);
-        o_i_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_o_i(1:n,:,:);
-        o_i_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_o_i(:,size(ground_o_i,1)-n+1:end,:),1);
-        o_i_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_o_i(size(ground_o_i,1)-n+1:end,:,:),2);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_spikeLoc(:,1:n,:),-1);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_spikeLoc(1:n,:,:);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_spikeLoc(:,size(ground_spikeLoc,1)-n+1:end,:),1);
-        spikeLoc_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_spikeLoc(size(ground_spikeLoc,1)-n+1:end,:,:),2);
-
-        % Pad with ceiling data
-        o_i_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_o_i(:,size(ceiling_o_i,1)-n+1:end,:),1));
-        o_i_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_o_i(1:n,:,:));
-        o_i_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(:,1:n,:),-1));
-        o_i_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(size(ceiling_o_i,1)-n+1:end,:,:),2));
-        spikeLoc_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_spikeLoc(:,size(ceiling_spikeLoc,1)-n+1:end,:),1));
-        spikeLoc_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_spikeLoc(1:n,:,:));
-        spikeLoc_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(:,1:n,:),-1));
-        spikeLoc_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(size(ceiling_spikeLoc,1)-n+1:end,:,:),2));
-
-        % Pad with wall data on either end
-        o_i_temp(n+1:n+size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(n+1:n+size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [n+1 n+size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar1'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,25-n:24,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,25:32,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,33:32+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,25:32,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,25-n:24,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,25:32,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,33:32+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,25:32,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar2'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,9-n:8,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,9:16,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,17:16+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,9:16,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,9-n:8,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,9:16,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,17:16+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,9:16,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar3'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,25-n:24,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,25:32,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,33:32+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,25:32,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,25-n:24,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,25:32,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,33:32+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,25:32,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-    case 'Pillar4'
-        groundsection_ind = strcmp(gazeSections,'Ground');
-        ground_o_i = grid_o_i{groundsection_ind};
-        ground_spikeLoc = grid_spikeLoc{groundsection_ind};
-
-        % Move original map to middle
-        o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
-        spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
-        spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
-
-        % Pad with ground data
-        o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,9-n:8,:),-1);
-        o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,9:16,:);
-        o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,17:16+n,:),1);
-        o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,9:16,:),2);
-        spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,9-n:8,:),-1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,9:16,:);
-        spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,17:16+n,:),1);
-        spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,9:16,:),2);
-
-        % Pad with pillar data on either end
-        o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
-        o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
-        spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
-        spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
-
-        % Save indices of original grid [from_x to_x; from_y to_y]
-        retrievemap = [1 size(o_i,1); ...
-                       n+1 n+size(o_i,2)];
-        % Send vars for adaptive smoothing
-        o_i = o_i_temp;
-        spikeLoc = spikeLoc_temp;
-
-end
+% % Pad maps with adjoining bins from adjacent maps
+% 
+% switch gazeSections{jj}
+%     case 'Ground'
+%         wallsection_ind = strcmp(gazeSections,'Walls');
+%         wall_o_i = grid_o_i{wallsection_ind};
+%         wall_spikeLoc = grid_spikeLoc{wallsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with wall data
+%         o_i_temp(1:n,n+1:n+size(o_i,1),:) = wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
+%         o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
+%         o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
+%         o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
+%         spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:); % top
+%         spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:),-1); % right
+%         spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:),-2); % bottom
+%         spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:),1); % left
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [n+1 n+size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Ceiling'
+%         wallsection_ind = strcmp(gazeSections,'Walls');
+%         wall_o_i = grid_o_i{wallsection_ind};
+%         wall_spikeLoc = grid_spikeLoc{wallsection_ind};
+% 
+%         % Flip walldata upside down
+%         wall_o_i = flipud(wall_o_i);
+%         wall_spikeLoc = flipud(wall_spikeLoc);
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with wall data
+%         o_i_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
+%         o_i_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
+%         o_i_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
+%         o_i_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_o_i(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
+%         spikeLoc_temp(1:n,n+1:n+size(o_i,1),:) = fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,1*size(o_i,1)+1:2*size(o_i,1),:)); % top
+%         spikeLoc_temp(n+1:n+size(o_i,1),size(o_i,1)+n+1:end,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,2*size(o_i,1)+1:3*size(o_i,1),:)),-1); % right
+%         spikeLoc_temp(size(o_i,1)+n+1:end,n+1:size(o_i,1)+n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,3*size(o_i,1)+1:4*size(o_i,1),:)),-2); % bottom
+%         spikeLoc_temp(n+1:size(o_i,1)+n,1:n,:) = rot90(fliplr(wall_spikeLoc(size(wall_o_i,1)-n+1:end,0*size(o_i,1)+1:1*size(o_i,1),:)),1); % left
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [n+1 n+size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Walls'
+%         groundsection_ind = strcmp(gazeSections,'Ground');
+%         ground_o_i = grid_o_i{groundsection_ind};
+%         ground_spikeLoc = grid_spikeLoc{groundsection_ind};
+% 
+%         ceilingsection_ind = strcmp(gazeSections,'Ceiling');
+%         ceiling_o_i = grid_o_i{ceilingsection_ind};
+%         ceiling_spikeLoc = grid_spikeLoc{ceilingsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+2*n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(n+1:n+size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with ground data
+%         o_i_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_o_i(:,1:n,:),-1);
+%         o_i_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_o_i(1:n,:,:);
+%         o_i_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_o_i(:,size(ground_o_i,1)-n+1:end,:),1);
+%         o_i_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_o_i(size(ground_o_i,1)-n+1:end,:,:),2);
+%         spikeLoc_temp(n+size(o_i,1)+1:end,n+1:size(ground_o_i,2)+n,:) = rot90(ground_spikeLoc(:,1:n,:),-1);
+%         spikeLoc_temp(n+size(o_i,1)+1:end,n+size(ground_o_i,2)+1:n+2*size(ground_o_i,2),:) = ground_spikeLoc(1:n,:,:);
+%         spikeLoc_temp(n+size(o_i,1)+1:end,n+2*size(ground_o_i,2)+1:n+3*size(ground_o_i,2),:) = rot90(ground_spikeLoc(:,size(ground_spikeLoc,1)-n+1:end,:),1);
+%         spikeLoc_temp(n+size(o_i,1)+1:end,n+3*size(ground_o_i,1)+1:n+4*size(ground_o_i,1),:) = rot90(ground_spikeLoc(size(ground_spikeLoc,1)-n+1:end,:,:),2);
+% 
+%         % Pad with ceiling data
+%         o_i_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_o_i(:,size(ceiling_o_i,1)-n+1:end,:),1));
+%         o_i_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_o_i(1:n,:,:));
+%         o_i_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(:,1:n,:),-1));
+%         o_i_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_o_i(size(ceiling_o_i,1)-n+1:end,:,:),2));
+%         spikeLoc_temp(1:n,n+1:size(ceiling_o_i,1)+n,:) = fliplr(rot90(ceiling_spikeLoc(:,size(ceiling_spikeLoc,1)-n+1:end,:),1));
+%         spikeLoc_temp(1:n,n+size(ceiling_o_i,1)+1:n+2*size(ceiling_o_i,1),:) = fliplr(ceiling_spikeLoc(1:n,:,:));
+%         spikeLoc_temp(1:n,n+2*size(ceiling_o_i,1)+1:n+3*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(:,1:n,:),-1));
+%         spikeLoc_temp(1:n,n+3*size(ceiling_o_i,1)+1:n+4*size(ceiling_o_i,1),:) = fliplr(rot90(ceiling_spikeLoc(size(ceiling_spikeLoc,1)-n+1:end,:,:),2));
+% 
+%         % Pad with wall data on either end
+%         o_i_temp(n+1:n+size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
+%         o_i_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
+%         spikeLoc_temp(n+1:n+size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
+%         spikeLoc_temp(n+1:n+size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [n+1 n+size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Pillar1'
+%         groundsection_ind = strcmp(gazeSections,'Ground');
+%         ground_o_i = grid_o_i{groundsection_ind};
+%         ground_spikeLoc = grid_spikeLoc{groundsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with ground data
+%         o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,25-n:24,:),-1);
+%         o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,25:32,:);
+%         o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,33:32+n,:),1);
+%         o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,25:32,:),2);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,25-n:24,:),-1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,25:32,:);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,33:32+n,:),1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,25:32,:),2);
+% 
+%         % Pad with pillar data on either end
+%         o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
+%         o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
+%         spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
+%         spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [1 size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Pillar2'
+%         groundsection_ind = strcmp(gazeSections,'Ground');
+%         ground_o_i = grid_o_i{groundsection_ind};
+%         ground_spikeLoc = grid_spikeLoc{groundsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with ground data
+%         o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(25:32,9-n:8,:),-1);
+%         o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(25-n:24,9:16,:);
+%         o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(25:32,17:16+n,:),1);
+%         o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(33:32+n,9:16,:),2);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(25:32,9-n:8,:),-1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(25-n:24,9:16,:);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(25:32,17:16+n,:),1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(33:32+n,9:16,:),2);
+% 
+%         % Pad with pillar data on either end
+%         o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
+%         o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
+%         spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
+%         spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [1 size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Pillar3'
+%         groundsection_ind = strcmp(gazeSections,'Ground');
+%         ground_o_i = grid_o_i{groundsection_ind};
+%         ground_spikeLoc = grid_spikeLoc{groundsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with ground data
+%         o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,25-n:24,:),-1);
+%         o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,25:32,:);
+%         o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,33:32+n,:),1);
+%         o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,25:32,:),2);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,25-n:24,:),-1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,25:32,:);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,33:32+n,:),1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,25:32,:),2);
+% 
+%         % Pad with pillar data on either end
+%         o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
+%         o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
+%         spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
+%         spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [1 size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+%     case 'Pillar4'
+%         groundsection_ind = strcmp(gazeSections,'Ground');
+%         ground_o_i = grid_o_i{groundsection_ind};
+%         ground_spikeLoc = grid_spikeLoc{groundsection_ind};
+% 
+%         % Move original map to middle
+%         o_i_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         o_i_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = o_i;
+%         spikeLoc_temp = nan(size(o_i,1)+n,size(o_i,2)+2*n,size(o_i,3));
+%         spikeLoc_temp(1:size(o_i,1), n+1:n+size(o_i,2),:) = spikeLoc;
+% 
+%         % Pad with ground data
+%         o_i_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_o_i(9:16,9-n:8,:),-1);
+%         o_i_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_o_i(9-n:8,9:16,:);
+%         o_i_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_o_i(9:16,17:16+n,:),1);
+%         o_i_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_o_i(17:16+n,9:16,:),2);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+1:(size(o_i,2)/4)+n,:) = rot90(ground_spikeLoc(9:16,9-n:8,:),-1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+(size(o_i,2)/4)+1:n+2*(size(o_i,2)/4),:) = ground_spikeLoc(9-n:8,9:16,:);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+2*(size(o_i,2)/4)+1:n+3*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(9:16,17:16+n,:),1);
+%         spikeLoc_temp(size(o_i,1)+1:end,n+3*(size(o_i,2)/4)+1:n+4*(size(o_i,2)/4),:) = rot90(ground_spikeLoc(17:16+n,9:16,:),2);
+% 
+%         % Pad with pillar data on either end
+%         o_i_temp(1:size(o_i,1),1:n,:) = o_i(:,size(o_i,2)-n+1:end,:);
+%         o_i_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = o_i(:,1:n,:);
+%         spikeLoc_temp(1:size(o_i,1),1:n,:) = spikeLoc(:,size(o_i,2)-n+1:end,:);
+%         spikeLoc_temp(1:size(o_i,1),size(o_i_temp,2)-n+1:end,:) = spikeLoc(:,1:n,:);
+% 
+%         % Save indices of original grid [from_x to_x; from_y to_y]
+%         retrievemap = [1 size(o_i,1); ...
+%                        n+1 n+size(o_i,2)];
+%         % Send vars for adaptive smoothing
+%         o_i = o_i_temp;
+%         spikeLoc = spikeLoc_temp;
+% 
+% end
 
 % 
 % function [smoothedRate,smoothedSpk,smoothedPos,radiiUsedList] = adaptivesmooth(pos,spk,alpha)
