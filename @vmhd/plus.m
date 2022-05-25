@@ -1,5 +1,5 @@
 function r = plus(p,q,varargin)
-%@dirfiles/plus Overloaded plus function for dirfiles objects.
+%@vmhd/plus Overloaded plus function for vmhd objects.
 %   R = plus(P,Q) combines dirfiles objects P and Q and returns the
 %   dirfiles object R.
 
@@ -37,11 +37,36 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+        
+        % Full session
+        r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
+        r.data.dur_raw = [p.data.dur_raw; q.data.dur_raw];
+        r.data.spk_raw = [p.data.spk_raw; q.data.spk_raw];
+        r.data.maps_bcsm = [p.data.maps_bcsm; q.data.maps_bcsm];
+        r.data.maps_bcsmsh = [p.data.maps_bcsmsh; q.data.maps_bcsmsh];
+        r.data.RV_bcsm = [p.data.RV_bcsm; q.data.RV_bcsm];
+        r.data.RVsh_bcsm = [p.data.RVsh_bcsm; q.data.RVsh_bcsm];
+        
+        % First half
+        r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
+        r.data.dur_raw1 = [p.data.dur_raw1; q.data.dur_raw1];
+        r.data.spk_raw1 = [p.data.spk_raw1; q.data.spk_raw1];
+        r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
+        r.data.RV_bcsm1 = [p.data.RV_bcsm1;q.data.RV_bcsm1];
+        
+        % Second half
+        r.data.maps_raw2 = [p.data.maps_raw2; q.data.maps_raw2];
+        r.data.dur_raw2 = [p.data.dur_raw2; q.data.dur_raw2];
+        r.data.spk_raw2 = [p.data.spk_raw2; q.data.spk_raw2];
+        r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
+        r.data.RV_bcsm2 = [p.data.RV_bcsm2;q.data.RV_bcsm2];
 
 		% object specific fields
-		r.data.dlist = [p.data.dlist; q.data.dlist];
-		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
-			+ q.data.setIndex(2:end))];
+% 		r.data.dlist = [p.data.dlist; q.data.dlist];
+% 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...
+% 			+ q.data.setIndex(2:end))];
+
+        r.data.origin = [p.data.origin; q.data.origin];
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
