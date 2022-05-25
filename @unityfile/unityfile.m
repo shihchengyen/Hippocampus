@@ -187,30 +187,49 @@ if(~isempty(rd))
         %using the eyelink object.
 %         unityData = synchronise(unityData, unityTriggers);
 
+        % Fix negative values of orientation. North is already 0, increasing clockwise
+        if abs(min(unityData(:,5))) > 1
+            error('min HD value smaller than -1');
+        end
+        negs = unityData(:,5) < 0;
+        unityData(negs,5) = unityData(negs,5)+360;
+
         % to calculate displacement and direction coming to data point
+        % Col 6: direction of displacement. North is zero, increasing clockwise
+        % Col 7: magnitude of displacement in unity units
         dd1 = zeros(size(unityData, 1), 2);
-        dd1(2:end,1) = diff(unityData(:,3));
-        dd1(2:end,2) = diff(unityData(:,4));
+        dd1(2:end,1) = diff(unityData(:,3)); % x displacement
+        dd1(2:end,2) = diff(unityData(:,4)); % y displacement
+        stationary = dd1(:,1)==0 & dd1(:,2)==0;
+
         dd = zeros(size(unityData, 1), 2);
-        [dd(:,1), dd(:,2)] = cart2pol(dd1(:,1),dd1(:,2));
+        [dd(:,1), dd(:,2)] = cart2pol(dd1(:,1),dd1(:,2)); % dd col 1 = angle (rad), col 2 = radius. East is 0 rad, increasing CCW
         dd(:,1) = rad2deg(dd(:,1));
         for item = 1:size(dd(:,1))
             if dd(item,1) < 0
-                dd(item,1) = 360 + dd(item,1);
+                dd(item,1) = 360 + dd(item,1); % convert southward directions to positive theta values
             end
         end
-        dd(:,1) = dd(:,1) - 90;
+        dd(:,1) = dd(:,1) - 90; % Make North the zero, increasing CCW
         for item = 1:size(dd(:,1))
             if dd(item,1) < 0
-                dd(item,1) = 360 + dd(item,1);
+                dd(item,1) = 360 + dd(item,1); % Again, take away the negative values
             end
         end
-        dd(:,1) = 360 - dd(:,1);
+        dd(:,1) = 360 - dd(:,1); % increasing CW (clockwise) 
         dd(find(dd(:,1)==360),1) = 0;
-        dd(find(dd(:,2)==0),1) = NaN;        
+        % Fix the stationary values which were all set to east because direction was computed from displacement==0
+        dd(stationary,1) = 0; 
+%         firstmove = find(~stationary,1);
+%         premove = 1:firstmove-1;
+%         stationary(premove) = false;
+%         dd(premove,1) = 0; % before starting to move, set to north
+%         dd(stationary,1) = nan;
+%         dd(:,1) = fillmissing(dd(:,1),'previous'); % All other stationary points after starting to move set to take on direction of last movement
         
-        % sixth column in degrees, north set to 0, clockwise. seventh column
-        % magnitude in unity units.
+        
+%         dd(find(dd(:,2)==0),1) = NaN; % HM commented out because HD cells should fire even if stationary       
+        
 
 		data.unityData = [unityData dd];
         % data.unityData(:,7) = data.unityData(:,7)./data.unityData(:,2); % converted to unity units per second
