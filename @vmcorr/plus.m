@@ -41,39 +41,167 @@ else
 		r.data.numSets = p.data.numSets + q.data.numSets;
         r.data.origin = [p.data.origin; q.data.origin];
 
-		% object specific fields %% Missing some
-        r.data.maps_raw_corrp = [p.data.maps_raw_corrp; q.data.maps_raw_corrp];
-        r.data.maps_raw_corrpset = [p.data.maps_raw_corrpset; {q.data.maps_raw_corrpset}];
-        r.data.maps_adsm_corrp = [p.data.maps_adsm_corrp; q.data.maps_adsm_corrp];
-        r.data.maps_adsm_corrpset = [p.data.maps_adsm_corrpset; {q.data.maps_adsm_corrpset}];
-        r.data.SIC_corrp = [p.data.SIC_corrp; q.data.SIC_corrp];
-        r.data.SIC_corrpset = [p.data.SIC_corrpset; {q.data.SIC_corrpset}];
-        r.data.ISE_corrp = [p.data.ISE_corrp; q.data.ISE_corrp];
-        r.data.ISE_corrpset = [p.data.ISE_corrpset; {q.data.ISE_corrpset}];
-
+		% object specific fields %% Full session
+        r.data.pv = [p.data.pv; q.data.pv];
+        r.data.ph = [p.data.ph; q.data.ph];
+        r.data.gridSteps = [p.data.gridSteps; q.data.gridSteps]; % Is one enough?
+        r.data.binDepths = [p.data.binDepths; q.data.binDepths];
+        r.data.placebins = [p.data.placebins; q.data.placebins];
+        r.data.viewbins = [p.data.viewbins; q.data.viewbins];
+        r.data.headdirectionbins = [p.data.headdirectionbins; q.data.headdirectionbins];
+        r.data.Args = p.data.Args;
         
-        r.data.maps_raw_corrsv = [p.data.maps_raw_corrsv; q.data.maps_raw_corrsv];
-        r.data.maps_raw_corrsvset = [p.data.maps_raw_corrsvset; {q.data.maps_raw_corrsvset}];
-        r.data.maps_adsm_corrsv = [p.data.maps_adsm_corrsv; q.data.maps_adsm_corrsv];
-        r.data.maps_adsm_corrsvset = [p.data.maps_adsm_corrsvset; {q.data.maps_adsm_corrsvset}];
-        r.data.SIC_corrsv = [p.data.SIC_corrsv; q.data.SIC_corrsv];
-        r.data.SIC_corrsvset = [p.data.SIC_corrsvset; {q.data.SIC_corrsvset}];
-        r.data.ISE_corrsv = [p.data.ISE_corrsv; q.data.ISE_corrsv];
-        r.data.ISE_corrsvset = [p.data.ISE_corrsvset; {q.data.ISE_corrsvset}];
-        r.data.covmat = [p.data.covmat; {q.data.covmat}];
-        r.data.covmat_norm = [p.data.covmat_norm; {q.data.covmat_norm}];
-        r.data.norml1 = [p.data.norml1; q.data.norml1];
-        r.data.norml2 = [p.data.norml2; q.data.norml2];
-        
-        r.data.convergewithsv = [p.data.convergewithsv; q.data.convergewithsv];
-        r.data.convergewithp = [p.data.convergewithp; q.data.convergewithp];
-        r.data.smoothpick = [p.data.smoothpick; q.data.smoothpick];
-        r.data.llhpick = [p.data.llhpick; q.data.llhpick];
-        r.data.NumIterLlh = [p.data.NumIterLlh; q.data.NumIterLlh];
-        r.data.llhpicklabel = [p.data.llhpicklabel; {q.data.llhpicklabel}];
-        r.data.llh = [p.data.llh; {q.data.llh}];
-			
-		% add nptdata objects as well
+        % add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
+        
+        
+%         r.data.maps_dist_p = [p.data.maps_dist_p; q.data.maps_dist_p];
+%         r.data.maps_dist_p_adsm = [p.data.maps_dist_p_adsm; q.data.maps_dist_p_adsm];
+%         r.data.maps_dist_sv = [p.data.maps_dist_sv; q.data.maps_dist_sv];
+%         r.data.maps_dist_sv_adsm = [p.data.maps_dist_sv_adsm; q.data.maps_dist_sv_adsm];
+%         r.data.distratio_p = [p.data.distratio_p; q.data.distratio_p];
+%         r.data.distratio_sv = [p.data.distratio_sv; q.data.distratio_sv];
+%         r.data.distcorr_p = [p.data.distcorr_p; q.data.distcorr_p];
+%         r.data.distcorr_sv = [p.data.distcorr_sv; q.data.distcorr_sv];
+%         
+%         r.data.maps_raw_corrp = [p.data.maps_raw_corrp; q.data.maps_raw_corrp];
+%         r.data.maps_raw_corrpset = [p.data.maps_raw_corrpset; {q.data.maps_raw_corrpset}];
+%         r.data.maps_adsm_corrp = [p.data.maps_adsm_corrp; q.data.maps_adsm_corrp];
+%         r.data.maps_adsm_corrpset = [p.data.maps_adsm_corrpset; {q.data.maps_adsm_corrpset}];
+%         r.data.maps_bcsm_corrp = [p.data.maps_bcsm_corrp; q.data.maps_bcsm_corrp];
+%         r.data.maps_bcsm_corrpset = [p.data.maps_bcsm_corrpset; {q.data.maps_bcsm_corrpset}];
+%         r.data.maps_dksm_corrp = [p.data.maps_dksm_corrp; q.data.maps_dksm_corrp];
+%         r.data.maps_dksm_corrpset = [p.data.maps_dksm_corrpset; {q.data.maps_dksm_corrpset}];
+%         r.data.dur_adsm_corrp = [p.data.dur_adsm_corrp; q.data.dur_adsm_corrp];
+%         r.data.SIC_adsm_corrp = [p.data.SIC_adsm_corrp; q.data.SIC_adsm_corrp];
+%         r.data.SIC_adsm_corrpset = [p.data.SIC_adsm_corrpset; {q.data.SIC_adsm_corrpset}];
+%         r.data.SIC_bcsm_corrp = [p.data.SIC_bcsm_corrp; q.data.SIC_bcsm_corrp];
+%         r.data.SIC_bcsm_corrpset = [p.data.SIC_bcsm_corrpset; {q.data.SIC_bcsm_corrpset}];
+%         r.data.SIC_dksm_corrp = [p.data.SIC_dksm_corrp; q.data.SIC_dksm_corrp];
+%         r.data.SIC_dksm_corrpset = [p.data.SIC_dksm_corrpset; {q.data.SIC_dksm_corrpset}];
+%         r.data.ISE_adsm_corrp = [p.data.ISE_adsm_corrp; q.data.ISE_adsm_corrp];
+%         r.data.ISE_adsm_corrpset = [p.data.ISE_adsm_corrpset; {q.data.ISE_adsm_corrpset}];
+% %         r.data.ratesplaceMethod2 = [p.data.ratesplaceMethod2; q.data.ratesplaceMethod2];
+% %         r.data.ratesviewMethod2 = [p.data.ratesviewMethod2; q.data.ratesviewMethod2];
+%         
+%         r.data.maps_raw_corrsv = [p.data.maps_raw_corrsv; q.data.maps_raw_corrsv];
+%         r.data.maps_raw_corrsvset = [p.data.maps_raw_corrsvset; {q.data.maps_raw_corrsvset}];
+%         r.data.maps_adsm_corrsv = [p.data.maps_adsm_corrsv; q.data.maps_adsm_corrsv];
+%         r.data.maps_adsm_corrsvset = [p.data.maps_adsm_corrsvset; {q.data.maps_adsm_corrsvset}];
+%         r.data.maps_bcsm_corrsv = [p.data.maps_bcsm_corrsv; q.data.maps_bcsm_corrsv];
+%         r.data.maps_bcsm_corrsvset = [p.data.maps_bcsm_corrsvset; {q.data.maps_bcsm_corrsvset}];
+%         r.data.maps_dksm_corrsv = [p.data.maps_dksm_corrsv; q.data.maps_dksm_corrsv];
+%         r.data.maps_dksm_corrsvset = [p.data.maps_dksm_corrsvset; {q.data.maps_dksm_corrsvset}];
+%         r.data.dur_adsm_corrsv = [p.data.dur_adsm_corrsv; q.data.dur_adsm_corrsv];
+%         r.data.SIC_adsm_corrsv = [p.data.SIC_adsm_corrsv; q.data.SIC_adsm_corrsv];
+%         r.data.SIC_adsm_corrsvset = [p.data.SIC_adsm_corrsvset; {q.data.SIC_adsm_corrsvset}];
+%         r.data.SIC_bcsm_corrsv = [p.data.SIC_bcsm_corrsv; q.data.SIC_bcsm_corrsv];
+%         r.data.SIC_bcsm_corrsvset = [p.data.SIC_bcsm_corrsvset; {q.data.SIC_bcsm_corrsvset}];
+%         r.data.SIC_dksm_corrsv = [p.data.SIC_dksm_corrsv; q.data.SIC_dksm_corrsv];
+%         r.data.SIC_dksm_corrsvset = [p.data.SIC_dksm_corrsvset; {q.data.SIC_dksm_corrsvset}];
+%         r.data.ISE_adsm_corrsv = [p.data.ISE_adsm_corrsv; q.data.ISE_adsm_corrsv];
+%         r.data.ISE_adsm_corrsvset = [p.data.ISE_adsm_corrsvset; {q.data.ISE_adsm_corrsvset}];
+%         r.data.covmat = [p.data.covmat; {q.data.covmat}];
+%         r.data.covmat_norm = [p.data.covmat_norm; {q.data.covmat_norm}];
+%         r.data.l1norm = [p.data.l1norm; q.data.l1norm];
+%         r.data.l2norm = [p.data.l2norm; q.data.l2norm];
+%         
+%         r.data.convergewithsv = [p.data.convergewithsv; q.data.convergewithsv];
+%         r.data.convergewithp = [p.data.convergewithp; q.data.convergewithp];
+%         r.data.smoothpick = [p.data.smoothpick; q.data.smoothpick];
+%         r.data.llhpick = [p.data.llhpick; q.data.llhpick];
+%         r.data.NumIterLlh = [p.data.NumIterLlh; q.data.NumIterLlh];
+%         r.data.llhpicklabel = [p.data.llhpicklabel; {q.data.llhpicklabel}];
+%         r.data.llh = [p.data.llh; {q.data.llh}];
+%         
+%         % 1st half
+%         r.data.maps_dist_p1 = [p.data.maps_dist_p1; q.data.maps_dist_p1];
+%         r.data.maps_dist_sv1 = [p.data.maps_dist_sv1; q.data.maps_dist_sv1];
+%         r.data.distratio_p1 = [p.data.distratio_p1; q.data.distratio_p1];
+%         r.data.distratio_sv1 = [p.data.distratio_sv1; q.data.distratio_sv1];
+%         r.data.distcorr_p1 = [p.data.distcorr_p1; q.data.distcorr_p1];
+%         r.data.distcorr_sv1 = [p.data.distcorr_sv1; q.data.distcorr_sv1];
+%         
+%         r.data.maps_adsm_corrp1 = [p.data.maps_adsm_corrp1; q.data.maps_adsm_corrp1];
+%         r.data.maps_adsm_corrpset1 = [p.data.maps_adsm_corrpset1; {q.data.maps_adsm_corrpset1}];
+%         r.data.maps_bcsm_corrp1 = [p.data.maps_bcsm_corrp1; q.data.maps_bcsm_corrp1];
+%         r.data.maps_bcsm_corrpset1 = [p.data.maps_bcsm_corrpset1; {q.data.maps_bcsm_corrpset1}];
+%         r.data.maps_dksm_corrp1 = [p.data.maps_dksm_corrp1; q.data.maps_dksm_corrp1];
+%         r.data.maps_dksm_corrpset1 = [p.data.maps_dksm_corrpset1; {q.data.maps_dksm_corrpset1}];
+%         r.data.SIC_adsm_corrp1 = [p.data.SIC_adsm_corrp1; q.data.SIC_adsm_corrp1];
+%         r.data.SIC_adsm_corrpset1 = [p.data.SIC_adsm_corrpset1; {q.data.SIC_adsm_corrpset1}];
+%         r.data.SIC_bcsm_corrp1 = [p.data.SIC_bcsm_corrp1; q.data.SIC_bcsm_corrp1];
+%         r.data.SIC_bcsm_corrpset1 = [p.data.SIC_bcsm_corrpset1; {q.data.SIC_bcsm_corrpset1}];
+%         r.data.SIC_dksm_corrp1 = [p.data.SIC_dksm_corrp1; q.data.SIC_dksm_corrp1];
+%         r.data.SIC_dksm_corrpset1 = [p.data.SIC_dksm_corrpset1; {q.data.SIC_dksm_corrpset1}];
+%         r.data.ISE_adsm_corrp1 = [p.data.ISE_adsm_corrp1; q.data.ISE_adsm_corrp1];
+%         r.data.ISE_adsm_corrpset1 = [p.data.ISE_adsm_corrpset1; {q.data.ISE_adsm_corrpset1}];
+% %         r.data.ratesplaceMethod2 = [p.data.ratesplaceMethod2; q.data.ratesplaceMethod2];
+% %         r.data.ratesviewMethod2 = [p.data.ratesviewMethod2; q.data.ratesviewMethod2];
+%         
+%         r.data.maps_adsm_corrsv1 = [p.data.maps_adsm_corrsv1; q.data.maps_adsm_corrsv1];
+%         r.data.maps_adsm_corrsvset1 = [p.data.maps_adsm_corrsvset1; {q.data.maps_adsm_corrsvset1}];
+%         r.data.maps_bcsm_corrsv1 = [p.data.maps_bcsm_corrsv1; q.data.maps_bcsm_corrsv1];
+%         r.data.maps_bcsm_corrsvset1 = [p.data.maps_bcsm_corrsvset1; {q.data.maps_bcsm_corrsvset1}];
+%         r.data.maps_dksm_corrsv1 = [p.data.maps_dksm_corrsv1; q.data.maps_dksm_corrsv1];
+%         r.data.maps_dksm_corrsvset1 = [p.data.maps_dksm_corrsvset1; {q.data.maps_dksm_corrsvset1}];
+%         r.data.SIC_adsm_corrsv1 = [p.data.SIC_adsm_corrsv1; q.data.SIC_adsm_corrsv1];
+%         r.data.SIC_adsm_corrsvset1 = [p.data.SIC_adsm_corrsvset1; {q.data.SIC_adsm_corrsvset1}];
+%         r.data.SIC_bcsm_corrsv1 = [p.data.SIC_bcsm_corrsv1; q.data.SIC_bcsm_corrsv1];
+%         r.data.SIC_bcsm_corrsvset1 = [p.data.SIC_bcsm_corrsvset1; {q.data.SIC_bcsm_corrsvset1}];
+%         r.data.SIC_dksm_corrsv1 = [p.data.SIC_dksm_corrsv1; q.data.SIC_dksm_corrsv1];
+%         r.data.SIC_dksm_corrsvset1 = [p.data.SIC_dksm_corrsvset1; {q.data.SIC_dksm_corrsvset1}];
+%         r.data.ISE_adsm_corrsv1 = [p.data.ISE_adsm_corrsv1; q.data.ISE_adsm_corrsv1];
+%         r.data.ISE_adsm_corrsvset1 = [p.data.ISE_adsm_corrsvset1; {q.data.ISE_adsm_corrsvset1}];
+% %         r.data.covmat1 = [p.data.covmat1; {q.data.covmat1}];
+% %         r.data.covmat_norm1 = [p.data.covmat_norm1; {q.data.covmat_norm1}];
+% %         r.data.l1norm1 = [p.data.l1norm1; q.data.l1norm1];
+% %         r.data.l2norm1 = [p.data.l2norm1; q.data.l2norm1];
+%         
+%         % 2nd half
+%         r.data.maps_dist_p2 = [p.data.maps_dist_p2; q.data.maps_dist_p2];
+%         r.data.maps_dist_sv2 = [p.data.maps_dist_sv2; q.data.maps_dist_sv2];
+%         r.data.distratio_p2 = [p.data.distratio_p2; q.data.distratio_p2];
+%         r.data.distratio_sv2 = [p.data.distratio_sv2; q.data.distratio_sv2];
+%         r.data.distcorr_p2 = [p.data.distcorr_p2; q.data.distcorr_p2];
+%         r.data.distcorr_sv2 = [p.data.distcorr_sv2; q.data.distcorr_sv2];
+%         
+%         r.data.maps_adsm_corrp2 = [p.data.maps_adsm_corrp2; q.data.maps_adsm_corrp2];
+%         r.data.maps_adsm_corrpset2 = [p.data.maps_adsm_corrpset2; {q.data.maps_adsm_corrpset2}];
+%         r.data.maps_bcsm_corrp2 = [p.data.maps_bcsm_corrp2; q.data.maps_bcsm_corrp2];
+%         r.data.maps_bcsm_corrpset2 = [p.data.maps_bcsm_corrpset2; {q.data.maps_bcsm_corrpset2}];
+%         r.data.maps_dksm_corrp2 = [p.data.maps_dksm_corrp2; q.data.maps_dksm_corrp2];
+%         r.data.maps_dksm_corrpset2 = [p.data.maps_dksm_corrpset2; {q.data.maps_dksm_corrpset2}];
+%         r.data.SIC_adsm_corrp2 = [p.data.SIC_adsm_corrp2; q.data.SIC_adsm_corrp2];
+%         r.data.SIC_adsm_corrpset2 = [p.data.SIC_adsm_corrpset2; {q.data.SIC_adsm_corrpset2}];
+%         r.data.SIC_bcsm_corrp2 = [p.data.SIC_bcsm_corrp2; q.data.SIC_bcsm_corrp2];
+%         r.data.SIC_bcsm_corrpset2 = [p.data.SIC_bcsm_corrpset2; {q.data.SIC_bcsm_corrpset2}];
+%         r.data.SIC_dksm_corrp2 = [p.data.SIC_dksm_corrp2; q.data.SIC_dksm_corrp2];
+%         r.data.SIC_dksm_corrpset2 = [p.data.SIC_dksm_corrpset2; {q.data.SIC_dksm_corrpset2}];
+%         r.data.ISE_adsm_corrp2 = [p.data.ISE_adsm_corrp2; q.data.ISE_adsm_corrp2];
+%         r.data.ISE_adsm_corrpset2 = [p.data.ISE_adsm_corrpset2; {q.data.ISE_adsm_corrpset2}];
+% %         r.data.ratesplaceMethod2 = [p.data.ratesplaceMethod2; q.data.ratesplaceMethod2];
+% %         r.data.ratesviewMethod2 = [p.data.ratesviewMethod2; q.data.ratesviewMethod2];
+%         
+%         r.data.maps_adsm_corrsv2 = [p.data.maps_adsm_corrsv2; q.data.maps_adsm_corrsv2];
+%         r.data.maps_adsm_corrsvset2 = [p.data.maps_adsm_corrsvset2; {q.data.maps_adsm_corrsvset2}];
+%         r.data.maps_bcsm_corrsv2 = [p.data.maps_bcsm_corrsv2; q.data.maps_bcsm_corrsv2];
+%         r.data.maps_bcsm_corrsvset2 = [p.data.maps_bcsm_corrsvset2; {q.data.maps_bcsm_corrsvset2}];
+%         r.data.maps_dksm_corrsv2 = [p.data.maps_dksm_corrsv2; q.data.maps_dksm_corrsv2];
+%         r.data.maps_dksm_corrsvset2 = [p.data.maps_dksm_corrsvset2; {q.data.maps_dksm_corrsvset2}];
+%         r.data.SIC_adsm_corrsv2 = [p.data.SIC_adsm_corrsv2; q.data.SIC_adsm_corrsv2];
+%         r.data.SIC_adsm_corrsvset2 = [p.data.SIC_adsm_corrsvset2; {q.data.SIC_adsm_corrsvset2}];
+%         r.data.SIC_bcsm_corrsv2 = [p.data.SIC_bcsm_corrsv2; q.data.SIC_bcsm_corrsv2];
+%         r.data.SIC_bcsm_corrsvset2 = [p.data.SIC_bcsm_corrsvset2; {q.data.SIC_bcsm_corrsvset2}];
+%         r.data.SIC_dksm_corrsv2 = [p.data.SIC_dksm_corrsv2; q.data.SIC_dksm_corrsv2];
+%         r.data.SIC_dksm_corrsvset2 = [p.data.SIC_dksm_corrsvset2; {q.data.SIC_dksm_corrsvset2}];
+%         r.data.ISE_adsm_corrsv2 = [p.data.ISE_adsm_corrsv2; q.data.ISE_adsm_corrsv2];
+%         r.data.ISE_adsm_corrsvset2 = [p.data.ISE_adsm_corrsvset2; {q.data.ISE_adsm_corrsvset2}];
+% %         r.data.covmat2 = [p.data.covmat2; {q.data.covmat2}];
+% %         r.data.covmat_norm2 = [p.data.covmat_norm2; {q.data.covmat_norm2}];
+% %         r.data.l1norm2 = [p.data.l1norm2; q.data.l1norm2];
+% %         r.data.l2norm2 = [p.data.l2norm2; q.data.l2norm2];
+        
+		
 	end
 end
