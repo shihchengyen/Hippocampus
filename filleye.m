@@ -102,6 +102,9 @@ function [elTrials, missing, newMessages] = filleye(messages, eltimes, rpl)
     end
 
     missing_rows = size(truth,1) - size(arranged_array,1);
+    if (missing_rows < 0)
+        arranged_array = arranged_array(1:size(truth,1),:); % removes extra trial markers not present in rpl
+    end
 
     slice_after = NaN(missing_rows,2); % this section accounts for triples that look ok, but are made of two trials with the same posters
     slice_index = 1;
