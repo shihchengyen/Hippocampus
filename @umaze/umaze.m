@@ -206,6 +206,11 @@ if(dnum>0)
         % unity trial duration and ripple trial duration was too large,
         % and has already been flagged out within the unityfile process
         % by setting timestamps in the trial to the initial timestamp.
+        
+%         % Debug
+%         if sTi > 6756
+%             disp('stop');
+%         end
 
         if tempTrialTime(end)-tempTrialTime(1) ~= 0
     

@@ -1,6 +1,6 @@
 
 
-function [mapG,mapGdummy]= plotmap(mapL,objtype)
+function [mapG,mapGdummy]= plotmap(mapL,objtype,varargin)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot rate map in either place, spatial view or head direction frames
@@ -21,7 +21,9 @@ if min(size(mapL)) ~= 1
 end
 
 if strcmp(objtype,'place') || strcmp(objtype,'view')
-
+    
+    ax = gca;
+    axis(ax,'tight');
     % Insert floor place map into larger 3D view setting
     if strcmp(objtype,'place')
         mapLtemp = mapL;
@@ -121,10 +123,18 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
     surf(P4_x, P4_y, PX_z, P4_TL);
 
     % Display parameters
-    alpha 1; shading flat; 
-    view(-35,20);
+    
+    axis(ax, 'tight');
+    axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim'),get(ax, 'zlim')])); % Make axes square around biggest value
+    axis(ax,[0 axlim 0 axlim 0 axlim]);  
+    axis(ax,'square','off');
     colormap jet;
     colorbar;
+    
+    alpha 1; shading flat; 
+    view(-35,20);
+    
+    
     
 elseif strcmp(objtype,'headdirection')
     
@@ -135,29 +145,98 @@ elseif strcmp(objtype,'headdirection')
     angles=angles+0.5*pi; % north is 0 deg
     angles(angles>(2*pi))=angles(angles>(2*pi)) - 2*pi;
     angles(angles<=0)=angles(angles<=0) + 2*pi;
-    [x, y] = pol2cart(angles, mapL);
+    % Normalize map, then multiply by factor if need to be scaled to place/view maps
+    mapLnorm = (mapL./(max(abs(mapL)))) .* 20;
+    [x, y] = pol2cart(angles, mapLnorm);
     x(end+1) = x(1);    % Make line meet itself at end
     y(end+1) = y(1);    %
-    % Plot %
-%     hMap = plot(opt.handle, x, y, 'k-');
-    ax = gca;
-    hMap = plot(ax,x, y, 'k-');
-%     % Plot circular mean, if requested %
-%     if opt.circ_mean
-%         cm=circ_mean(angles',mapL);
-%         [cmX cmY]=pol2cart(cm,max(mapL));
-%         line('xdata',[0 cmX],'ydata',[0 cmY],'parent',opt.handle,'linewidth',2);
-%     end    
+    % Color the plot line
+    c = mapL;
+    c(end+1) = c(1);
 
-    % This is all formatting of axes %
-%     set(ax, 'color', 'w');  % For SCAn preview pane.
-    axis(ax, 'tight');
-    axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
-    axis(ax,[-axlim axlim -axlim axlim]);                         %   ..
-    line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-    axis(ax, 'square', 'off', 'tight');
-    ax.FontSize = 14;
+    if isempty(varargin)
+        % Plot %
+        ax = gca;   
+        hMap = patch(x,y,c,'FaceColor','none','EdgeColor','interp');
+    elseif size(varargin,2) == 2 && strcmp(varargin{1},'headdirection')
+        % Plot %
+        ax = gca;
+        hMap = plot(ax,x, y, varargin{2});
+    else
+        % If plotting both primary and secondary maps in 3D
+        if strcmp(varargin{1},'place')
+            raise = 20;
+        elseif strcmp(varargin{1},'view')
+            raise = 60;
+        end
+        % Move center of plot
+        zplus = repelem(raise,length(x));
+        xplus = x+20;
+        yplus = y+20;
+        % Plot
+        ax = gca;
+        if size(varargin,2) == 1
+            hMap = patch(xplus,yplus,zplus,c,'FaceColor','none','EdgeColor','interp');
+        elseif size(varargin,2) == 2
+            hMap = plot3(ax,xplus, yplus,zplus, varargin{2});
+        end 
+    end
+    %                     % Plot %
+%                 ax = gca;
+%                 %     hMap = plot(opt.handle, x, y, 'k-');
+%                 hMap = plot(ax,x, y, 'k-');
+%                 %     % Plot circular mean, if requested %
+%                 %     if opt.circ_mean
+%                 %         cm=circ_mean(angles',mapL);
+%                 %         [cmX cmY]=pol2cart(cm,max(mapL));
+%                 %         line('xdata',[0 cmX],'ydata',[0 cmY],'parent',opt.handle,'linewidth',2);
+%                 %     end   
+
     
+    % This is all formatting of axes %
+    if isempty(varargin) 
+        axis(ax, 'tight');
+        axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
+        axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
+        line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
+        line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
+        axis(ax, 'square', 'off');
+%         axis(ax, 'square', 'off', 'tight');
+        ax.FontSize = 14;
+    else
+        if ~strcmp(varargin{1},'headdirection')
+            if strcmp(varargin{1},'place')
+                raise = 20;
+            elseif strcmp(varargin{1},'view')
+                raise = 60;
+            end
+            axis(ax, 'tight');
+            axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
+            axsize = max([abs(x),abs(y)]);          
+            line('xdata',0.95*[20-axsize 20+axsize],'ydata',[20 20],'zdata',[raise raise],'parent',ax);   
+            line('xdata',[20 20],'ydata',0.95*[20-axsize 20+axsize],'zdata',[raise raise],'parent',ax); % centre-crossing axes
+            if strcmp(varargin{1},'headdirection')
+                axis(ax,[1.1*(20-axsize) 1.1*axlim 1.1*(20-axsize) 1.1*axlim]); 
+                axis(ax, 'square', 'off');
+    %             axis(ax, 'square', 'off', 'tight');
+            else
+                axis(ax,'square','off');
+            end
+            ax.FontSize = 14;
+            view(-35,20);
+        else
+            axis(ax, 'tight');
+        axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
+        axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
+        line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
+        line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
+        axis(ax, 'square', 'off');
+%         axis(ax, 'square', 'off', 'tight');
+        end
+    end
+    colormap jet;
+    colorbar;
+
     mapG = [x' y'];
     mapGdummy = [[1:size(x,2)-1 1]' [1:size(y,2)-1 1]'];
     

@@ -12,6 +12,10 @@ switch var
         if size(gridmap,1) ~= 9 % || sum(gridSize(:,1).*sum(gridSize(:,2))) ~= sum(gridmap(:,1).*sum(gridmap(:,2)))
             error('Incorrect dimensions specified for grid size');
         end
+    case 'headdirection'
+        if size(gridmap,1) ~= 1 % || sum(gridSize(:,1).*sum(gridSize(:,2))) ~= sum(gridmap(:,1).*sum(gridmap(:,2)))
+            error('Incorrect dimensions specified for grid size');
+        end
 end
 linmap = nan(sum(gridSize(:,1).*gridSize(:,2)),size(gridmap{1},3));
 for ii = 1:size(gridmap,1)

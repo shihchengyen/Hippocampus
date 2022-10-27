@@ -9,6 +9,13 @@ function [obj, varargout] = unityfile(varargin)
 %   % Instructions on unityfile %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%   Performs these operations:
+%   1. Loads in unity session data from 'RawData_Tx' and scales trial time
+%   to ripple time if difference is small enough. 
+%   2. Extracts direction and magnitude of displacement from head direction
+%       - fixes neg values of HD, north is 0deg, increases clockwise (col5)
+%       - col 6 is direction of displacement, col 7 magnitude
+%
 %example [as, Args] = unityfile('save','redo')
 %
 %dependencies: 
@@ -176,7 +183,7 @@ if(~isempty(rd))
 				unityTrialTime(tindices,a) = tempTrialTime - [0; cumsum(repmat(tdiff/numUnityFrames,numUnityFrames,1))];
                 
 			else
-				unityTrialTime(tindices,a) = tempTrialTime;
+				unityTrialTime(tindices,a) = tempTrialTime; %% ??? Does not match above comment
 	
 			end			
 
@@ -241,8 +248,8 @@ if(~isempty(rd))
         % compute cumulative sum of unity time to make it easy for
         % placeselect.m to compute histograms for shuffled data
         % add a zero at the beginning to avoid spike from being missed
-        data.unityTime = [0; cumsum(unityData(:,2))]; 
-        
+        data.unityTime = [0; cumsum(unityData(:,2))]; % will be aligned with ripple time in aligning_objects.m later
+
 		% create nptdata so we can inherit from it
 	    data.Args = Args;
 		n = nptdata(data.numSets,0,pwd);

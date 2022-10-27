@@ -42,24 +42,24 @@ else
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
         r.data.dur_raw = [p.data.dur_raw; q.data.dur_raw];
         r.data.spk_raw = [p.data.spk_raw; q.data.spk_raw];
-        r.data.maps_bcsm = [p.data.maps_bcsm; q.data.maps_bcsm];
-        r.data.maps_bcsmsh = [p.data.maps_bcsmsh; q.data.maps_bcsmsh];
-        r.data.RV_bcsm = [p.data.RV_bcsm; q.data.RV_bcsm];
-        r.data.RVsh_bcsm = [p.data.RVsh_bcsm; q.data.RVsh_bcsm];
+        r.data.maps_sm = [p.data.maps_sm; q.data.maps_sm];
+        r.data.maps_smsh = [p.data.maps_smsh; q.data.maps_smsh];
+        r.data.crit_sm = [p.data.crit_sm; q.data.crit_sm];
+        r.data.critsh_sm = [p.data.critsh_sm; q.data.critsh_sm];
         
         % First half
         r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
         r.data.dur_raw1 = [p.data.dur_raw1; q.data.dur_raw1];
         r.data.spk_raw1 = [p.data.spk_raw1; q.data.spk_raw1];
-        r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
-        r.data.RV_bcsm1 = [p.data.RV_bcsm1;q.data.RV_bcsm1];
+        r.data.maps_sm1 = [p.data.maps_sm1; q.data.maps_sm1];
+        r.data.crit_sm1 = [p.data.crit_sm1;q.data.crit_sm1];
         
         % Second half
         r.data.maps_raw2 = [p.data.maps_raw2; q.data.maps_raw2];
         r.data.dur_raw2 = [p.data.dur_raw2; q.data.dur_raw2];
         r.data.spk_raw2 = [p.data.spk_raw2; q.data.spk_raw2];
-        r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
-        r.data.RV_bcsm2 = [p.data.RV_bcsm2;q.data.RV_bcsm2];
+        r.data.maps_sm2 = [p.data.maps_sm2; q.data.maps_sm2];
+        r.data.crit_sm2 = [p.data.crit_sm2;q.data.crit_sm2];
 
 		% object specific fields
 % 		r.data.dlist = [p.data.dlist; q.data.dlist];
@@ -72,3 +72,4 @@ else
 		r.nptdata = plus(p.nptdata,q.nptdata);
 	end
 end
+

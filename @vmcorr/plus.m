@@ -44,8 +44,9 @@ else
 		% object specific fields %% Full session
         r.data.pv = [p.data.pv; q.data.pv];
         r.data.ph = [p.data.ph; q.data.ph];
+        r.data.hv = [p.data.hv; q.data.hv];
         r.data.gridSteps = [p.data.gridSteps; q.data.gridSteps]; % Is one enough?
-        r.data.binDepths = [p.data.binDepths; q.data.binDepths];
+%         r.data.binDepths = [p.data.binDepths; q.data.binDepths];
         r.data.placebins = [p.data.placebins; q.data.placebins];
         r.data.viewbins = [p.data.viewbins; q.data.viewbins];
         r.data.headdirectionbins = [p.data.headdirectionbins; q.data.headdirectionbins];
