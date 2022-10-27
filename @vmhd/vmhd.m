@@ -77,7 +77,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     %%%% PATCH
     cd ..; cd ..; cd ..;
-    pv = load('vmpv.mat');
+    pv = load('1vmpv.mat');
     pv = pv.pv;
     %%%%%%%
     
@@ -128,6 +128,7 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
         flat_spiketimes = flat_spiketimes'; 
         flat_spiketimes = sortrows(flat_spiketimes);
+        flat_spiketimes = round(flat_spiketimes); % there are occasional errors where these are not integers and prevent indexing using these 
         
         flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];
         
@@ -215,6 +216,9 @@ if(~isempty(dir(Args.RequiredFile)))
 %                     bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
 %                 end
             end
+%             if isempty(bins_hit)
+%                 continue;
+%             end
             consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) + 1;
 
         end        
@@ -267,7 +271,8 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_smooth = firing_rates_full_raw;
                 % Smooth with moving window average of n bins
                 n = 5;
-                [firing_rates_full]=smoothDirMap(to_smooth,n,Args.DirSteps);
+%                 [firing_rates_full]=smoothDirMap(to_smooth,n,Args.DirSteps); % legacy
+                [firing_rates_full]=smoothdir(to_smooth,n,Args.DirSteps);
                 % smoothing part ends
                 
                 if repeat == 1
@@ -326,11 +331,11 @@ if(~isempty(dir(Args.RequiredFile)))
         %     data.occ_data = occ_data;
         elseif repeat == 2
 %             data.SIC_adsm1 = sic_adsm;
-            data.crit_bcsm1 = meanR;
+            data.crit_sm1 = meanR;
 %             data.SIC_dksm1 = sic_dksm;
         elseif repeat == 3
 %             data.SIC_adsm2 = sic_adsm;
-            data.crit_bcsm2 = meanR;
+            data.crit_sm2 = meanR;
 %             data.SIC_dksm2 = sic_dksm;
         end
             
@@ -370,24 +375,24 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-function [map_sm]=smoothDirMap(map_raw,n,dirSteps)
-% Sliding window average of n bins
-% raw map input needs to be in column form. 
-% M dir bins by N shuffles
-dim1 = size(map_raw,1);
-dim2 = size(map_raw,2);
-flip = false;
-if dim1 ~= dirSteps
-    flip = true;
-    map_raw = map_raw';
-end
-% Smooth a dir map.
-if n==1; map_sm=map_raw; return; end
-p = (n-1)/2;                                               % Pad for circular smooth
-pad_map = [map_raw(end-p+1:end,:); map_raw; map_raw(1:p,:)];                    %  ..
-map_sm = mean( im2col(pad_map, [n 1], 'sliding') );
-% Reshape
-map_sm = reshape(map_sm,dirSteps,size(map_sm,2)/dirSteps);
-if flip
-    map_sm = map_sm';
-end
+% function [map_sm]=smoothDirMap(map_raw,n,dirSteps)
+% % Sliding window average of n bins
+% % raw map input needs to be in column form. 
+% % M dir bins by N shuffles
+% dim1 = size(map_raw,1);
+% dim2 = size(map_raw,2);
+% flip = false;
+% if dim1 ~= dirSteps
+%     flip = true;
+%     map_raw = map_raw';
+% end
+% % Smooth a dir map.
+% if n==1; map_sm=map_raw; return; end
+% p = (n-1)/2;                                               % Pad for circular smooth
+% pad_map = [map_raw(end-p+1:end,:); map_raw; map_raw(1:p,:)];                    %  ..
+% map_sm = mean( im2col(pad_map, [n 1], 'sliding') );
+% % Reshape
+% map_sm = reshape(map_sm,dirSteps,size(map_sm,2)/dirSteps);
+% if flip
+%     map_sm = map_sm';
+% end

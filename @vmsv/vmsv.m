@@ -76,7 +76,7 @@ if(~isempty(dir(Args.RequiredFile)))
     %%%%%%%
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
-    pv = load('vmpv.mat');
+    pv = load('1vmpv.mat');
     pv = pv.pv;
     %%%%%%%%%%
     %
@@ -118,6 +118,7 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
         flat_spiketimes = flat_spiketimes'; 
         flat_spiketimes = sortrows(flat_spiketimes);
+        flat_spiketimes = round(flat_spiketimes); % there are occasional errors where these are not integers and prevent indexing using these 
 
         flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
         
@@ -468,91 +469,91 @@ if(~isempty(dir(Args.RequiredFile)))
             sic_dksm = skaggs_sic(maps_dksm',pos_dksm');
             sic_dksm = sic_dksm';
 
-            % ISE portion
-            % create overall map and insert padded portions in, to account for
-            % cross-portion pairs
-            tic;
-            firing_rates = lambda_i;
-            if repeat == 1
-                disp('    Calculating ISE');
-            end
-            canvas = nan(51, 161, Args.NumShuffles + 1);
-            % flooring
-            floor_padded = nan(42,42,Args.NumShuffles+1);
-            floor_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-            floor_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,3203:3203+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
-            floor_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,3243:3243+39),[2 1]), 1, 40, Args.NumShuffles+1);
-            floor_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,3283:3283+39),[2 1]), 40, 1, Args.NumShuffles+1);
-            floor_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,3323:3323+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
-            canvas(10:end,1:42,:) = floor_padded;
-
-            % ceiling
-            ceiling_padded = nan(42,42,Args.NumShuffles+1);
-            ceiling_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,1603:3202),size(firing_rates,1),40,40), [3 2 1]), 1);
-            ceiling_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,4323:4323+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
-            ceiling_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,4363:4363+39),[2 1]), 1, 40, Args.NumShuffles+1);
-            ceiling_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,4403:4403+39),[2 1]), 40, 1, Args.NumShuffles+1);
-            ceiling_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,4443:4443+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
-            canvas(10:end,44:85,:) = ceiling_padded;
-
-            % walls
-            walls_padded = nan(8,161,Args.NumShuffles+1);
-            walls_padded(:,1:end-1,:) = flip(permute(reshape(firing_rates(:,3203:3203+1280-1), Args.NumShuffles+1, 40*4, 8),[3 2 1]), 1);
-            walls_padded(:,end,:) = walls_padded(:,1,:);
-            canvas(1:8,:,:) = walls_padded;
-
-            % used to pad pillar base more easily
-            floor_base = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
-
-            % pillars
-            PTL_padded = nan(6,33,Args.NumShuffles+1);
-            PTL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4963:4963+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            % small diagonal issue here, diagonal floor bins at the corners are put
-            % side by side, only 16 such occurrences in total, neglected for now.
-            PTL_padded(end,1:8,:) = flip(permute(floor_base(9:16,8,:),[2 1 3]),2);
-            PTL_padded(end,9:16,:) = floor_base(8,9:16,:);
-            PTL_padded(end,17:24,:) = permute(floor_base(9:16,17,:),[2 1 3]);
-            PTL_padded(end,25:32,:) = flip(floor_base(17,9:16,:),2);
-            PTL_padded(:,end,:) = PTL_padded(:,1,:);
-            canvas(10:10+6-1,87:87+32,:) = PTL_padded;
-
-            PTR_padded = nan(6,33,Args.NumShuffles+1);
-            PTR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4803:4803+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PTR_padded(end,1:8,:) = flip(permute(floor_base(9:16,24,:),[2 1 3]),2);
-            PTR_padded(end,9:16,:) = floor_base(8,25:32,:);
-            PTR_padded(end,17:24,:) = permute(floor_base(9:16,33,:),[2 1 3]);
-            PTR_padded(end,25:32,:) = flip(floor_base(17,25:32,:),2);
-            PTR_padded(:,end,:) = PTR_padded(:,1,:);
-            canvas(10:10+6-1,121:121+32,:) = PTR_padded;
-
-            PBL_padded = nan(6,33,Args.NumShuffles+1);
-            PBL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4643:4643+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PBL_padded(end,1:8,:) = flip(permute(floor_base(25:32,8,:),[2 1 3]),2);
-            PBL_padded(end,9:16,:) = floor_base(24,9:16,:);
-            PBL_padded(end,17:24,:) = permute(floor_base(25:32,17,:),[2 1 3]);
-            PBL_padded(end,25:32,:) = flip(floor_base(33,9:16,:),2);
-            PBL_padded(:,end,:) = PBL_padded(:,1,:);
-            canvas(17:17+6-1,87:87+32,:) = PBL_padded;
-
-            PBR_padded = nan(6,33,Args.NumShuffles+1);
-            PBR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4483:4483+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
-            PBR_padded(end,1:8,:) = flip(permute(floor_base(25:32,24,:),[2 1 3]),2);
-            PBR_padded(end,9:16,:) = floor_base(24,25:32,:);
-            PBR_padded(end,17:24,:) = permute(floor_base(25:32,33,:),[2 1 3]);
-            PBR_padded(end,25:32,:) = flip(floor_base(33,25:32,:),2);
-            PBR_padded(:,end,:) = PBR_padded(:,1,:);
-            canvas(17:17+6-1,121:121+32,:) = PBR_padded;
-
-            actual_image = canvas(:,:,1);
-            actual_image = actual_image(:)';
-            shuffled_images = canvas(:,:,2:end);
-            shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
-
-            disp(['time taken to pad map for ISE: ' num2str(toc)]);
-            tic;
-
-            ise_out = ise(actual_image, shuffled_images, 51, 161);
-            disp(['time taken to compute ISE: ' num2str(toc)]);
+%             % ISE portion
+%             % create overall map and insert padded portions in, to account for
+%             % cross-portion pairs
+%             tic;
+%             firing_rates = lambda_i;
+%             if repeat == 1
+%                 disp('    Calculating ISE');
+%             end
+%             canvas = nan(51, 161, Args.NumShuffles + 1);
+%             % flooring
+%             floor_padded = nan(42,42,Args.NumShuffles+1);
+%             floor_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
+%             floor_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,3203:3203+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
+%             floor_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,3243:3243+39),[2 1]), 1, 40, Args.NumShuffles+1);
+%             floor_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,3283:3283+39),[2 1]), 40, 1, Args.NumShuffles+1);
+%             floor_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,3323:3323+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
+%             canvas(10:end,1:42,:) = floor_padded;
+% 
+%             % ceiling
+%             ceiling_padded = nan(42,42,Args.NumShuffles+1);
+%             ceiling_padded(2:end-1, 2:end-1, :) = flip(permute(reshape(firing_rates(:,1603:3202),size(firing_rates,1),40,40), [3 2 1]), 1);
+%             ceiling_padded(2:end-1,1,:) = flip(reshape(permute(firing_rates(:,4323:4323+39),[2 1]), 40, 1, Args.NumShuffles+1),1);
+%             ceiling_padded(1,2:end-1,:) = reshape(permute(firing_rates(:,4363:4363+39),[2 1]), 1, 40, Args.NumShuffles+1);
+%             ceiling_padded(2:end-1,end,:) = reshape(permute(firing_rates(:,4403:4403+39),[2 1]), 40, 1, Args.NumShuffles+1);
+%             ceiling_padded(end,2:end-1,:) = flip(reshape(permute(firing_rates(:,4443:4443+39),[2 1]), 1, 40, Args.NumShuffles+1), 2);
+%             canvas(10:end,44:85,:) = ceiling_padded;
+% 
+%             % walls
+%             walls_padded = nan(8,161,Args.NumShuffles+1);
+%             walls_padded(:,1:end-1,:) = flip(permute(reshape(firing_rates(:,3203:3203+1280-1), Args.NumShuffles+1, 40*4, 8),[3 2 1]), 1);
+%             walls_padded(:,end,:) = walls_padded(:,1,:);
+%             canvas(1:8,:,:) = walls_padded;
+% 
+%             % used to pad pillar base more easily
+%             floor_base = flip(permute(reshape(firing_rates(:,3:1602),size(firing_rates,1),40,40), [3 2 1]), 1);
+% 
+%             % pillars
+%             PTL_padded = nan(6,33,Args.NumShuffles+1);
+%             PTL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4963:4963+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
+%             % small diagonal issue here, diagonal floor bins at the corners are put
+%             % side by side, only 16 such occurrences in total, neglected for now.
+%             PTL_padded(end,1:8,:) = flip(permute(floor_base(9:16,8,:),[2 1 3]),2);
+%             PTL_padded(end,9:16,:) = floor_base(8,9:16,:);
+%             PTL_padded(end,17:24,:) = permute(floor_base(9:16,17,:),[2 1 3]);
+%             PTL_padded(end,25:32,:) = flip(floor_base(17,9:16,:),2);
+%             PTL_padded(:,end,:) = PTL_padded(:,1,:);
+%             canvas(10:10+6-1,87:87+32,:) = PTL_padded;
+% 
+%             PTR_padded = nan(6,33,Args.NumShuffles+1);
+%             PTR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4803:4803+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
+%             PTR_padded(end,1:8,:) = flip(permute(floor_base(9:16,24,:),[2 1 3]),2);
+%             PTR_padded(end,9:16,:) = floor_base(8,25:32,:);
+%             PTR_padded(end,17:24,:) = permute(floor_base(9:16,33,:),[2 1 3]);
+%             PTR_padded(end,25:32,:) = flip(floor_base(17,25:32,:),2);
+%             PTR_padded(:,end,:) = PTR_padded(:,1,:);
+%             canvas(10:10+6-1,121:121+32,:) = PTR_padded;
+% 
+%             PBL_padded = nan(6,33,Args.NumShuffles+1);
+%             PBL_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4643:4643+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
+%             PBL_padded(end,1:8,:) = flip(permute(floor_base(25:32,8,:),[2 1 3]),2);
+%             PBL_padded(end,9:16,:) = floor_base(24,9:16,:);
+%             PBL_padded(end,17:24,:) = permute(floor_base(25:32,17,:),[2 1 3]);
+%             PBL_padded(end,25:32,:) = flip(floor_base(33,9:16,:),2);
+%             PBL_padded(:,end,:) = PBL_padded(:,1,:);
+%             canvas(17:17+6-1,87:87+32,:) = PBL_padded;
+% 
+%             PBR_padded = nan(6,33,Args.NumShuffles+1);
+%             PBR_padded(1:end-1,1:end-1,:) = flip(permute(reshape(firing_rates(:,4483:4483+160-1), Args.NumShuffles+1, 8*4, 5),[3 2 1]), 1);
+%             PBR_padded(end,1:8,:) = flip(permute(floor_base(25:32,24,:),[2 1 3]),2);
+%             PBR_padded(end,9:16,:) = floor_base(24,25:32,:);
+%             PBR_padded(end,17:24,:) = permute(floor_base(25:32,33,:),[2 1 3]);
+%             PBR_padded(end,25:32,:) = flip(floor_base(33,25:32,:),2);
+%             PBR_padded(:,end,:) = PBR_padded(:,1,:);
+%             canvas(17:17+6-1,121:121+32,:) = PBR_padded;
+% 
+%             actual_image = canvas(:,:,1);
+%             actual_image = actual_image(:)';
+%             shuffled_images = canvas(:,:,2:end);
+%             shuffled_images = reshape(shuffled_images, size(shuffled_images,3),size(shuffled_images,1)*size(shuffled_images,2));
+% 
+%             disp(['time taken to pad map for ISE: ' num2str(toc)]);
+%             tic;
+% 
+%             ise_out = ise(actual_image, shuffled_images, 51, 161);
+%             disp(['time taken to compute ISE: ' num2str(toc)]);
             
             switch Args.SmoothType
                 case 'Adaptive'
@@ -566,16 +567,16 @@ if(~isempty(dir(Args.RequiredFile)))
             switch Args.SelectiveCriteria
                 case 'SIC'
                     crit_sm = sic_sm;
-                case 'ISE'
-                    crit_sm = ise_out;
+%                 case 'ISE'
+%                     crit_sm = ise_out;
             end
             
             if repeat == 1
-                data.flattened = squeeze(canvas(:,:,1));
+%                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC_adsm = sic_adsm(1);
                 data.SICsh_adsm = sic_adsm(2:end,1);
-                data.ISE_adsm = ise_out(1);
-                data.ISEsh_adsm = ise_out(2:end,1);
+%                 data.ISE_adsm = ise_out(1);
+%                 data.ISEsh_adsm = ise_out(2:end,1);
                 data.SIC_bcsm = sic_bcsm(1);
                 data.SICsh_bcsm = sic_bcsm(2:end,1);
                 data.SIC_dksm = sic_dksm(1);
@@ -584,13 +585,13 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.critsh_sm = crit_sm(2:end,1);
             elseif repeat == 2
                 data.SIC_adsm1 = sic_adsm;
-                data.ISE_adsm1 = ise_out;
+%                 data.ISE_adsm1 = ise_out;
                 data.SIC_bcsm1 = sic_bcsm;
                 data.SIC_dksm1 = sic_dksm;
                 data.crit_sm1 = crit_sm;
             elseif repeat == 3
                 data.SIC_adsm2 = sic_adsm;
-                data.ISE_adsm2 = ise_out;
+%                 data.ISE_adsm2 = ise_out;
                 data.SIC_bcsm2 = sic_bcsm;
                 data.SIC_dksm2 = sic_dksm;
                 data.crit_sm2 = crit_sm;

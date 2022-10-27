@@ -76,7 +76,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
     %%%% PATCH
     cd ..; cd ..; cd ..;
-    pv = load('vmpv.mat');
+    pv = load('1vmpv.mat');
     pv = pv.pv;
     %%%%%%%
 
@@ -128,6 +128,7 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
         flat_spiketimes = flat_spiketimes'; 
         flat_spiketimes = sortrows(flat_spiketimes);
+        flat_spiketimes = round(flat_spiketimes); % there are occasional errors where these are not integers and prevent indexing using these 
 
         flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
         
@@ -411,20 +412,20 @@ if(~isempty(dir(Args.RequiredFile)))
             sic_dksm = skaggs_sic(maps_dksm',pos_dksm');
             sic_dksm = sic_dksm';
 
-            % ISE part
-            lambda_i = firing_rates_full;
-
-            if repeat == 1
-                ise_adsm = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-                data.ISE_sm = ise_adsm(1);
-                data.ISEsh_sm = ise_adsm(2:end,1);
-            elseif repeat == 2
-                ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                data.ISE_sm1 = ise_adsm;
-            elseif repeat == 3
-                ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
-                data.ISE_sm2 = ise_adsm;
-            end
+%             % ISE part
+%             lambda_i = firing_rates_full;
+% 
+%             if repeat == 1
+%                 ise_adsm = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+%                 data.ISE_sm = ise_adsm(1);
+%                 data.ISEsh_sm = ise_adsm(2:end,1);
+%             elseif repeat == 2
+%                 ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                 data.ISE_sm1 = ise_adsm;
+%             elseif repeat == 3
+%                 ise_sm = ise(lambda_i, [], Args.GridSteps, Args.GridSteps);
+%                 data.ISE_sm2 = ise_adsm;
+%             end
         
         switch Args.SmoothType
             case 'Adaptive'

@@ -15,7 +15,7 @@ function [obj, varargout] = vmcorr(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
 				'GridSteps',40, ...
-                'ShuffleLimits',[0.1 0.9], 'NumShuffles',0, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',100000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4, 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'StartOrig',0,'AlphaPlace',10000,'AlphaView',1000,...
                 'ConvergeLim',0.001,'LLHIterLim',1000,'UseIterLim',0); 
@@ -74,15 +74,15 @@ if(~isempty(dir(Args.RequiredFile)))
 %     pv = vmpv('auto', varargin{:});
         % Temporary workaround so that we can use file named '1vmpv.mat'
         cd ..; cd ..; cd ..;
-        pv = load('vmpv.mat');
+        pv = load('1vmpv.mat');
         pv = pv.pv;
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    gazeSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
-    binDepths = [1 1;
+    viewSections = {'Cue', 'Hint', 'Ground', 'Ceiling', 'Walls', 'Pillar1', 'Pillar2', 'Pillar3', 'Pillar4'};
+    viewbinDepths = [1 1;
         1 1;
         40 40;
         40 40;
@@ -91,10 +91,12 @@ if(~isempty(dir(Args.RequiredFile)))
         5 32;
         5 32;
         5 32];
+    placebinDepths = [pv.data.Args.GridSteps pv.data.Args.GridSteps];
+    headdirectionbinDepths = [pv.data.headdirectionbins 1];
 
     % Numbers of pair permutations given input numbers of spatial variables
     spatialvars = {'place','view','headdirection'};
-    spatialvarpairs = {{'place','view'}, {'place','headdirection'}}; % FIX - for now place has to be var1
+    spatialvarpairs = {{'place','view'}, {'place','headdirection'},{'headdirection','view'}}; % view must be in var2 position because of backfilling spikes later
 
     % Filter
 
@@ -105,6 +107,11 @@ if(~isempty(dir(Args.RequiredFile)))
             Var1 = spatialvarpairs{combi}{1};
             Var2 = spatialvarpairs{combi}{2};
             combiname = [lower(Var1(1)) lower(Var2(1))];
+            
+            % Debug
+            if combi == 3
+                disp('hd x v');
+            end
         
             if repeat == 1
     %             stc = pv.data.sessionTimeC;
@@ -136,15 +143,31 @@ if(~isempty(dir(Args.RequiredFile)))
                 conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
             end
             if Args.UseMinObs %%%% FIX
-                bins_sieved_var1 = pv.data.place_good_bins;
-                bins_removed_var1 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var1);
-                bins_sieved_var2 = pv.data.view_good_bins;
-                bins_removed_var2 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var2);
-                conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+                switch Var1
+                    case 'place'
+                        bins_sieved_var1 = pv.data.place_good_bins;
+                        bins_removed_var1 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var1);
+                    case 'view'
+                        bins_sieved_var1 = pv.data.view_good_bins;
+                        bins_removed_var1 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var1);
+                    case 'headdirection' %%% FIX
+                        
+                end
+                switch Var2
+                    case 'place'
+                        bins_sieved_var2 = pv.data.place_good_bins;
+                        bins_removed_var2 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var2);
+                    case 'view'
+                        bins_sieved_var2 = pv.data.view_good_bins;
+                        bins_removed_var2 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var2);
+                    case 'headdirection' %%FIX
+                        
+                end
+                    conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
             else
                 bins_sieved_var1 = 1:pv.data.([Var1 'bins']);
                 bins_removed_var1 = [];
-                bins_sieved_var2 = 1:pv.data.([Var1 'bins']);
+                bins_sieved_var2 = 1:pv.data.([Var2 'bins']);
                 bins_removed_var2 = [];
             end
             if repeat == 2
@@ -153,6 +176,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 conditions = conditions & (pv.data.halving_markers==2);
             end
 
+            %%
     %         if repeat == 1 % Full session
 
     %         % Method 2 of 2 for binning spikes - 
@@ -226,12 +250,12 @@ if(~isempty(dir(Args.RequiredFile)))
             %% Consolidate pv array into view by place bin array
 
             % remove filtered rows
-            switch Var2
-                case 'view'
-                    stc_ssv = stc(find(conditions==1),[2 4 5 6]); % [place view dur spk]
-                case 'headdirection'
-                    stc_ssv = stc(find(conditions==1),[2 3 5 6]); % [place hd dur spk]
-            end
+            stc_ssv = stc(conditions == 1,:);
+            stc_colnames = {'time','place','headdirection','view','dur','spk'};
+            keepcol = [find(ismember(stc_colnames,spatialvarpairs{combi}{1})) ...
+                find(ismember(stc_colnames,spatialvarpairs{combi}{2}))];
+%             stc_ssv = stc(conditions==1,[keepcol 5 6]);
+
             % Initialise variables
             var1_durations1 = nan(1,pv.data.([Var1 'bins']));
             var1_spikes1 = zeros(1,pv.data.([Var1 'bins']));
@@ -239,36 +263,44 @@ if(~isempty(dir(Args.RequiredFile)))
             full_spikes1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
             for ii = 1:pv.data.([Var1 'bins'])
 
-                inds = stc_ssv(:,1)==ii;
-                subsample = [stc_ssv(inds,:)]; % [place view dur]
-                % Consider only samples where both variables are sampled
-                subsample(isnan(subsample(:,2)),:) = [];
+                inds = stc_ssv(:,keepcol(1))==ii;
+                subsample = stc_ssv(inds,:);
+                % Consider only samples where both variables are sampled (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
+                for cc = 1:length(keepcol)
+                    if strcmp(spatialvarpairs{combi}(cc),'view')
+                        subsample(isnan(subsample(:,keepcol(cc))),:) = [];
+                    else 
+                        subsample(subsample(:,keepcol(cc)) < 1) = [];
+                    end
+                end
                 if ~isempty(subsample) 
                     % Get spikes and duration for place only
-                    var1_durations1(1,ii) = sum(subsample(:,3));
-                    var1_spikes1(1,ii) = sum(subsample(:,4));
+                    var1_durations1(1,ii) = sum(subsample(:,5));
+                    var1_spikes1(1,ii) = sum(subsample(:,6));
                     % back-filling spikes for Var2
-                    subsample(subsample(:,4)==0,4) = nan;
-    %                 subsample(:,5) = circshift(subsample(:,3)~=0 ,-1); % Use only if spike is recorded in first bin of view set and time in last bin (like how it was before)
-                    subsample(:,5) = subsample(:,3)~=0;
-                    subsample(isnan(subsample(:,4)) & subsample(:,5), 4) = 0;
-                    subsample(:,5) = [];
-                    subsample(:,4) = fillmissing(subsample(:,4), 'next');
+                    subsample(subsample(:,6)==0,6) = nan;
+    %                 subsample(:,7) = circshift(subsample(:,5)~=0 ,-1); % Use only if spike is recorded in first bin of view set and time in last bin (like how it was before)
+                    subsample(:,7) = subsample(:,5)~=0;
+                    subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
+                    subsample(:,7) = [];
+                    subsample(:,6) = fillmissing(subsample(:,6), 'next'); % In current version of pv, time and spikes are recorded in last repeat bin
                     % back-filling time for Var2
-                    subsample(subsample(:,3)==0,3) = nan;
-                    subsample(:,3) = fillmissing(subsample(:,3), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+                    subsample(subsample(:,5)==0,5) = nan;
+                    subsample(:,5) = fillmissing(subsample(:,5), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
                     % padding with max Var2 bin
-                    if subsample(end,2) ~= pv.data.([Var2 'bins'])
+                    if subsample(end,keepcol(2)) ~= pv.data.([Var2 'bins'])
     %                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
-                        subsample = [subsample; [ii pv.data.([Var2 'bins']) 0 0]];
+                        segment = [0 0 0 0 0 0];
+                        segment(1,keepcol) = [ii pv.data.([Var2 'bins'])];
+                        subsample = [subsample; segment];
                     end
                     % remove bad view spots
-                    subsample(isnan(subsample(:,2)),:) = [];
+                    subsample(isnan(subsample(:,keepcol(ismember(spatialvarpairs{combi},'view')))),:) = [];
                     % sum durations
     %                 full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
-                    full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],0);
+                    full_durations1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,5),[],[],0);
                     % sum spikes % Method 1 of 2 to bin spikes (counter check Method 2
-                    full_spikes1(:,ii) = accumarray(subsample(:,2), subsample(:,4),[],[],0);
+                    full_spikes1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,6),[],[],0);
                 end
             end
 
@@ -316,14 +348,22 @@ if(~isempty(dir(Args.RequiredFile)))
 
             %% Distributive hypothesis testing
 
-            % Null hypothesis: no influence of view other than that caused by a
-            % place effect. Vice versa, no influence of place other than
-            % that caused by a view effect. 
+            % Null hypothesis: Under the assumption that firing of cell is
+            % ideally specific to Var 1, predicted Var 2 firing can be 
+            % calculated and should not be modulated by Var 2. 
+            % (e.g. place cell firing is ideally location-specific, 
+            % direction firing can be predicted from place map, and should
+            % be non-selective for direction. Test for difference between
+            % real HD map and predicted HD map. If difference is large,
+            % with predicted deviating little from baseline,
+            % then the cell is truly directional. If the difference is
+            % small, and predicted has same peaks as observed, then there
+            % is little directional selectivity. 
 
             % Removing hint and cue effects
             var2_array_orig_trun = var2_array_orig;
             full_durations1_trun = full_durations1;
-            if strcmp('Var2','view')
+            if strcmp(Var2,'view')
                  % disregard cue and hint bins
                 var2_array_orig_trun(1:2) = nan;
                 full_durations1_trun(1:2,:) = 0;
@@ -338,17 +378,17 @@ if(~isempty(dir(Args.RequiredFile)))
                 case 'view'
                     % Adaptive smooth predicted view map
                     % transform from linear to grid
-                    toptermG = lineartogrid(topterm,'view',binDepths);
-                    bottomtermG = lineartogrid(bottomterm,'view',binDepths);
+                    toptermG = lineartogrid(topterm,'view',viewbinDepths);
+                    bottomtermG = lineartogrid(bottomterm,'view',viewbinDepths);
                     % Pad sv map with 5 extra rows
                     n = 5;
                     padpillar = false;
-                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,viewSections,padpillar);
                     padpillar = true;
-                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,gazeSections,padpillar);
-                    [toptermGpad,~] = padsvmap(n,toptermG,gazeSections,padpillar);
-                    sv_array_pred_adsmGpad = cell(size(binDepths,1),1);
-                    for gg = 1:size(binDepths,1)
+                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,viewSections,padpillar);
+                    [toptermGpad,~] = padsvmap(n,toptermG,viewSections,padpillar);
+                    sv_array_pred_adsmGpad = cell(size(viewbinDepths,1),1);
+                    for gg = 1:size(viewbinDepths,1)
                         if gg == 1 || gg == 2
                             sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
                         else
@@ -358,10 +398,10 @@ if(~isempty(dir(Args.RequiredFile)))
                     % Unpad
                     [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
                     % Linearise
-                    var2_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',binDepths);
+                    var2_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
                 case 'headdirection'
                     n = 5; % Boxcar window of 5
-                    [var2_array_pred_adsm] = smoothDirMap(var2_array_pred,n,pv.data.([Var2 'bins']));
+                    [var2_array_pred_adsm] = smoothdir(var2_array_pred,n,pv.data.([Var2 'bins']));
                 case 'place'
                     toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
                     bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
@@ -393,21 +433,21 @@ if(~isempty(dir(Args.RequiredFile)))
                     var1_array_pred_adsm = gridtolinear({p_array_pred_adsmG},'place',[Args.GridSteps Args.GridSteps])';
                 case 'headdirection'
                     n = 5; % Boxcar window of 5
-                    [var1_array_pred_adsm] = smoothDirMap(var1_array_pred,n,pv.data.([Var1 'bins']));
+                    [var1_array_pred_adsm] = smoothdir(var1_array_pred,n,pv.data.([Var1 'bins']));
                 case 'view'
                     % Adaptive smooth predicted view map
                     % transform from linear to grid
-                    toptermG = lineartogrid(topterm,'view',binDepths);
-                    bottomtermG = lineartogrid(bottomterm,'view',binDepths);
+                    toptermG = lineartogrid(topterm,'view',viewbinDepths);
+                    bottomtermG = lineartogrid(bottomterm,'view',viewbinDepths);
                     % Pad sv map with 5 extra rows
                     n = 5;
                     padpillar = false;
-                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,gazeSections,padpillar);
+                    [emptyfloorref_pad,~] = padsvmap(n,bottomtermG,viewSections,padpillar);
                     padpillar = true;
-                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,gazeSections,padpillar);
-                    [toptermGpad,~] = padsvmap(n,toptermG,gazeSections,padpillar);
-                    sv_array_pred_adsmGpad = cell(size(binDepths,1),1);
-                    for gg = 1:size(binDepths,1)
+                    [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,viewSections,padpillar);
+                    [toptermGpad,~] = padsvmap(n,toptermG,viewSections,padpillar);
+                    sv_array_pred_adsmGpad = cell(size(viewbinDepths,1),1);
+                    for gg = 1:size(viewbinDepths,1)
                         if gg == 1 || gg == 2
                             sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
                         else
@@ -417,7 +457,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     % Unpad
                     [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
                     % Linearise
-                    var1_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',binDepths);
+                    var1_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
             end
 
             % If view cell firing is only mod by view location, and place influence is attributable only to inhomogeous sampling, 
@@ -819,185 +859,211 @@ if(~isempty(dir(Args.RequiredFile)))
 
             disp('Smoothing ...');
 
-            %% PLACE Smoothing
-
-            placesmooth = 'adaptive';
-
-            switch placesmooth
-
-                case 'adaptive'
-
-                    % Adaptive Smoothing
-                    var1_maps_sm = nan(size(var1_array_smoothset,1),size(var1_array_smoothset,2));
-                    var1_dur_sm = nan(size(var1_array_smoothset,1),size(var1_array_smoothset,2));
-                    var1_durationsG = lineartogrid(var1_durations1','place',[Args.GridSteps Args.GridSteps]);
-                    var1_durationsG = var1_durationsG{1};
-                    for ii = 1:numIterSm
-                        var1_spikesG = lineartogrid(var1_spk_smoothset(ii,:)','place',[Args.GridSteps Args.GridSteps]);
-                        var1_spikesG = var1_spikesG{1};
-                        [maps_adsmG,~,dur_adsmG] = adsmooth(var1_durationsG,var1_spikesG,Args.AlphaPlace);
-                        dur_adsmG(isnan(dur_adsmG)) = 0;
-                        var1_maps_sm(ii,:) = gridtolinear({maps_adsmG},'place',[Args.GridSteps Args.GridSteps]);
-                        var1_dur_sm(ii,:) = gridtolinear({dur_adsmG},'place',[Args.GridSteps Args.GridSteps]);
-                    end
-                    % Adaptive SIC
-                    var1_crit_out = skaggs_sic(var1_maps_sm',var1_dur_sm');
-
-                case 'boxcar'
-
-                    var1_array_smoothsetG = cell2mat(lineartogrid(var1_array_smoothset','place',[Args.GridSteps Args.GridSteps]));
-                    var1_durationsG = repmat(var1_durationsG,1,1,size(var1_array_smoothset,1));
-                    unvis = ~(var1_durationsG > 0);
-
-                    % Boxcar smoothing
-                    maps_bcsmG = smooth(var1_array_smoothsetG,5,unvis,'boxcar');
-                    dur_bcsmG = smooth(var1_durationsG,5,unvis,'boxcar');
-                    var1_maps_sm = (gridtolinear({maps_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
-                    dur_bcsm = (gridtolinear({dur_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
-                    dur_bcsm(isnan(dur_bcsm)) = 0;
-                    % Boxcar SIC
-                    var1_crit_out = skaggs_sic(var1_maps_sm',dur_bcsm');
-
-                case 'disk'
-
-                    % Disk smoothing
-                    maps_dksmG = smooth(var1_array_smoothsetG,5,unvis,'disk');
-                    dur_dksmG = smooth(var1_durationsG,5,unvis,'disk');
-                    var1_maps_sm = (gridtolinear({maps_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
-                    dur_dksm = (gridtolinear({dur_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
-                    dur_dksm(isnan(dur_dksm)) = 0;
-                    % Disk SIC
-                    var1_crit_out = skaggs_sic(var1_maps_sm',dur_dksm');
-            end
-
-    %         % ISE 
-    %         lambda_i = var1_maps_adsm; 
-    %         var1_ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
-
-            %% Var2 Smoothing
-
-            var2durlin = nansum(full_durations1,2);
+            %% Smoothing
             
-            if strcmp(Var2,'view')
-
-                viewsmooth = 'adaptive';
-
-                var2_maps_sm = nan(numIterSm,size(var2_array_smoothset,1));
-                var2_dur_sm = nan(numIterSm,size(var2_array_smoothset,1));
-    %             var2_maps_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
-    %             var2_dur_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
-    %             var2_maps_dksm = nan(numIterSm,size(var2_array_smoothset,1));
-    %             var2_dur_dksm = nan(numIterSm,size(var2_array_smoothset,1));
+            for cc = 1:2 % for each var
                 
-                for ii = 1:numIterSm % For each iteration
+                if cc == 1
+                    arr = var1_array_smoothset;
+                    spk = var1_spk_smoothset;
+                    dur = var1_durations1;
+                    if size(arr,1) < size(arr,2)
+                        arr = arr'; spk = spk'; dur = dur';
+                    end
+                else
+                    arr = var2_array_smoothset;
+                    spk = var2_spk_smoothset;
+                    dur = nansum(full_durations1,2);
+                    if size(arr,1) < size(arr,2)
+                        arr = arr'; spk = spk';
+                    end
+                end
+                
+                switch spatialvarpairs{combi}{cc}
+                    
+                    case 'place'
+                        placesmooth = 'adaptive';
+                        switch placesmooth
 
-                    % Assign linear bin to grid bin - left to right, bottom to top
-                    durG = lineartogrid(var2durlin,'view',binDepths);
-                    spkG = lineartogrid(var2_spk_smoothset(:,ii),'view',binDepths);
-                    ratesG = lineartogrid(var2_array_smoothset(:,ii),'view',binDepths);
+                            case 'adaptive'
 
-                    % Pad sv map with 5 extra rows
-                    n = 5;
-                    padpillar = false;
-                    [emptyfloorref_pad,~] = padsvmap(n,durG,gazeSections,padpillar);
-                    padpillar = true;
-                    [durGpad,retrievemap] = padsvmap(n,durG,gazeSections,padpillar);
-                    [spkGpad,~] = padsvmap(n,spkG,gazeSections,padpillar);
-                    [ratesGpad,~] = padsvmap(n,ratesG,gazeSections,padpillar);
+                                % Adaptive Smoothing
+                                maps_sm = nan(size(arr,2),size(arr,1));
+                                dur_sm = nan(size(arr,2),size(arr,1));
+                                durG = lineartogrid(dur,'place',[Args.GridSteps Args.GridSteps]);
+                                durG = durG{1};
+                                for ii = 1:numIterSm
+                                    spkG = lineartogrid(spk(:,ii),'place',[Args.GridSteps Args.GridSteps]);
+                                    spkG = spkG{1}; 
+                                    [maps_adsmG,~,dur_adsmG] = adsmooth(durG,spkG,Args.AlphaPlace);
+                                    dur_adsmG(isnan(dur_adsmG)) = 0;
+                                    maps_sm(ii,:) = gridtolinear({maps_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                                    dur_sm(ii,:) = gridtolinear({dur_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                                end
+                                % Adaptive SIC
+                                crit_out = skaggs_sic(maps_sm',dur_sm');
 
-                    if strcmp(viewsmooth,'adaptive')
+                            case 'boxcar'
 
-                        % Adaptive smooth
-                        maps_adsmGpad = cell(size(durGpad));
-                        dur_adsmGpad = cell(size(durGpad));
-                        for jj = 1:size(binDepths,1)
-                            if jj == 1 || jj == 2
-                                maps_adsmGpad{jj} = spkGpad{jj}/durGpad{jj};
-                                dur_adsmGpad{jj} = durGpad{jj};
-                            else
-                                [maps_adsmGpad{jj},spk_adsmG,dur_adsmGpad{jj}] = adsmooth(durGpad{jj},spkGpad{jj},Args.AlphaView);
-                            end
+                                arrG = cell2mat(lineartogrid(arr,'place',[Args.GridSteps Args.GridSteps]));
+                                durG = repmat(durG,1,1,size(arr,1)); %% ???
+                                unvis = ~(durG > 0);
+
+                                % Boxcar smoothing
+                                maps_bcsmG = smooth(arrG,5,unvis,'boxcar');
+                                dur_bcsmG = smooth(durG,5,unvis,'boxcar');
+                                maps_sm = (gridtolinear({maps_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
+                                dur_bcsm = (gridtolinear({dur_bcsmG},'place',[Args.GridSteps Args.GridSteps]))';
+                                dur_bcsm(isnan(dur_bcsm)) = 0;
+                                % Boxcar SIC
+                                crit_out = skaggs_sic(maps_sm',dur_bcsm');
+
+                            case 'disk'
+
+                                % Disk smoothing
+                                maps_dksmG = smooth(arrG,5,unvis,'disk');
+                                dur_dksmG = smooth(durG,5,unvis,'disk');
+                                maps_sm = (gridtolinear({maps_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
+                                dur_dksm = (gridtolinear({dur_dksmG},'place',[Args.GridSteps Args.GridSteps]))';
+                                dur_dksm(isnan(dur_dksm)) = 0;
+                                % Disk SIC
+                                crit_out = skaggs_sic(maps_sm',dur_dksm');
                         end
-                        % Unpad smoothed map
-                        maps_adsmG = unpadsvmap(maps_adsmGpad,retrievemap,durG);
-                        dur_adsmG = unpadsvmap(dur_adsmGpad,retrievemap,durG);
-                        % Convert grid map back to linear sv map
-                        var2_maps_sm(ii,:) = gridtolinear(maps_adsmG,'view',binDepths);
-                        var2_dur_sm(ii,:) = gridtolinear(dur_adsmG,'view',binDepths);
-                        var2_dur_sm(isnan(var2_dur_sm)) = 0;
-                        % Adaptive SIC 
-                        var2_crit_out = skaggs_sic(var2_maps_sm',var2_dur_sm');
-                    else 
-                        % Boxcar/disk smooth
-                        maps_bcsmGpad = cell(size(durGpad));
-                        dur_bcsmGpad = cell(size(durGpad));
-                        maps_dksmGpad = cell(size(durGpad));
-                        dur_dksmGpad = cell(size(durGpad));
-                        for jj = 1:size(binDepths,1)
-                            if jj == 1 || jj == 2
-                                maps_bcsmGpad{jj} = ratesGpad{jj};
-                                maps_dksmGpad{jj} = ratesGpad{jj};
-                                dur_bcsmGpad{jj} = durGpad{jj};
-                                dur_dksmGpad{jj} = durGpad{jj};
-                            else
-                                unvis = ~(emptyfloorref_pad{jj}>0) | isnan(ratesGpad{jj});
+                        %         % ISE 
+                        %         lambda_i = var1_maps_adsm; 
+                        %         var1_ise_out = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
+                    
+                    case 'view'
+                        viewsmooth = 'adaptive';
+
+                        maps_sm = nan(numIterSm,size(arr,1));
+                        dur_sm = nan(numIterSm,size(arr,1));
+            %             var2_maps_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
+            %             var2_dur_bcsm = nan(numIterSm,size(var2_array_smoothset,1));
+            %             var2_maps_dksm = nan(numIterSm,size(var2_array_smoothset,1));
+            %             var2_dur_dksm = nan(numIterSm,size(var2_array_smoothset,1));
+
+                        for ii = 1:numIterSm % For each iteration
+
+                            % Assign linear bin to grid bin - left to right, bottom to top
+                            durG = lineartogrid(dur,'view',viewbinDepths);
+                            spkG = lineartogrid(spk(:,ii),'view',viewbinDepths);
+                            ratesG = lineartogrid(arr(:,ii),'view',viewbinDepths);
+
+                            % Pad sv map with 5 extra rows
+                            n = 5;
+                            padpillar = false;
+                            [emptyfloorref_pad,~] = padsvmap(n,durG,viewSections,padpillar);
+                            padpillar = true;
+                            [durGpad,retrievemap] = padsvmap(n,durG,viewSections,padpillar);
+                            [spkGpad,~] = padsvmap(n,spkG,viewSections,padpillar);
+                            [ratesGpad,~] = padsvmap(n,ratesG,viewSections,padpillar);
+
+                            if strcmp(viewsmooth,'adaptive')
+
+                                % Adaptive smooth
+                                maps_adsmGpad = cell(size(durGpad));
+                                dur_adsmGpad = cell(size(durGpad));
+                                for jj = 1:size(viewbinDepths,1)
+                                    if jj == 1 || jj == 2
+                                        maps_adsmGpad{jj} = spkGpad{jj}/durGpad{jj};
+                                        dur_adsmGpad{jj} = durGpad{jj};
+                                    else
+                                        [maps_adsmGpad{jj},spk_adsmG,dur_adsmGpad{jj}] = adsmooth(durGpad{jj},spkGpad{jj},Args.AlphaView);
+                                    end
+                                end
+                                % Unpad smoothed map
+                                maps_adsmG = unpadsvmap(maps_adsmGpad,retrievemap,durG);
+                                dur_adsmG = unpadsvmap(dur_adsmGpad,retrievemap,durG);
+                                % Convert grid map back to linear sv map
+                                maps_sm(ii,:) = gridtolinear(maps_adsmG,'view',viewbinDepths);
+                                dur_sm(ii,:) = gridtolinear(dur_adsmG,'view',viewbinDepths);
+                                dur_sm(isnan(dur_sm)) = 0;
+                                % Adaptive SIC 
+                                crit_out = skaggs_sic(maps_sm',dur_sm');
+                            else 
+                                % Boxcar/disk smooth
+                                maps_bcsmGpad = cell(size(durGpad));
+                                dur_bcsmGpad = cell(size(durGpad));
+                                maps_dksmGpad = cell(size(durGpad));
+                                dur_dksmGpad = cell(size(durGpad));
+                                for jj = 1:size(viewbinDepths,1)
+                                    if jj == 1 || jj == 2
+                                        maps_bcsmGpad{jj} = ratesGpad{jj};
+                                        maps_dksmGpad{jj} = ratesGpad{jj};
+                                        dur_bcsmGpad{jj} = durGpad{jj};
+                                        dur_dksmGpad{jj} = durGpad{jj};
+                                    else
+                                        unvis = ~(emptyfloorref_pad{jj}>0) | isnan(ratesGpad{jj});
+                                        if strcmp(viewsmooth,'boxcar')
+                                            % Boxcar smoothing
+                                            maps_bcsmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'boxcar');
+                                            dur_bcsmGpad{jj} = smooth(durGpad{jj},5,unvis,'boxcar');
+                                        elseif strcmp(viewsmooth,'disk')
+                                            % Disk smoothing
+                                            maps_dksmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'disk');
+                                            dur_dksmGpad{jj} = smooth(durGpad{jj},5,unvis,'disk');
+                                        end
+                                    end
+                                end
+
                                 if strcmp(viewsmooth,'boxcar')
-                                    % Boxcar smoothing
-                                    maps_bcsmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'boxcar');
-                                    dur_bcsmGpad{jj} = smooth(durGpad{jj},5,unvis,'boxcar');
+                                    % Unpad smoothed map
+                                    maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap,durG);
+                                    dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap,durG);
+                                    % Convert grid map back to linear sv map
+                                    maps_sm(ii,:) = gridtolinear(maps_bcsmG,'view',viewbinDepths);
+                                    dur_sm(ii,:) = gridtolinear(dur_bcsmG,'view',viewbinDepths);
+                                    dur_sm(isnan(var2_dur_bcsm)) = 0;
+                                    % Boxcar SIC
+                                    crit_out = skaggs_sic(var2_maps_bcsm',dur_sm');
                                 elseif strcmp(viewsmooth,'disk')
-                                    % Disk smoothing
-                                    maps_dksmGpad{jj} = smooth(ratesGpad{jj},5,unvis,'disk');
-                                    dur_dksmGpad{jj} = smooth(durGpad{jj},5,unvis,'disk');
+                                    % Unpad smoothed map
+                                    maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap,durG);
+                                    dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap,durG);
+                                    % Convert grid map back to linear sv map
+                                    maps_sm(ii,:) = gridtolinear(maps_dksmG,'view',viewbinDepths);
+                                    dur_sm(ii,:) = gridtolinear(dur_dksmG,'view',viewbinDepths);
+                                    dur_sm(isnan(var2_dur_dksm)) = 0;
+                                    % Disk SIC
+                                    crit_out = skaggs_sic(var2_maps_dksm',dur_sm');
                                 end
                             end
-                        end
 
-                        if strcmp(viewsmooth,'boxcar')
-                            % Unpad smoothed map
-                            maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap,durG);
-                            dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap,durG);
-                            % Convert grid map back to linear sv map
-                            var2_maps_sm(ii,:) = gridtolinear(maps_bcsmG,'view',binDepths);
-                            var2_dur_sm(ii,:) = gridtolinear(dur_bcsmG,'view',binDepths);
-                            var2_dur_sm(isnan(var2_dur_bcsm)) = 0;
-                            % Boxcar SIC
-                            var2_crit_out = skaggs_sic(var2_maps_bcsm',var2_dur_sm');
-                        elseif strcmp(viewsmooth,'disk')
-                            % Unpad smoothed map
-                            maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap,durG);
-                            dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap,durG);
-                            % Convert grid map back to linear sv map
-                            var2_maps_sm(ii,:) = gridtolinear(maps_dksmG,'view',binDepths);
-                            var2_dur_sm(ii,:) = gridtolinear(dur_dksmG,'view',binDepths);
-                            var2_dur_sm(isnan(var2_dur_dksm)) = 0;
-                            % Disk SIC
-                            var2_crit_out = skaggs_sic(var2_maps_dksm',var2_dur_sm');
                         end
-                    end
+                        
+                    case 'headdirection'
+                        
+                        n = 5;
+                        headdirectionsmooth = 'boxcar';
+                        % Smooth
+                        [maps_sm] = smoothdir(arr,n,pv.data.headdirectionbins);
+                        [dur_sm] = smoothdir(repmat(dur,1,numIterSm),n,pv.data.headdirectionbins);
+                        maps_sm = maps_sm';
+                        dur_sm = dur_sm';
 
+                        % Rayleigh vector
+                        binSize=(pi*2)/length(maps_sm(1,:));
+                        binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
+                        binWeights=maps_sm./(max(maps_sm,[],2));
+                        S=nansum( sin(binAngles).*binWeights , 2);
+                        C=nansum( cos(binAngles).*binWeights , 2);
+                        R=sqrt(S.^2+C.^2);
+                        meanR=R./nansum(binWeights,2);
+                        crit_out = meanR';
                 end
-
-            elseif strcmp(Var2,'headdirection')
-                n = 5;
-                headdirectionsmooth = 'boxcar';
-                % Smooth
-                [var2_maps_sm] = smoothDirMap(var2_array_smoothset,n,pv.data.([Var2 'bins']));
-                [var2_dur_sm] = smoothDirMap(repmat(var2durlin,1,numIterSm),n,pv.data.([Var2 'bins']));
-                var2_maps_sm = var2_maps_sm';
-                var2_dur_sm = var2_dur_sm';
-
-                % Rayleigh vector
-                binSize=(pi*2)/length(var2_maps_sm(1,:));
-                binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
-                binWeights=var2_maps_sm./(max(var2_maps_sm,[],2));
-                S=sum( sin(binAngles).*binWeights , 2);
-                C=sum( cos(binAngles).*binWeights , 2);
-                R=sqrt(S.^2+C.^2);
-                meanR=R./sum(binWeights,2);
-                var2_crit_out = meanR';
-            end
             
+                if cc == 1
+                    var1_maps_sm = maps_sm;
+                    var1_dur_sm = dur_sm;
+                    var1_crit_out = crit_out;
+                else
+                    var2_maps_sm = maps_sm;
+                    var2_dur_sm = dur_sm;
+                    var2_crit_out = crit_out;
+                end
+                    
+            end
 
             % Store output data
             if repeat == 1
@@ -1006,6 +1072,8 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.(combiname).var2 = Var2;
                 data.(combiname).([lower(Var1) 'smooth']) = eval([lower(Var1) 'smooth']);
                 data.(combiname).([lower(Var2) 'smooth']) = eval([lower(Var2) 'smooth']);
+                data.(combiname).([lower(Var1) 'binDepths']) = eval([Var1 'binDepths']);
+                data.(combiname).([lower(Var2) 'binDepths']) = eval([Var2 'binDepths']);
 
                 data.(combiname).(['maps_dist_' lower(Var1(1))]) = var1_array_pred;
                 data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm']) = var1_array_pred_adsm;
@@ -1099,7 +1167,7 @@ if(~isempty(dir(Args.RequiredFile)))
     data.spatialvars = spatialvars;
     data.spatialvarpairs = spatialvarpairs;
     data.gridSteps = Args.GridSteps;
-    data.binDepths = binDepths;
+%     data.binDepths = viewbinDepths;
     data.placebins = pv.data.placebins;
     data.viewbins = pv.data.viewbins;
     data.headdirectionbins = pv.data.headdirectionbins;
@@ -1131,24 +1199,4 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-function [map_sm]=smoothDirMap(map_raw,n,dirSteps)
-% Sliding window average of n bins
-% raw map input needs to be in column form. 
-% M dir bins by N shuffles
-dim1 = size(map_raw,1);
-dim2 = size(map_raw,2);
-flip = false;
-if dim1 ~= dirSteps
-    flip = true;
-    map_raw = map_raw';
-end
-% Smooth a dir map.
-if n==1; map_sm=map_raw; return; end
-p = (n-1)/2;                                               % Pad for circular smooth
-pad_map = [map_raw(end-p+1:end,:); map_raw; map_raw(1:p,:)];                    %  ..
-map_sm = mean( im2col(pad_map, [n 1], 'sliding') );
-% Reshape
-map_sm = reshape(map_sm,dirSteps,size(map_sm,2)/dirSteps);
-if flip
-    map_sm = map_sm';
-end
+

@@ -81,7 +81,7 @@ elseif nargin > 4 % If plotting a single cell and map needs to be loaded
 else % If plotting a batch of cells
     % Load cell list
     cd(cwd);
-    fid = fopen([cwd '/cell_list.txt'],'rt');
+    fid = fopen([cwd '/cell_list_singlecell.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
     % Make sure no empty cells
@@ -109,12 +109,14 @@ else % If plotting a batch of cells
             objP = load('c_vmpc.mat');
             objP = objP.vmp;
         case 'mixsel0'
-            objMain = load('c_vmms0_2var.mat');
+            objMain = load('c_vmms0.mat');
             objMain = objMain.vmms;
             objPlace = load('c_vmpc.mat');
             objPlace = objPlace.vmp;
             objView = load('c_vmsv.mat');
             objView = objView.vms;
+            objHeaddirection = load('c_vmhd.mat');
+            objHeaddirection = objHeaddirection.vmd;
         case 'mixsel1'
             objMain = load('c_vmms1.mat');
             objMain = objMain.vmms;
@@ -122,6 +124,8 @@ else % If plotting a batch of cells
             objPlace = objPlace.vmp;
             objView = load('c_vmsv.mat');
             objView = objView.vms;
+            objHeaddirection = load('c_vmhd.mat');
+            objHeaddirection = objHeaddirection.vmd;
         case 'allprop'
             objMain0 = load('c_vmms0.mat');
             objMain0 = objMain0.vmms;
@@ -131,6 +135,8 @@ else % If plotting a batch of cells
             objPlace = objPlace.vmp;
             objView = load('c_vmsv.mat');
             objView = objView.vms;
+            objHeaddirection = load('c_vmhd.mat');
+            objHeaddirection = objHeaddirection.vmd;
         case 'headdirection'
             objMain = load('c_vmhd.mat');
             objMain = objMain.vmd;
@@ -433,10 +439,10 @@ if strcmp(objtype, 'place')  % Place maps
                 
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 if isempty(corr_ind)
                     critcorr = nan;
@@ -464,7 +470,7 @@ if strcmp(objtype, 'place')  % Place maps
                     'XColor','none','YColor','none','ZColor','none',...
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
-                    ax.Title.String = {horzcat('Corrected',temptype,temp(corr_ind).llhpicklabel,'of',...
+                    ax.Title.String = {horzcat('Corrected',msvar_short,temp(corr_ind).llhpicklabel,'of',...
                         num2str(size(temp(corr_ind).llh,1)),': ',num2str(nanmax(mapLincorr),3),'Hz'), ...
                         horzcat(criteria, '=',num2str(critcorr,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
                     set(ax,'CLim',[0 maxCcorr]);
@@ -496,10 +502,10 @@ if strcmp(objtype, 'place')  % Place maps
                 
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 % Setup object
                 h = gcf;
@@ -517,11 +523,11 @@ if strcmp(objtype, 'place')  % Place maps
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
                     if cc == 1
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)];...
                             ['dist ratio v= ' num2str(temp(corr_ind).distratio_v)]};
                     elseif cc == 2
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)];...
                             ['dist ratio h= ' num2str(temp(corr_ind).distratio_h)]};
                     end
@@ -803,10 +809,10 @@ elseif strcmp(objtype, 'view')
             for cc = 1 % pv & ph
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 if isempty(corr_ind)
                     critcorr = nan;
@@ -830,7 +836,7 @@ elseif strcmp(objtype, 'view')
                     'XColor','none','YColor','none','ZColor','none',...
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
-                    ax.Title.String = {horzcat('Corrected',temptype,temp(corr_ind).llhpicklabel,'of',...
+                    ax.Title.String = {horzcat('Corrected',msvar_short,temp(corr_ind).llhpicklabel,'of',...
                         num2str(size(temp(corr_ind).llh,1)),': ',num2str(nanmax(mapLincorr),3),'Hz'), ...
                         horzcat(criteria, '=',num2str(critcorr,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
                     set(ax,'CLim',[0 maxCcorr]);
@@ -859,10 +865,10 @@ elseif strcmp(objtype, 'view')
             for cc = 1 % pv and ph
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 % Setup object
                 h = gcf;
@@ -880,11 +886,11 @@ elseif strcmp(objtype, 'view')
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
                     if cc == 1
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio v = ' num2str(temp(corr_ind).distratio_v)];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)]};
                     elseif cc == 2
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio h = ' num2str(temp(corr_ind).distratio_h)];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)]};
 
@@ -1128,10 +1134,10 @@ elseif strcmp(objtype,'headdirection')
                 
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 if isempty(corr_ind)
                     critcorr = nan;
@@ -1159,7 +1165,7 @@ elseif strcmp(objtype,'headdirection')
                     'XColor','none','YColor','none','ZColor','none',...
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
-                    ax.Title.String = {horzcat('Corrected',temptype,temp(corr_ind).llhpicklabel,'of',...
+                    ax.Title.String = {horzcat('Corrected',msvar_short,temp(corr_ind).llhpicklabel,'of',...
                         num2str(size(temp(corr_ind).llh,1)),': ',num2str(nanmax(mapLincorr),3),'Hz'), ...
                         horzcat(criteria, '=',num2str(critcorr,2),'/',num2str(thr_cell,2),'/',num2str(thr_pop,2))};
                     set(ax,'CLim',[0 maxCcorr]);
@@ -1196,10 +1202,10 @@ elseif strcmp(objtype,'headdirection')
                 
                 if cc == 1
                     temp = objCorr.data.pv;
-                    temptype = 'pv';
+                    msvar_short = 'pv';
                 elseif cc == 2
                     temp = objCorr.data.ph;
-                    temptype = 'ph';
+                    msvar_short = 'ph';
                 end
                 % Setup object
                 h = gcf;
@@ -1217,11 +1223,11 @@ elseif strcmp(objtype,'headdirection')
                     'FontSize',14,'GridLineStyle','none','Color','none');
                 if ~isempty(corr_ind)
                     if cc == 1
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)];...
                             ['dist ratio v= ' num2str(temp(corr_ind).distratio_v)]};
                     elseif cc == 2
-                        ax.Title.String = {['Distributed map ' temptype];...
+                        ax.Title.String = {['Distributed map ' msvar_short];...
                             ['dist ratio p = ' num2str(temp(corr_ind).distratio_p)];...
                             ['dist ratio h= ' num2str(temp(corr_ind).distratio_h)]};
                     end
@@ -1297,7 +1303,8 @@ elseif strcmp(objtype,'headdirection')
     
 elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
 
-    spatialvarpairs = objCorr.data.spatialvarpairs;
+%     spatialvarpairs = objCorr.data.spatialvarpairs;
+    spatialvarpairs = objMain.data.Args.spatialvarpairs;
     
     for ii = 1:size(setsessions,1) % For each session
         cells_indList = find(identifiers(:,1) == setsessions(ii));
@@ -1310,21 +1317,32 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
             cell_id = [num2str(identifiers(cell_ind,1)) 'ch' num2str(identifiers(cell_ind,4)) 'c' num2str(identifiers(cell_ind,5))];
             cell_indP = strcmp(objPlace.data.origin,cellList{cell_ind});
             cell_indV = strcmp(objView.data.origin,cellList{cell_ind});
+            cell_indH = strcmp(objHeaddirection.data.origin,cellList{cell_ind});
             cell_indCorr = strcmp(objCorr.data.origin,cellList{cell_ind});
             cell_indMain = strcmp(objMain.data.origin,cellList{cell_ind});
             
 %             if objMain.data.mixsel(cell_indMain) % Plotting only mixed selective cells
             if objMain.data.filtspkcount(cell_indMain) > 100
                 disp(['Plotting: ' cell_id]);
+
+                %% Where to save plots
                 
-                %% Linear or nonlinear mixed selectivity
-
-                %% Plot 1 map for 1 cell - mixed or single selective
-
-                % Where to save plots
-                if objMain.data.mixsel(cell_indMain)
-                    figdir2 = [figdir '/mixsel/' cell_id];
-                    sel = 'mixed';
+                if objMain.data.placesel(cell_indMain) && objMain.data.viewsel(cell_indMain) && objMain.data.headdirectionsel(cell_indMain)
+                    figdir2 = [figdir '/3sel/' cell_id];
+                    sel = '3sel';
+                elseif objMain.data.placesel(cell_indMain) && objMain.data.viewsel(cell_indMain) || ...
+                        objMain.data.placesel(cell_indMain) && objMain.data.headdirectionsel(cell_indMain) || ...
+                        objMain.data.headdirectionsel(cell_indMain) && objMain.data.viewsel(cell_indMain)
+                    if objMain.data.placesel(cell_indMain) && objMain.data.viewsel(cell_indMain)
+                        figdir2 = [figdir '/pvsel/' cell_id];
+                        sel = 'pvsel';
+                    elseif objMain.data.placesel(cell_indMain) && objMain.data.headdirectionsel(cell_indMain)
+                        figdir2 = [figdir '/phsel/' cell_id];
+                        sel = 'phsel';
+                    elseif objMain.data.headdirectionsel(cell_indMain) && objMain.data.viewsel(cell_indMain)
+                        figdir2 = [figdir '/hvsel/' cell_id];
+                        sel = 'hvsel';
+                    end
                 elseif objMain.data.placesel(cell_indMain)
                     figdir2 = [figdir '/placesel/' cell_id];
                     sel = 'place only';
@@ -1339,289 +1357,75 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                     sel = 'ns';
                 end
 
-%                 % Plot pv raw map vs pc/v raw map vs corr
-%                 h = figure(fig);
-%                 hold on;
-%                 figname = horzcat(objtype,': ',cell_id,'Raw maps');
-%                 set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-%                 for oo = 1:size(msobj,2)
-%                     % Plot vmms pv maps
-%                     basedata = objMain.data.(msobj{oo})(cell_indMain);
-%                     if ~isempty(basedata.pvmap)
-%                         ax = subplot(2,3,1+(oo-1)*3);
-%                         plotmap(basedata.pvmap,msobj{oo});
-%                         % If firing rate or spike count = 0, set to black
-%                         settoblack(basedata.pvmap,msobj{oo});
-%                         % Scale color map
-%                         switch msobj{oo}
-%                             case 'place'
-%                                 maxC = max(basedata.pvmap);
-%                                 fieldcolor = 'r';
-%                             case 'view'
-%                                 maxC = max(basedata.pvmap(3:end)); % leave out cue and hint
-%                                 fieldcolor = [50/256 205/256 50/256];
-%                         end
-%                         % Patch boundaries of base fields
-%                         for ff = 1:size(basedata.seccomponents_perbasepx,1)
-%                             % Patch base fields
-%                             for pp = 1:size(basedata.fieldcoord{ff},1)
-%                                 % PATCH
-%                                 if strcmp(msobj{oo},'place')
-%                                     plotgrid = 3;
-%                                 else
-%                                     plotgrid = basedata.gridnum(ff);
-%                                 end
-%                                 [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-%                                 patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
-%                             end
-%                         end
-%                         set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-%                             'XColor','none','YColor','none','ZColor','none',...
-%                             'FontSize',14,'GridLineStyle','none','Color','none');
-%                         colormap(ax,cool);
-%                         ax.Title.String = ['vmms raw ' msobj{oo} ' map: ' sel];
-%                     end
-%                     % Plot maps from pc/v objects
-%                     ax = subplot(2,3,2+(oo-1)*3);
-%                     if strcmp(msobj{oo},'place')
-%                         basemap = objPlace.data.maps_raw(cell_indP,:);
-%                         maxC = max(objPlace.data.maps_raw(cell_indP,:));
-%                         title = ['vmpc raw' msobj{oo} 'map: ' sel];
-%                     elseif strcmp(msobj{oo},'view')
-%                         basemap = objView.data.maps_raw(cell_indV,:);
-%                         maxC = max(objView.data.maps_raw(cell_indV,3:end));
-%                         title = ['vmsv raw' msobj{oo} 'map: ' sel];
-%                     end
-%                     plotmap(basemap,msobj{oo});
-%                     % If firing rate or spike count = 0, set to black
-%                     settoblack(basemap,msobj{oo});
-%                     % Patch boundaries of base fields
-%                     for ff = 1:size(basedata.seccomponents_perbasepx,1)
-%                         % Patch base fields
-%                         for pp = 1:size(basedata.fieldcoord{ff},1)
-%                             % PATCH
-%                                 if strcmp(msobj{oo},'place')
-%                                     plotgrid = 3;
-%                                 else
-%                                     plotgrid = basedata.gridnum(ff);
-%                                 end
-%                             [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-%                             patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
-%                         end
-%                     end
-%                     set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-%                         'XColor','none','YColor','none','ZColor','none',...
-%                         'FontSize',14,'GridLineStyle','none','Color','none');
-%                     colormap(ax,cool);
-%                     ax.Title.String = title;
-%                     % Plot maps from corr objects
-%                     ax = subplot(2,3,3+(oo-1)*3);
-%                     if strcmp(msobj{oo},'place')
-%                         basemap = objCorr.data.maps_raw_corrpset{cell_indCorr}(1,:);
-%                         maxC = max(basemap);
-%                         title = ['vmcorr raw place map: ' sel];
-%                     elseif strcmp(msobj{oo},'view')
-%                         basemap = objCorr.data.maps_raw_corrvset{cell_indCorr}(1,:);
-%                         maxC = max(basemap(3:end));
-%                         title = ['vmcorr raw view map: ' sel];
-%                     end
-%                     plotmap(basemap,msobj{oo});
-%                     % If firing rate or spike count = 0, set to black
-%                     settoblack(basemap,msobj{oo});
-%                     % Patch boundaries of base fields
-%                     for ff = 1:size(basedata.seccomponents_perbasepx,1)
-%                         % Patch base fields
-%                         for pp = 1:size(basedata.fieldcoord{ff},1)
-%                             % PATCH
-%                                 if strcmp(msobj{oo},'place')
-%                                     plotgrid = 3;
-%                                 else
-%                                     plotgrid = basedata.gridnum(ff);
-%                                 end
-%                             [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-%                             patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
-%                         end
-%                     end
-%                     set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-%                         'XColor','none','YColor','none','ZColor','none',...
-%                         'FontSize',14,'GridLineStyle','none','Color','none');
-%                     colormap(ax,cool);
-%                     ax.Title.String = title;
-%                 end
-
-                % Plot raw maps for actual and predicted (based on
-                % sampling bias) maps
-                for ss = 1:size(spatialvarpairs,2)
-                    msobj = spatialvarpairs{ss};
-                    if ss == 1
-                        temp = objCorr.data.pv;
-                        temptype = 'pv';
-                    elseif ss == 2
-                        temp = objCorr.data.ph;
-                        temptype = 'ph';
-                    end
+                %% Plot vmms raw and smoothed maps for each variable pair
+                
+                for pair = 1:size(spatialvarpairs,2)
                     
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+                    % Set up
                     h = figure(fig);
                     hold on;
-                    figname = horzcat(objtype,': ',cell_id,'Raw maps');
+                    figname = horzcat(num2str(fig), '- Raw maps ',msvar_short,': ',cell_id,' ',sel);
                     set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                    for oo = 1:size(msobj,2)
-                        % Plot vmcorr smoothed maps
-                        if strcmp(msobj{oo},'place')
-                            basemap = temp(cell_indCorr).maps_sm_corrpset(1,:);
-                            maxC = max(basemap);
-                            title = ['vmcorr smoothed place map: ' sel];
-                        elseif strcmp(msobj{oo},'view')
-                            basemap = temp(cell_indCorr).maps_sm_corrvset(1,:);
-                            maxC = max(basemap(3:end));
-                            title = ['vmcorr smoothed view map: ' sel];
-                        elseif strcmp(msobj{oo},'headdirection')
-                            basemap = temp(cell_indCorr).maps_sm_corrhset(1,:);
-                            maxC = max(basemap);
-                            title = ['vmcorr smoothed hd map: ' sel];
-                        end
-                        ax = subplot(2,3,1+(oo-1)*3);
-                        plotmap(basemap,msobj{oo});
-                        % If selective, patch field
-                        if ss == 1 || (ss==2 && oo == 1)
+                    % Plot 
+                    for kk = 1:size(msvar,2)
+                        basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{kk});
+                        for mm = 1:2 % raw or smooth
+                            if mm == 1
+                                map = basedata.pvmap;
+                                type = 'raw';
+                            else
+                                map = basedata.basemapLsm;
+                                type = 'sm';
+                            end
+                            ax = subplot(2,2,2*(kk-1)+mm);
+                            plotmap(map,msvar{kk});
                             % If firing rate or spike count = 0, set to black
-                            settoblack(basemap,msobj{oo});
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            switch msobj{oo}
+                            settoblack(map,msvar{kk});
+                            % Scale color map
+                            switch msvar{kk}
                                 case 'place'
-                                    if objMain.data.placesel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap);
-                                        fieldcolor = 'r';
-                                        % Patch boundaries of base fields
-                                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                            % Patch base fields
-                                            for pp = 1:size(basedata.fieldcoord{ff},1)
-                                                % PATCH
-                                                if strcmp(msobj{oo},'place')
-                                                    plotgrid = 3;
-                                                else
-                                                    plotgrid = basedata.gridnum(ff);
-                                                end
-                                                [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                                patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
-                                            end
-                                        end
-                                    end
+                                    maxC = nanmax(map);
+                                    fieldcolor = 'r';
                                 case 'view'
-                                    if objMain.data.viewsel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap(3:end)); % leave out cue and hint
-                                        fieldcolor = [50/256 205/256 50/256];
-                                        % Patch boundaries of base fields
-                                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                            % Patch base fields
-                                            for pp = 1:size(basedata.fieldcoord{ff},1)
-                                                % PATCH
-                                                if strcmp(msobj{oo},'place')
-                                                    plotgrid = 3;
-                                                else
-                                                    plotgrid = basedata.gridnum(ff);
-                                                end
-                                                [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                                patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
-                                            end
+                                    maxC = nanmax(map(3:end)); % leave out cue and hint
+                                    fieldcolor = [50/256 205/256 50/256];
+                                case 'headdirection'
+                                    maxC = nanmax(map);
+                            end
+                            % Patch boundaries of base fields
+                            if ~strcmp(msvar{kk},'headdirection')
+                                for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                    % Patch base fields
+                                    for pp = 1:size(basedata.fieldcoord{ff},1)
+                                        % PATCH
+                                        if strcmp(msvar{kk},'place')
+                                            plotgrid = 3;
+                                        else
+                                            plotgrid = basedata.gridnum(ff);
                                         end
+                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                        patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
                                     end
+                                end
+                            else % For head direction, mark start and end of field
+                                for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                    hold on;
+                                    section = nan(size(map));
+                                    section(basedata.fieldlinbin{ff}) = 1.1*maxC;
+                                    plotmap(section,msvar{kk},msvar{kk},'b');
+                                end
                             end
+                            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                                'XColor','none','YColor','none','ZColor','none',...
+                                'FontSize',14,'GridLineStyle','none','Color','none');
+                            colormap(ax,cool);
+                            ax.Title.String = ['vmms ' msvar_short '- ' type ' ' msvar{kk} ' map'];
                         end
-                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                            'XColor','none','YColor','none','ZColor','none',...
-                            'FontSize',14,'GridLineStyle','none','Color','none');
-                        colormap(ax,cool);
-                        ax.Title.String = ['vmcorr original smoothed ' msobj{oo} ' map: ' sel];
-
-                        % Plot vmcorr raw pv maps
-                        if strcmp(msobj{oo},'place')
-                            basemap = temp(cell_indCorr).maps_raw_corrpset(1,:);
-                            maxC = max(basemap);
-                            title = ['vmcorr raw place map: ' sel];
-                        elseif strcmp(msobj{oo},'view')
-                            basemap = temp(cell_indCorr).maps_raw_corrvset(1,:);
-                            maxC = max(basemap(3:end));
-                            title = ['vmcorr raw view map: ' sel];
-                        elseif strcmp(msobj{oo},'headdirection')
-                            basemap = temp(cell_indCorr).maps_raw_corrhset(1,:);
-                            maxC = max(basemap);
-                            title = ['vmcorr raw hd map: ' sel];
-                        end
-    %                     if ~isempty(basedata.pvmap)
-                        ax = subplot(2,3,2+(oo-1)*3);
-                        plotmap(basemap,msobj{oo});
-                        % If selective, patch field
-                        if ss == 1 || (ss==2 && oo==1)
-                            % If firing rate or spike count = 0, set to black
-                            settoblack(basemap,msobj{oo});
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            switch msobj{oo}
-                                case 'place'
-                                    if objMain.data.placesel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap);
-                                        fieldcolor = 'r';
-                                    end
-                                case 'view'
-                                    if objMain.data.viewsel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap(3:end)); % leave out cue and hint
-                                        fieldcolor = [50/256 205/256 50/256];
-                                    end
-                            end
-                        end
-                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                            'XColor','none','YColor','none','ZColor','none',...
-                            'FontSize',14,'GridLineStyle','none','Color','none');
-                        colormap(ax,cool);
-                        ax.Title.String = ['vmcorr original raw ' msobj{oo} ' map: ' sel];
-    %                     end
-
-                        % Plot predicted maps from corr objects
-                        ax = subplot(2,3,3+(oo-1)*3);
-                        if ss == 1
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_dist_p;
-                                maxC = max(basemap);
-                                title = {horzcat('vmcorr predicted raw place map: ',sel); ...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p));...
-                                    horzcat('distratio_v = ',num2str(temp(cell_indCorr).distratio_v))};
-                            elseif strcmp(msobj{oo},'view')
-                                basemap = temp(cell_indCorr).maps_dist_v;
-                                maxC = max(basemap(3:end));
-                                title = {horzcat('vmcorr predicted raw view map: ',sel); ...
-                                    horzcat('distratio_v = ',num2str(temp(cell_indCorr).distratio_v));...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p))};
-                            end
-                        elseif ss == 2
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_dist_p;
-                                maxC = max(basemap);
-                                title = {horzcat('vmcorr predicted raw place map: ',sel); ...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p));...
-                                    horzcat('distratio_h = ',num2str(temp(cell_indCorr).distratio_h))};
-                            elseif strcmp(msobj{oo},'headdirection')
-                                basemap = temp(cell_indCorr).maps_dist_h;
-                                maxC = max(basemap);
-                                title = {horzcat('vmcorr predicted raw hd map: ',sel); ...
-                                    horzcat('distratio_h = ',num2str(temp(cell_indCorr).distratio_h));...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p))};
-                            end
-                        end
-                        plotmap(basemap,msobj{oo});
-                        % If firing rate or spike count = 0, set to black
-                        settoblack(basemap,msobj{oo});
-                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                            'XColor','none','YColor','none','ZColor','none',...
-                            'FontSize',14,'GridLineStyle','none','Color','none');
-                        colormap(ax,cool);
-                        ax.Title.String = title;
                     end
                     % Save
-                    figtitle = horzcat(cell_id,'-',num2str(fig),'Raw maps ',temptype);
+                    figtitle = horzcat(num2str(fig),'- vmms maps ',msvar_short,': ',cell_id);
                     if save
                         mkdir(figdir2);
                         savefigure(h,figtitle,figdir2);
@@ -1630,149 +1434,594 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                     fig = fig + 1;
                 end
                 
-                % Plot vmcorr smoothed original vs predicted maps
-                for ss = 1:size(spatialvarpairs,2)
-                    msobj = spatialvarpairs{ss};
-                    if ss == 1
-                        temp = objCorr.data.pv;
-                        temptype = 'pv';
-                    elseif ss == 2
-                        temp = objCorr.data.ph;
-                        temptype = 'ph';
+                %% Plot base maps (all 3 vars)
+                
+                % Set up
+                h = figure(fig);
+                hold on;
+                figname = horzcat(num2str(fig),'- Base maps ',msvar_short,': ',cell_id,' ',sel);
+                set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                var = {'place','view','headdirection'};
+                varobj = {'pv','pv','hv'};
+                for oo = 1:size(var,2)
+                    basedata = objMain.data.(varobj{oo})(cell_indMain).(var{oo});
+                    basemap = basedata.basemapLsm;
+                    ax = subplot(1,3,oo);
+                    plotmap(basedata.basemapLsm,var{oo});
+                    % If firing rate or spike count = 0, set to black
+                    settoblack(basedata.basemapLsm,var{oo});
+                    maxC = nanmax(basemap);
+                    % Rate and SIC 
+                    rate = text(ax,1,1.1,1,[num2str(maxC,2) 'Hz'],'Units','Normalized','FontSize',30,'HorizontalAlignment','right');
+                    si = text(ax,0,1.1,1,num2str(basedata.SI,2),'Units','Normalized','FontSize',30,'HorizontalAlignment','left');
+                    if basedata.SI > basedata.SIthr
+                        si.Color = 'r';
+                    end
+                    set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                        'XColor','none','YColor','none','ZColor','none',...
+                        'FontSize',14,'GridLineStyle','none','Color','none');
+                    titlestring = text(ax,0.5,1.2,1,[' Base ' varobj{oo} ' sm map ' num2str(basedata.sigfields) ' sig fields'],...
+                        'Units','Normalized','FontSize',30,'HorizontalAlignment','center');
+                    % Draw env boundaries
+                    if ~strcmp(var{oo},'headdirection')
+                        patchenvbounds(var{oo});
+                    end
+                end
+                % Save
+                figtitle = horzcat(num2str(fig),'- Base maps sm ',': ',cell_id,' ',sel);
+                if save
+                    savefigure(h,figtitle,figdir2);
+                end
+                close(h);
+                fig = fig + 1;
+                
+                
+                
+                %% Plot pixel maps for each base field
+                
+                for pair = 1:size(spatialvarpairs,2)
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+
+                    for oo = 1:size(msvar,2)
+                        basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{oo});
+                        secdata = objMain.data.(msvar_short)(cell_indMain).(msvar{2-oo+1});
+                        if strcmp(msvar{oo},'headdirection') || strcmp(msvar{2-oo+1},'headdirection')
+                            disp('stop')
+                        end
+                        
+                        for ff = 1:size(basedata.seccomponents_perbasepx,1) % In mixselpv we've only extracted data for max of 3 fields per map
+                                % Plot raw base maps with secondary pixel maps
+                                h = figure(fig);
+                                figname = '';
+                                set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
+                                hold on;
+                                ax = subplot(1,3,1);
+                                % Plot secondary full pixel set
+                                tempsecmap = nan(size(basedata.secmapLsm));
+                                tempsecmap(basedata.secmaps_raw{ff,1}(:,1)) = basedata.secmaps_raw{ff,1}(:,4);
+                                plotmap(tempsecmap,msvar{2-oo+1},msvar{oo});
+    %                             colormap(ax,cool);
+                                % Patch secondary fields
+                                if ~strcmp(msvar{2-oo+1},'headdirection')
+                                    for mm = 1:size(secdata.seccomponents_perbasepx,1) % For each secondary field
+                                        % Plot secondary field in consolidated pixel map
+                                        sec = secdata.fieldcoord{mm}; % Get bins for sec field
+                                        % Patch secondary fields in the consolidated pixel map
+                                        for pp = 1:size(sec,1)
+                                            % PATCH
+                                            if strcmp(msvar{2-oo+1},'place')
+                                                plotgrid = 3;
+                                            else
+                                                plotgrid = secdata.gridnum(mm);
+                                            end
+                                            [x,y,z] = converttosurf(plotgrid,sec(pp,1),sec(pp,2));
+                                            patch(x,y,z,'r','EdgeColor',[169/256 169/256 169/256],'FaceColor','none','LineWidth',1); % Dark Grey
+                                            if strcmp(msvar{2-oo+1},'place')
+                                                patch(x,y,z,'r','EdgeColor','r','FaceColor','none','LineWidth',2); % Red
+                                            elseif strcmp(msvar{2-oo+1},'view')
+                                                patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green
+                                            end
+                                        end
+                                    end
+                                else
+                                    for mm = 1:size(secdata.seccomponents_perbasepx,1) % For each secondary field
+                                        hold on;
+                                        section = nan(size(tempsecmap));
+                                        section(secdata.fieldlinbin{mm}) = 1.1*nanmax(tempsecmap);
+                                        plotmap(section,msvar{2-oo+1},msvar{oo},'b');
+                                    end
+                                end
+                                set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                                    'XColor','none','YColor','none','ZColor','none',...
+                                    'FontSize',14,'GridLineStyle','none','Color','none');
+                                % Patch env bounds
+                                if sum(strcmp(msvar,'headdirection')) == 0
+                                    patchenvbounds('view');
+                                elseif sum(strcmp(msvar,'place')) == 1
+                                    patchenvbounds('place');
+                                elseif sum(strcmp(msvar,'view'))
+                                    patchenvbounds('view');
+                                end
+                                % If firing rate or spike count = 0, set to black
+                                settoblack(tempsecmap,msvar{2-oo+1});
+                                % Patch basemap field
+                                if oo == 2 && strcmp(msvar{oo},'headdirection')
+                                    disp('stop')
+                                end
+                                if ~strcmp(msvar{oo},'headdirection')
+                                    for pp = 1:size(basedata.fieldcoord{ff},1)
+                                        % PATCH
+                                        if strcmp(msvar{oo},'place')
+                                            plotgrid = 3;
+                                        else
+                                            plotgrid = basedata.gridnum(ff);
+                                        end
+                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                        if strcmp(msvar{oo},'place')
+                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
+                                        elseif strcmp(msvar{oo},'view')
+                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
+                                        end
+                                    end
+                                else
+                                    hold on;
+                                    section = nan(size(basedata.basemapLrw));
+                                    section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                    plotmap(section,msvar{oo},msvar{2-oo+1},'b');
+                                end
+                                % Strech axis back to normal if hv and h as base
+                                if strcmp(msvar_short,'hv') && strcmp(msvar{oo},'headdirection')
+                                    axis equal;
+                                else
+                                    disp('stop')
+                                end
+                                ax.Title.String = cell(size(basedata.sec_infieldrates{ff},1),1);
+                                linked = [];
+                                for ss = 1:size(basedata.sec_infieldrates{ff},1)
+                                    % Check if infield firing in sec field is higher than outfield firing
+                                    if basedata.sec_infieldrates{ff}(ss,1) > prctile(basedata.sec_outfieldrates{ff}{ss,1},95)
+                                        linked = horzcat(linked,',',num2str(ss));
+                                        ax.Title.String{ss,1} = horzcat('LINKED:',msvar{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.sec_infieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{ss,1},95),2),'Hz');
+                                    else
+                                        ax.Title.String{ss,1} = horzcat(msvar{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.sec_infieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{ss,1},95),2),'Hz');
+                                    end
+                                end
+                                ax.Title.String{end+1,1} = ['Rawpx = ' num2str(sum(~isnan(tempsecmap)))];
+                                if isempty(linked)
+                                    figname = horzcat(num2str(fig),'- Pixel maps ', msvar_short, '-', msvar{oo},' field ',num2str(ff),' not linked');
+                                else
+                                    figname = horzcat(num2str(fig),'- Pixel maps ', msvar_short, '-', msvar{oo},' field ',num2str(ff),' sig linked to ',msvar{2-oo+1},' field ', linked);
+                                end
+
+                                % Plot smoothed sec pixel map
+                                ax = subplot(1,3,2);
+%                                     temp1 = basedata.(['sec' mapname]){ff};
+                                temp1 = basedata.(['secmaps_sm' ]){ff};
+                                switch msvar{2-oo+1}
+                                    case 'place'
+                                        maxC = nanmax(temp1);
+                                    case 'view'
+                                        maxC = nanmax(temp1(3:end));
+                                    case 'headdirection'
+                                        maxC = nanmax(temp1);
+                                end
+                                plotmap(temp1,msvar{2-oo+1},msvar{oo});
+                                % If firing rate or spike count = 0, set to black
+                                settoblack(temp1,msvar{2-oo+1});
+                                % Label
+                                pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
+                                ax.Title.String = {horzcat('SI: ',num2str(basedata.(['secSIC_sm' ])(ff),2),'/',num2str(pseudoSIthr,2)); ...
+                                    horzcat('Smoothpx = ',num2str(sum(~isnan(temp1)))); ...
+                                    horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_adsm{ff}),2)),2))};
+                                ax.Title.FontSize = 16;
+                                if basedata.(['secSIC_sm' ])(ff)>pseudoSIthr && maxC >= 0.7 
+                                    ax.Title.Color = 'r';
+                                end
+                                set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                                    'XColor','none','YColor','none','ZColor','none',...
+                                    'FontSize',14,'GridLineStyle','none','Color','none');
+                                % Patch env bounds
+                                if sum(strcmp(msvar,'headdirection')) == 0
+                                    patchenvbounds('view');
+                                elseif sum(strcmp(msvar,'place')) == 1
+                                    patchenvbounds('place');
+                                elseif sum(strcmp(msvar,'view'))
+                                    patchenvbounds('view');
+                                end
+                                if strcmp(msvar{oo},'headdirection')
+                                    disp('stop')
+                                end
+                                if ~strcmp(msvar{oo},'headdirection')
+                                    % Patch basemap field
+                                    for pp = 1:size(basedata.fieldcoord{ff},1)
+                                        % PATCH
+                                        if strcmp(msvar{oo},'place')
+                                            plotgrid = 3;
+                                        else
+                                            plotgrid = basedata.gridnum(ff);
+                                        end
+                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                        if strcmp(msvar{oo},'place')
+                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
+                                        elseif strcmp(msvar{oo},'view')
+                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
+                                        end
+                                    end
+                                else
+                                    hold on;
+                                    section = nan(size(basedata.basemapLrw));
+                                    section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                    plotmap(section,msvar{oo},msvar{2-oo+1},'b');
+                                end
+                                % Patch fields found from smoothed conditioned maps
+                                tempdata = basedata.seccond_fieldcoord{ff};
+                                if ~isempty(tempdata) % If there are secondary fields in conditioned maps
+                                    overlap = {};
+                                    for gg = 1:size(tempdata,1) % For each of the secondary fields
+                                        if sum(basedata.seccond_fieldoverlapind{ff}{gg})>0
+                                            fieldcolor = 'y';
+                                            xxx = find(basedata.seccond_fieldoverlapind{ff}{gg});
+                                            for xx = 1:size(xxx,1)
+                                                % Does the sec field overlap with any of the base fields from the other var?
+                                                overlap{end+1,1} = ['Base field ' num2str(ff) ' X Sec field '...
+                                                    num2str(xxx(xx))];
+                                            end
+                                        else
+                                            fieldcolor = 'b';
+                                        end
+                                    end
+                                    ax.Title.String{end+1,1} = [num2str(size(tempdata,1)) ' cond fields - mean coverage ' ...
+                                        num2str(mean(basedata.seccond_fieldsizepercent{ff}),2) '% per field'];
+                                    ax.Title.String{end+1,1} = cell2mat(overlap);
+
+%                                     % Linear or nonlinear mixed selectivity?
+%                                     outfieldrate_basefield = basedata.tertrate_orig(ff,:);
+%                                     outfieldrate_pseudofield = basedata.tertrate_pseudo(ff,:);
+%                                     [hval,pval,ci,stats] = ttest(outfieldrate_basefield,outfieldrate_pseudofield,'Tail','right');
+%                                     if hval~=0
+%                                        ax.Title.String{end+1,1} = ['Linear pv: Outfield firing greater from ' ...
+%                                            msobj{oo} ' field than random field'];
+%                                     else
+%                                        ax.Title.String{end+1,1} = ['Nonlinear pv'];
+%                                     end
+%                                     ax.Title.String{end+1,1} = ['h=' num2str(hval) 't=' num2str(stats.tstat,2) 'p=' num2str(pval,2)];
+
+                                else 
+                                    ax.Title.String{end+1,1} = ['No cond fields'];
+                                end
+                                % Strech axis back to normal if hv and h as base
+                                if strcmp(msvar_short,'hv') && strcmp(msvar{oo},'headdirection')
+                                    axis equal;
+                                end
+
+                                % Plot predicted sec pixel map
+                                ax = subplot(1,3,3);
+                                temp2 = basedata.secmaps_dist{ff};
+                                switch msvar{2-oo+1}
+                                    case 'place'
+                                        maxC = nanmax(temp2);
+                                    case 'view'
+                                        maxC = nanmax(temp2(3:end));
+                                    case 'headdirection'
+                                        maxC = nanmax(temp2);
+                                end
+                                plotmap(temp2,msvar{2-oo+1},msvar{oo});
+                                % If firing rate or spike count = 0, set to black
+                                settoblack(temp2,msvar{2-oo+1});
+                                % Label
+                                pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
+                                ax.Title.String = {['Predicted ' msvar{2-oo+1} ' map']; ...
+                                    ['dist ratio_' basedata.varname_short ' = ' num2str(basedata.base_distratio(ff))];...
+                                    ['dist ratio_' secdata.varname_short ' = ' num2str(basedata.sec_distratio(ff))]};
+                                ax.Title.FontSize = 16;
+                                if basedata.(['secSIC_sm' ])(ff)>pseudoSIthr && maxC >= 0.7 
+                                    ax.Title.Color = 'r';
+                                end
+                                set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                                    'XColor','none','YColor','none','ZColor','none',...
+                                    'FontSize',14,'GridLineStyle','none','Color','none');
+                                % Patch env bounds
+                                if sum(strcmp(msvar,'headdirection')) == 0
+                                    patchenvbounds('view');
+                                elseif sum(strcmp(msvar,'place')) == 1
+                                    patchenvbounds('place');
+                                elseif sum(strcmp(msvar,'view'))
+                                    patchenvbounds('view');
+                                end
+                                % Patch base field
+                                if ~strcmp(msvar{oo},'headdirection')
+                                    % Patch basemap field
+                                    for pp = 1:size(basedata.fieldcoord{ff},1)
+                                        % PATCH
+                                        if strcmp(msvar{oo},'place')
+                                            plotgrid = 3;
+                                        else
+                                            plotgrid = basedata.gridnum(ff);
+                                        end
+                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                        if strcmp(msvar{oo},'place')
+                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
+                                        elseif strcmp(msvar{oo},'view')
+                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
+                                        end
+                                    end
+                                else
+                                    hold on;
+                                    section = nan(size(basedata.basemapLrw));
+                                    section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                    plotmap(section,msvar{oo},msvar{2-oo+1},'b');
+                                end
+                                % Strech axis back to normal if hv and h as base
+                                if strcmp(msvar_short,'hv') && strcmp(msvar{oo},'headdirection')
+                                    axis equal;
+                                end
+
+% %                                 if objMain.data.mixsel(cell_indMain)
+%                                 % Linear or nonlinear mixed anova per field
+%                                 base_infield = inrate_placeset((ff-1)*500+1:ff*500);
+%                                 if strcmp(msobj{oo},'place')
+%                                     inplace_field = inrate_placeset((ff-1)*500+1:ff*500);
+%                                     outplace_field = outrate_placeset((ff-1)*500+1:ff*500);
+%                                     ind_field = randsample(1:size(inrate_viewset,1),500);
+%                                     inview_field = inrate_viewset(ind_field);
+%                                     outview_field = outrate_viewset(ind_field);
+% 
+%                                 else
+%                                     inview_field = inrate_viewset((ff-1)*500+1:ff*500);
+%                                     outview_field = outrate_viewset((ff-1)*500+1:ff*500);
+%                                     ind_field = randsample(1:size(inrate_placeset,1),500);
+%                                     inplace_field = inrate_placeset(ind_field);
+%                                     outplace_field = outrate_placeset(ind_field);
+%                                 end
+%                                 [pval,tbl,stats] = anova2([inplace_field outplace_field;inview_field outview_field],500);
+% %                                 [pval,tbl,stats] = anova2([inplace_field inview_field; outplace_field outview_field],500);
+%                                 figanova = gcf;
+%                                 figtitle = ['ANOVA ' msobj{oo} ' field ' num2str(ff)];
+%                                 if save
+%                                     savefigure(figanova,figtitle,figdir2);
+%                                 end
+%                                 close(figanova);
+%                                 if pval(3) < 0.05
+%                                     ax.Title.String{end+1,1} = ['Nonlinear interaction: F=' num2str(tbl{4,5},2) ', p=' num2str(pval(3))];
+%                                 else
+%                                     ax.Title.String{end+1,1} = ['Linear: F=' num2str(tbl{4,5},2) ', p=' num2str(pval(3))];
+%                                 end
+% %                                 end
+
+                                % Save 
+                                figtitle = figname;
+                                if save
+                                    savefigure(h,figtitle,figdir2);
+                                end
+                                close(h);
+                                fig = fig + 1;
+
+    %                             % Plot a selection of the pseudopopulation of smoothed conditioned maps
+    %                             h = figure(fig);
+    %                             figname = [msobj{oo} ' field ' num2str(ff) ' - pseudopopulation'];
+    %                             set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
+    %                             hold on;
+    %                             temp = basedata.pseudosecSIC_adsm{ff};
+    %                             setpoints = quantile(temp,[0.25,0.5,0.75,0.975])';
+    %                             for hh = 1:size(setpoints,1)
+    %                                 inds_pseudoplot = find(abs(temp-setpoints(hh)) == min(abs(temp-setpoints(hh))),1);
+    %                                 % Plot raw map
+    %                                 ax = subplot(2,5,hh);
+    %                                 plotmap(basedata.pseudosecdataperfield{ff}{4}(inds_pseudoplot,:),msobj{2-oo+1});
+    %                                 colormap(ax,cool);
+    %                                 % If firing rate or spike count = 0, set to black
+    %                                 settoblack(basedata.pseudosecdataperfield{ff}{4}(inds_pseudoplot,:),msobj{2-oo+1});
+    % %                                 % Patch tertiary field 
+    % % %                                 for pp = 1:size(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot},1)
+    % %                                     if strcmp(msobj{oo},'place')
+    % %                                         sectemp = nan(1,1600);
+    % %                                         fieldcolor = 'r';
+    % %                                     elseif strcmp(msobj{oo},'view')
+    % %                                         sectemp = nan(1,5122);
+    % %                                         fieldcolor = [50/256 205/256 50/256];
+    % %                                     end
+    % %                                     for pp = 1:size(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot},1)
+    % %                                         px = basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot}(pp);
+    % %                                         if strcmp(msobj{oo},'place')
+    % %                                             g = 1;
+    % %                                         elseif strcmp(msobj{oo},'view')
+    % %                                             g = findgrid(px,msobj{oo});
+    % %                                         end
+    % %                                         coords = find(basedata.dummygrid{g} == px);
+    % %                                     end
+    % %                                     sectemp(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot}) = 1;
+    % % %                                 end
+    %                                 numspk = sum(basedata.pseudosecdataperfield{ff}{3}(inds_pseudoplot,:));
+    %                                 ax.Title.String = {'Raw map';[num2str(numspk),' spk']};
+    %                                 ax.Title.FontSize = 16;
+    %                                 set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    %                                     'XColor','none','YColor','none','ZColor','none',...
+    %                                     'FontSize',14,'GridLineStyle','none','Color','none');
+    %                                 patchenvbounds('view');
+    %                                 % Plot smoothed map
+    %                                 ax = subplot(2,5,hh+5);
+    %                                 plotmap(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+    %                                 colormap(ax,cool);
+    %                                 % If firing rate or spike count = 0, set to black
+    %                                 settoblack(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+    %                                 ax.Title.String = {'Smoothed map';...
+    %                                     ['SI = ' num2str(basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1),2) '/' num2str(pseudoSIthr,2)]};
+    %                                 ax.Title.FontSize = 16;
+    %                                 if basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1) > pseudoSIthr
+    %                                     ax.Title.Color = 'r';
+    %                                 end
+    %                                 set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    %                                     'XColor','none','YColor','none','ZColor','none',...
+    %                                     'FontSize',14,'GridLineStyle','none','Color','none');
+    %                                 patchenvbounds('view');
+    %                             end
+    %                             % Plot actual sec map for comparison
+    %                             ax = subplot(2,5,5);
+    %                             temp = nan(size(basedata.secmapLsm,2),1);
+    %                             temp(basedata.secmaps_raw{ff}(:,1),1) = basedata.secmaps_raw{ff}(:,4);
+    %                             plotmap(temp,msobj{2-oo+1});
+    %                             colormap(ax,cool);
+    %                             % If firing rate or spike count = 0, set to black
+    %                             settoblack(temp,msobj{2-oo+1});
+    %                             numspk = sum(basedata.secmaps_raw{ff}(:,3));
+    %                             ax.Title.String = {'Actual raw map';[num2str(numspk),' spk']};
+    %                             ax.Title.FontSize = 16;
+    %                             set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    %                                 'XColor','none','YColor','none','ZColor','none',...
+    %                                 'FontSize',14,'GridLineStyle','none','Color','none');
+    %                             patchenvbounds('view');
+    %                             ax = subplot(2,5,10);
+    %                             plotmap(basedata.(['sec' mapname]){ff},msobj{2-oo+1});
+    %                             colormap(ax,cool);
+    %                             % If firing rate or spike count = 0, set to black
+    %                             settoblack(basedata.(['sec' mapname]){ff},msobj{2-oo+1});
+    %                             ax.Title.String = {'Actual smoothed map';...
+    %                                 ['SI = ' num2str(basedata.(['sec' critname])(ff),2) '/' num2str(pseudoSIthr,2)]};
+    %                             ax.Title.FontSize = 16;
+    %                             if basedata.(['sec' critname])(ff) > pseudoSIthr
+    %                                 ax.Title.Color = 'r';
+    %                             end
+    %                             set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+    %                                 'XColor','none','YColor','none','ZColor','none',...
+    %                                 'FontSize',14,'GridLineStyle','none','Color','none');
+    %                             patchenvbounds('view');
+    %                             % Save 
+    %                             figtitle = figname;
+    %                             if save
+    %                                 savefigure(h,figtitle,figdir2);
+    %                             end
+    %                             close(h);
+    %                             fig = fig + 1;
+
+    %                             % Patch secondary fields
+    %                             for mm = 1:size(secdata.seccomponents_perbasepx,1) % For each secondary field
+    %                                 % Plot secondary field in consolidated pixel map
+    %                                 sec = secdata.fieldcoord{mm}; % Get bins for sec field
+    %                                 % Patch secondary fields in the consolidated pixel map
+    %                                 for pp = 1:size(sec,1)
+    %                                     % PATCH
+    %                                     if strcmp(msobj{2-oo+1},'place')
+    %                                         plotgrid = 3;
+    %                                     else
+    %                                         plotgrid = secdata.gridnum(mm);
+    %                                     end
+    %                                     [x,y,z] = converttosurf(plotgrid,sec(pp,1),sec(pp,2));
+    %                                     patch(x,y,z,'r','EdgeColor',[169/256 169/256 169/256],'FaceColor','none','LineWidth',1); % Dark Grey
+    %                                     if strcmp(msobj{2-oo+1},'place')
+    %                                         patch(x,y,z,'r','EdgeColor','r','FaceColor','none','LineWidth',1); % Red
+    %                                     elseif strcmp(msobj{2-oo+1},'view')
+    %                                         patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green
+    %                                     end
+    %                                 end
+    %                             end 
+
+
+
+                        end
+
+
                     end
                     
+                end
+                
+                %% Plot pc/sv vs corr smoothed maps - uncorrected
+                % For checking filtering across objects - optional
+
+                for pair = 1:size(spatialvarpairs,2)
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+                    temp = objCorr.data.(msvar_short);
+
                     h = figure(fig);
                     hold on;
-                    figname = horzcat(objtype,': ',cell_id,'Raw linear maps');
+                    figname = horzcat(num2str(fig),'- vmcorr Smoothed maps ', msvar_short, '-', cell_id,'-',num2str(fig));
                     set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                    for oo = 1:size(msobj,2)
-                        % Plot vmcorr smoothed original maps
-                        if strcmp(msobj{oo},'place')
-                            basemap = temp(cell_indCorr).maps_sm_corrpset(1,:);
+                    for oo = 1:size(msvar,2)
+                        basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{oo});
+                        % Plot maps from pc/v objects
+                        ax = subplot(2,2,1+(oo-1)*2);
+                        if strcmp(msvar{oo},'place')
+                            basemap = objPlace.data.maps_sm(cell_indP,:);
                             maxC = max(basemap);
-                            title = ['vmcorr smoothed original place map: ' sel];
-                        elseif strcmp(msobj{oo},'view')
-                            basemap = temp(cell_indCorr).maps_sm_corrvset(1,:);
+                            title = ['vmpc smoothed place map: ' sel];
+                            fieldcolor = 'r';
+                        elseif strcmp(msvar{oo},'view')
+                            basemap = objView.data.maps_sm(cell_indV,:);
                             maxC = max(basemap(3:end));
-                            title = ['vmcorr smoothed original view map: ' sel];
-                        elseif strcmp(msobj{oo},'headdirection')
-                            basemap = temp(cell_indCorr).maps_sm_corrhset(1,:);
-                            maxC = max(basemap);
-                            title = ['vmcorr smoothed original hd map: ' sel];
+                            title = ['vmsv smoothed view map: ' sel];
+                            fieldcolor = [50/256 205/256 50/256];
+                        elseif strcmp(msvar{oo},'headdirection')
+                            basemap = objHeaddirection.data.maps_sm(cell_indH,:);
+                            maxC = nanmax(basemap);
+                            title = ['vmhd smoothed headdirection map: ' sel];
                         end
-                        ax = subplot(2,3,1+(oo-1)*3);
-                        plotmap(basemap,msobj{oo});
-                        % If selective, patch field
-                        if ss == 1 || (ss==2 && oo==1)
-                            % If firing rate or spike count = 0, set to black
-                            settoblack(basemap,msobj{oo});
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            switch msobj{oo}
-                                case 'place'
-                                    if objMain.data.placesel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap);
-                                        fieldcolor = 'r';
-                                        % Patch boundaries of base fields
-                                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                            % Patch base fields
-                                            for pp = 1:size(basedata.fieldcoord{ff},1)
-                                                % PATCH
-                                                if strcmp(msobj{oo},'place')
-                                                    plotgrid = 3;
-                                                else
-                                                    plotgrid = basedata.gridnum(ff);
-                                                end
-                                                [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                                patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
-                                            end
-                                        end
+                        plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        % Patch boundaries of base fields
+                        if ~strcmp(msvar{oo},'headdirection')
+                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                % Patch base fields
+                                for pp = 1:size(basedata.fieldcoord{ff},1)
+                                    % PATCH
+                                    if strcmp(msvar{oo},'place')
+                                        plotgrid = 3;
+                                    else
+                                        plotgrid = basedata.gridnum(ff);
                                     end
-                                case 'view'
-                                    if objMain.data.viewsel(cell_indMain)
-                                        % Scale color map
-                                        maxC = max(basemap(3:end)); % leave out cue and hint
-                                        fieldcolor = [50/256 205/256 50/256];
-                                        % Patch boundaries of base fields
-                                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                            % Patch base fields
-                                            for pp = 1:size(basedata.fieldcoord{ff},1)
-                                                % PATCH
-                                                if strcmp(msobj{oo},'place')
-                                                    plotgrid = 3;
-                                                else
-                                                    plotgrid = basedata.gridnum(ff);
-                                                end
-                                                [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                                patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
-                                            end
-                                        end
-                                    end
+                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                                end
+                            end
+                        else
+                            hold on;
+                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                section = nan(size(basemap));
+                                section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                plotmap(section,msvar{oo},msvar{2-oo+1},'b');
                             end
                         end
                         set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
                             'XColor','none','YColor','none','ZColor','none',...
                             'FontSize',14,'GridLineStyle','none','Color','none');
                         colormap(ax,cool);
-                        ax.Title.String = ['vmcorr original smoothed ' msobj{oo} ' map: ' sel];
-
-                        % Plot vmcorr smoothed original duration
-                        if strcmp(msobj{oo},'place')
-                            basemap = temp(cell_indCorr).dur_sm_corrp;
-                            basemap(basemap==0) = nan;
+                        ax.Title.String = title;
+                        % Plot maps from corr objects
+                        ax = subplot(2,2,2+(oo-1)*2);
+                        basemap = temp(cell_indCorr).(['maps_sm_corr' msvar{oo}(1) 'set'])(1,:);
+                        title = ['vmcorr uncorrected smoothed ' msvar{oo} ' map: ' sel];
+                        if ~strcmp(msvar{oo},'view')
                             maxC = max(basemap);
-                            title = ['vmcorr smoothed original place duration: ' sel];
-                        elseif strcmp(msobj{oo},'view')
-                            basemap = temp(cell_indCorr).dur_sm_corrv;
-                            basemap(basemap==0) = nan;
+                        else 
                             maxC = max(basemap(3:end));
-                            title = ['vmcorr smoothed original view duration: ' sel];
-                        elseif strcmp(msobj{oo},'headdirection')
-                            basemap = temp(cell_indCorr).dur_sm_corrh;
-                            basemap(basemap==0) = nan;
-                            maxC = max(basemap);
-                            title = ['vmcorr smoothed original hd duration: ' sel];
                         end
-                        ax = subplot(2,3,2+(oo-1)*3);
-                        plotmap(basemap,msobj{oo});
+                        plotmap(basemap,msvar{oo});
                         % If firing rate or spike count = 0, set to black
-                        settoblack(basemap,msobj{oo});
-                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                            'XColor','none','YColor','none','ZColor','none',...
-                            'FontSize',14,'GridLineStyle','none','Color','none');
-                        colormap(ax,cool);
-                        ax.Title.String = ['vmcorr original smoothed ' msobj{oo} ' duration: ' sel];
-
-                        % Plot vmcorr smoothed predicted maps
-                        if ss == 1
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_dist_p_adsm;
-                                title = {['vmcorr predicted smoothed place map: ' sel]; ...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p));...
-                                    horzcat('distratio_v = ',num2str(temp(cell_indCorr).distratio_v))};
-                            elseif strcmp(msobj{oo},'view')
-                                basemap = temp(cell_indCorr).maps_dist_v_adsm;
-                                title = {['vmcorr predicted smoothed view map: ' sel]; ...
-                                    horzcat('distratio_v = ',num2str(temp(cell_indCorr).distratio_v));...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p))};
+                        settoblack(basemap,msvar{oo});
+                        % Patch boundaries of base fields
+                        if ~strcmp(msvar{oo},'headdirection')
+                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                % Patch base fields
+                                for pp = 1:size(basedata.fieldcoord{ff},1)
+                                    % PATCH
+                                    if strcmp(msvar{oo},'place')
+                                        plotgrid = 3;
+                                    else
+                                        plotgrid = basedata.gridnum(ff);
+                                    end
+                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
+                                end
                             end
-                        elseif ss == 2
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_dist_p_adsm;
-                                title = {['vmcorr predicted smoothed place map: ' sel]; ...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p));...
-                                    horzcat('distratio_h = ',num2str(temp(cell_indCorr).distratio_h))};
-                            elseif strcmp(msobj{oo},'headdirection')
-                                basemap = temp(cell_indCorr).maps_dist_h_adsm;
-                                title = {['vmcorr predicted smoothed hd map: ' sel]; ...
-                                    horzcat('distratio_h = ',num2str(temp(cell_indCorr).distratio_h));...
-                                    horzcat('distratio_p = ',num2str(temp(cell_indCorr).distratio_p))};
+                        else
+                            hold on;
+                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                                section = nan(size(basemap));
+                                section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                plotmap(section,msvar{oo},msvar{2-oo+1},'b');
                             end
                         end
-                        ax = subplot(2,3,3+(oo-1)*3);
-                        plotmap(basemap,msobj{oo});
-                        % If firing rate or spike count = 0, set to black
-                        settoblack(basemap,msobj{oo});
                         set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
                             'XColor','none','YColor','none','ZColor','none',...
                             'FontSize',14,'GridLineStyle','none','Color','none');
@@ -1780,7 +2029,231 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                         ax.Title.String = title;
                     end
                     % Save
-                    figtitle = horzcat(cell_id,'-',num2str(fig),'Raw maps ',temptype);
+                    figtitle = horzcat(num2str(fig),'- vmcorr Smoothed maps ', msvar_short, '-', cell_id,'-',num2str(fig));
+                    if save
+                        savefigure(h,figtitle,figdir2);
+                    end
+                    close(h);
+                    fig = fig + 1;
+                end
+                
+ 
+                %% Plot predicted raw maps (vmcorr)
+                for pair = 1:size(spatialvarpairs,2)
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+                    temp = objCorr.data.(msvar_short);
+                    if strcmp(msvar_short,'hv')
+                        disp('stop')
+                    end
+                    
+                    h = figure(fig);
+                    hold on;
+                    figname = horzcat(num2str(fig),'- Predicted raw maps ',msvar_short,'-',num2str(fig));
+                    set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                    for oo = 1:size(msvar,2)
+                        % Plot vmcorr smoothed maps
+                        basemap = temp(cell_indCorr).(['maps_sm_corr' msvar{oo}(1) 'set'])(1,:);
+                        title = ['vmcorr smoothed ' msvar{oo}(1) ' map: ' sel];
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                            if strcmp(msvar{oo},'place')
+                                fieldcolor = 'r';
+                            else
+                                fieldcolor = 'b';
+                            end
+                        else
+                            maxC = max(basemap(3:end));
+                            fieldcolor = [50/256 205/256 50/256];
+                        end
+                        ax = subplot(2,3,1+(oo-1)*3);
+                        plotmap(basemap,msvar{oo});
+                        % If selective, patch field
+%                         if pair == 1 || (pair==2 && oo == 1)
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{oo});
+                        % Patch boundaries of base fields
+                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                            if ~strcmp(msvar{oo},'headdirection')
+                                % Patch base fields
+                                for pp = 1:size(basedata.fieldcoord{ff},1)
+                                    % PATCH
+                                    if strcmp(msvar{oo},'place')
+                                        plotgrid = 3;
+                                    else
+                                        plotgrid = basedata.gridnum(ff);
+                                    end
+                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
+                                end
+                            else
+                                hold on;
+                                section = nan(size(basemap));
+                                section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                plotmap(section,msvar{oo},msvar{oo},fieldcolor);
+                            end
+                        end
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = ['vmcorr original smoothed ' msvar{oo} ' map: ' sel];
+
+                        % Plot vmcorr raw pv maps
+                        ax = subplot(2,3,2+(oo-1)*3);
+                        basemap = temp(cell_indCorr).(['maps_raw_corr' msvar{oo}(1) 'set'])(1,:);
+                        title = ['vmcorr raw ' msvar{oo} ' map: ' sel];
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                            if strcmp(msvar{oo},'place')
+                                fieldcolor = 'r';
+                            else
+                                fieldcolor = 'b';
+                            end
+                        else
+                            maxC = max(basemap(3:end));
+                            fieldcolor = [50/256 205/256 50/256];
+                        end
+                        plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+%                         basedata = objMain.data.(msvar{oo})(cell_indMain);
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = ['vmcorr original raw ' msvar{oo} ' map: ' sel];
+
+                        % Plot predicted maps from corr objects
+                        ax = subplot(2,3,3+(oo-1)*3);
+                        basemap = temp(cell_indCorr).(['maps_dist_' msvar{oo}(1)]);
+                        title = {horzcat('vmcorr predicted raw ', msvar{oo}, ' map: ',sel); ...
+                                horzcat('distratio_', msvar{oo}(1), ' = ',num2str(temp(cell_indCorr).(['distratio_' msvar{oo}(1)])));...
+                                horzcat('distratio_', msvar{2-oo+1}(1), ' = ',num2str(temp(cell_indCorr).(['distratio_' msvar{2-oo+1}(1)])))};
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                        else
+                            maxC = max(basemap(3:end));
+                        end
+                        plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = title;
+                    end
+                    % Save
+                    figtitle = horzcat(num2str(fig),'- Predicted raw maps ',msvar_short,'-',num2str(fig));
+                    if save
+                        mkdir(figdir2);
+                        savefigure(h,figtitle,figdir2);
+                    end
+                    close(h);
+                    fig = fig + 1;
+                end
+                
+                %% Plot predicted smoothed maps (vmcorr)
+                for pair = 1:size(spatialvarpairs,2)
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+                    temp = objCorr.data.(msvar_short);
+                    
+                    h = figure(fig);
+                    hold on;
+                    figname = horzcat(num2str(fig),'- Predicted sm maps ',msvar_short,'-',num2str(fig));
+                    set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
+                    
+                    for oo = 1:size(msvar,2)
+                        % Plot vmcorr smoothed original maps
+                        ax = subplot(2,3,1+(oo-1)*3);
+                        basemap = temp(cell_indCorr).(['maps_sm_corr' msvar{oo}(1) 'set'])(1,:);
+                        title = ['vmcorr smoothed original ' msvar{oo}(1) ' map: ' sel];
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                            if strcmp(msvar{oo},'place')
+                                fieldcolor = 'r';
+                            else
+                                fieldcolor = 'b';
+                            end
+                        else
+                            maxC = max(basemap(3:end));
+                            fieldcolor = [50/256 205/256 50/256];
+                        end
+                        plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{oo});
+                        % Patch boundaries of base fields
+                        for ff = 1:size(basedata.seccomponents_perbasepx,1)
+                            if ~strcmp(msvar{oo},'headdirection')
+                                % Patch base fields
+                                for pp = 1:size(basedata.fieldcoord{ff},1)
+                                    % PATCH
+                                    if strcmp(msvar{oo},'place')
+                                        plotgrid = 3;
+                                    else
+                                        plotgrid = basedata.gridnum(ff);
+                                    end
+                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
+                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.5,'EdgeAlpha',1);
+                                end
+                            else
+                                hold on;
+                                section = nan(size(basemap));
+                                section(basedata.fieldlinbin{ff}) = 1; % *nanmax(tempsecmap);
+                                plotmap(section,msvar{oo},msvar{2-oo+1},fieldcolor);
+                            end
+                        end
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = ['vmcorr original smoothed ' msvar{oo} ' map: ' sel];
+
+                        % Plot vmcorr smoothed original duration
+                        ax = subplot(2,3,2+(oo-1)*3);
+                        basemap = temp(cell_indCorr).(['dur_sm_corr' msvar{oo}(1)]);
+                        basemap(basemap==0) = nan;
+                        title = ['vmcorr smoothed original ' msvar{oo}(1) ' duration: ' sel];
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                        else
+                            maxC = max(basemap(3:end));
+                        end
+                        plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = ['vmcorr original smoothed ' msvar{oo} ' duration: ' sel];
+
+                        % Plot vmcorr smoothed predicted maps
+                        ax = subplot(2,3,3+(oo-1)*3);
+                        basemap = temp(cell_indCorr).(['maps_dist_' msvar{oo}(1) '_adsm']);
+                        title = {['vmcorr predicted smoothed ' msvar{oo}(1) ' map: ' sel]; ...
+                                horzcat('distratio_', msvar{oo}(1), '= ',num2str(temp(cell_indCorr).(['distratio_' msvar{oo}(1)])));...
+                                horzcat('distratio_', msvar{2-oo+1}(1), ' = ',num2str(temp(cell_indCorr).(['distratio_' msvar{2-oo+1}(1)])))};
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                        else
+                            maxC = max(basemap(3:end));
+                        end
+                            plotmap(basemap,msvar{oo});
+                        % If firing rate or spike count = 0, set to black
+                        settoblack(basemap,msvar{oo});
+                        set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                            'XColor','none','YColor','none','ZColor','none',...
+                            'FontSize',14,'GridLineStyle','none','Color','none');
+                        colormap(ax,cool);
+                        ax.Title.String = title;
+                    end
+                    % Save
+                    figtitle = horzcat(num2str(fig),'- Predicted sm maps ',msvar_short,'-',num2str(fig));
                     if save
                         savefigure(h,figtitle,figdir2);
                     end
@@ -1791,64 +2264,35 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                 
                 % Plot linearised differences between actual and predicted
                 % maps
-                for ss = 1:size(spatialvarpairs,2)
-                    msobj = spatialvarpairs{ss};
-                    if ss == 1
-                        temp = objCorr.data.pv;
-                        temptype = 'pv';
-                    elseif ss == 2
-                        temp = objCorr.data.ph;
-                        temptype = 'ph';
-                    end
+                for pair = 1:size(spatialvarpairs,2)
+                    msvar = spatialvarpairs{pair};
+                    msvar_short = [msvar{1}(1) msvar{2}(1)];
+                    temp = objCorr.data.(msvar_short);
                     
                     h = figure(fig);
                     hold on;
-                    figname = horzcat(objtype,': ',cell_id,'Raw linear maps');
+                    figname = horzcat(num2str(fig),'- Diff map ', msvar_short, ' - pred (red) vs raw (black)');
                     set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                    for oo = 1:size(msobj,2)
+                    for oo = 1:size(msvar,2)
                         ax = subplot(1,2,oo);
                         % Plot vmcorr predicted raw map
-                        if strcmp(msobj{oo},'place')
-                            basemap = temp(cell_indCorr).maps_dist_p;
+                        basemap = temp(cell_indCorr).(['maps_dist_' msvar{oo}(1)]);
+                        if ~strcmp(msvar{oo},'view')
                             maxC = max(basemap);
-                        elseif strcmp(msobj{oo},'view')
-                            basemap = temp(cell_indCorr).maps_dist_v;
+                        else
                             maxC = max(basemap(3:end));
-                        elseif strcmp(msobj{oo},'headdirection')
-                            basemap = temp(cell_indCorr).maps_dist_h;
-                            maxC = max(basemap);
                         end
                         plot(1:size(basemap,2),log(basemap),'ro');
                         hold on;
                         % Plot vmcorr actual raw map
-                        if ss == 1
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_raw_corrpset(1,:);
-                                maxC = max(basemap);
-                                title = {['vmcorr raw vs predicted place map: ' sel]; ...
-                                    ['dist ratio_p = ' num2str(temp(cell_indCorr).distratio_p)];...
-                                    ['dist ratio_v = ' num2str(temp(cell_indCorr).distratio_v)]};
-                            elseif strcmp(msobj{oo},'view')
-                                basemap = temp(cell_indCorr).maps_raw_corrvset(1,:);
-                                maxC = max(basemap(3:end));
-                                title = {['vmcorr raw vs predicted view map: ' sel]; ...
-                                    ['dist ratio_v = ' num2str(temp(cell_indCorr).distratio_v)];...
-                                    ['dist ratio_p = ' num2str(temp(cell_indCorr).distratio_p)]};
-                            end
-                        elseif ss == 2
-                            if strcmp(msobj{oo},'place')
-                                basemap = temp(cell_indCorr).maps_raw_corrpset(1,:);
-                                maxC = max(basemap);
-                                title = {['vmcorr raw vs predicted place map: ' sel]; ...
-                                    ['dist ratio_p = ' num2str(temp(cell_indCorr).distratio_p)];...
-                                    ['dist ratio_h = ' num2str(temp(cell_indCorr).distratio_h)]};
-                            elseif strcmp(msobj{oo},'headdirection')
-                                basemap = temp(cell_indCorr).maps_raw_corrhset(1,:);
-                                maxC = max(basemap);
-                                title = {['vmcorr raw vs predicted view map: ' sel]; ...
-                                    ['dist ratio_h = ' num2str(temp(cell_indCorr).distratio_h)];...
-                                    ['dist ratio_p = ' num2str(temp(cell_indCorr).distratio_p)]};
-                            end
+                        basemap = temp(cell_indCorr).(['maps_raw_corr' msvar{oo}(1) 'set'])(1,:);
+                        title = {['vmcorr raw vs predicted ' msvar{oo}(1) ' map: ' sel]; ...
+                                ['dist ratio_' msvar{oo}(1) ' = ' num2str(temp(cell_indCorr).(['distratio_' msvar{oo}(1)]))];...
+                                ['dist ratio_' msvar{2-oo+1}(1) ' = ' num2str(temp(cell_indCorr).(['distratio_' msvar{2-oo+1}(1)]))]};
+                        if ~strcmp(msvar{oo},'view')
+                            maxC = max(basemap);
+                        else
+                            maxC = max(basemap(3:end));
                         end
                         plot(1:size(basemap,2),log(basemap),'ko');
                         hold off;
@@ -1857,7 +2301,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                         ax.Title.String = title;
                     end
                     % Save
-                    figtitle = horzcat(cell_id,'-',num2str(fig),'Raw maps ',temptype);
+                    figtitle = figname;
                     if save
                         savefigure(h,figtitle,figdir2);
                     end
@@ -1865,74 +2309,95 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                     fig = fig + 1;
                 end
                 
-%                 % Linear or non linear mixed selectivity?
+                % Linear or non linear mixed selectivity?
 %                 if objMain.data.placesel(cell_indMain) && objMain.data.viewsel(cell_indMain)
+%                 for pair = 1:size(spatialvarpairs,2)
 %                     
-%                     inrate_placeset = [];
-%                     inrate_viewset = [];
-%                     outrate_placeset = [];
-%                     outrate_viewset = [];
+%                     msvar = spatialvarpairs{pair};
+%                     msvar_short = [msvar{1}(1) msvar{2}(1)];
 %                     
-%                     for oo = 1:size(msobj,2)
-%                         basedata = objMain.data.(msobj{oo})(cell_indMain);
-%                         secdata = objMain.data.(msobj{2-oo+1})(cell_indMain);
+%                     inrate_baseset = [];
+%                     inrate_secset = [];
+%                     outrate_baseset = [];
+%                     outrate_secset = [];
+%                     
+%                     for oo = 1:size(msvar,2)
+%                         basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{oo});
+%                         secdata = objMain.data.(msvar_short)(cell_indMain).(msvar{2-oo+1});
 % 
 %                         for ff = 1:size(basedata.seccomponents_perbasepx,1)
-%                             inrate_place = [];
-%                             outrate_place = [];
-%                             inrate_view = [];
-%                             outrate_view = [];
+%                             inrate_base = [];
+%                             outrate_base = [];
+%                             inrate_sec = [];
+%                             outrate_sec = [];
 %                             for xx = 1:objMain.data.Args.NumShuffles % For each shuffle
-%                                 if strcmp(msobj{oo},'place')
-%                                     basebin_size = size(basedata.fieldlinbin{ff},1);
-%                                     inds = randsample(1:basebin_size,ceil(basebin_size/2));
-%                                     indbins_base = basedata.fieldlinbin{ff}(inds);
-%                                     inrate_place(xx) = nanmean(nanmean(basedata.basemapLsm(indbins_base)));
+%                                 
+%                                 basebin_size = length(basedata.fieldlinbin{ff});
+%                                 inds = randsample(1:basebin_size,ceil(basebin_size/2));
+%                                 indbins_base = basedata.fieldlinbin{ff}(inds);
+%                                 inrate_base(xx) = nanmean(nanmean(basedata.basemapLsm(indbins_base)));
 % 
-%                                     pseudobasebins = basedata.pseudosecdataperfield{ff}{1}{xx};
-%                                     nonoverlap = setdiff(pseudobasebins,basedata.fieldlinbin{ff});
-%                                     pseudobasebin_size = size(nonoverlap,1);
-%                                     inds = randsample(1:pseudobasebin_size,ceil(basebin_size/2));
-%                                     indbins_pseudobase = nonoverlap(inds);
-%                                     outrate_place(xx) = nanmean(basedata.basemapLsm(indbins_pseudobase));
-%                                 elseif strcmp(msobj{oo},'view')
-%                                     basebin_size = ceil(size(basedata.fieldlinbin{ff},1));
-%                                     inds = randsample(1:basebin_size,ceil(basebin_size/2));
-%                                     indbins_base = basedata.fieldlinbin{ff}(inds);
-%                                     inrate_view(xx) = nanmean(nanmean(basedata.basemapLsm(indbins_base)));
-% 
-%                                     pseudobasebins = basedata.pseudosecdataperfield{ff}{1}{xx};
-%                                     nonoverlap = setdiff(pseudobasebins,basedata.fieldlinbin{ff});
-%                                     pseudobasebin_size = size(nonoverlap,1);
-%                                     inds = randsample(1:pseudobasebin_size,ceil(basebin_size/2));
-%                                     indbins_pseudobase = nonoverlap(inds);
-%                                     outrate_view(xx) = nanmean(basedata.basemapLsm(indbins_pseudobase));
-%                                 end
+%                                 pseudobasebins = basedata.pseudosecdataperfield{ff}{1}{xx};
+%                                 nonoverlap = setdiff(pseudobasebins,basedata.fieldlinbin{ff});
+%                                 pseudobasebin_size = size(nonoverlap,1);
+%                                 inds = randsample(1:pseudobasebin_size,ceil(basebin_size/2));
+%                                 indbins_pseudobase = nonoverlap(inds);
+%                                 outrate_base(xx) = nanmean(basedata.basemapLsm(indbins_pseudobase));
+% %                                 if strcmp(msvar{oo},'place')
+% %                                     basebin_size = size(basedata.fieldlinbin{ff},1);
+% %                                     inds = randsample(1:basebin_size,ceil(basebin_size/2));
+% %                                     indbins_base = basedata.fieldlinbin{ff}(inds);
+% %                                     inrate_base(xx) = nanmean(nanmean(basedata.basemapLsm(indbins_base)));
+% % 
+% %                                     pseudobasebins = basedata.pseudosecdataperfield{ff}{1}{xx};
+% %                                     nonoverlap = setdiff(pseudobasebins,basedata.fieldlinbin{ff});
+% %                                     pseudobasebin_size = size(nonoverlap,1);
+% %                                     inds = randsample(1:pseudobasebin_size,ceil(basebin_size/2));
+% %                                     indbins_pseudobase = nonoverlap(inds);
+% %                                     outrate_base(xx) = nanmean(basedata.basemapLsm(indbins_pseudobase));
+% %                                 elseif strcmp(msvar{oo},'view')
+% %                                     basebin_size = ceil(size(basedata.fieldlinbin{ff},1));
+% %                                     inds = randsample(1:basebin_size,ceil(basebin_size/2));
+% %                                     indbins_base = basedata.fieldlinbin{ff}(inds);
+% %                                     inrate_sec(xx) = nanmean(nanmean(basedata.basemapLsm(indbins_base)));
+% % 
+% %                                     pseudobasebins = basedata.pseudosecdataperfield{ff}{1}{xx};
+% %                                     nonoverlap = setdiff(pseudobasebins,basedata.fieldlinbin{ff});
+% %                                     pseudobasebin_size = size(nonoverlap,1);
+% %                                     inds = randsample(1:pseudobasebin_size,ceil(basebin_size/2));
+% %                                     indbins_pseudobase = nonoverlap(inds);
+% %                                     outrate_sec(xx) = nanmean(basedata.basemapLsm(indbins_pseudobase));
+% %                                 end
 % 
 %                             end
+%                             
+%                             inrate_baseset = [inrate_baseset;inrate_base'];
+%                             outrate_baseset = [outrate_baseset;outrate_base'];
+%                             inrate_secset = [inrate_secset;inrate_sec'];
+%                             outrate_secset = [outrate_secset;outrate_sec'];
 % 
-%                             if strcmp(msobj{oo},'place')
-%                                 inrate_placeset = [inrate_placeset;inrate_place'];
-%                                 outrate_placeset = [outrate_placeset;outrate_place'];
-%                             else
-%                                 inrate_viewset = [inrate_viewset;inrate_view'];
-%                                 outrate_viewset = [outrate_viewset;outrate_view'];
-%                             end 
+% %                             if strcmp(msvar{oo},'place')
+% %                                 inrate_baseset = [inrate_baseset;inrate_base'];
+% %                                 outrate_baseset = [outrate_baseset;outrate_base'];
+% %                             else
+% %                                 inrate_secset = [inrate_secset;inrate_sec'];
+% %                                 outrate_secset = [outrate_secset;outrate_sec'];
+% %                             end 
 %                         end
 %                     end
 %                     
-%                     minobs = min([size(inrate_placeset,1),size(inrate_viewset,1),size(outrate_placeset,1),size(outrate_viewset,1)]);
-%                     indsplace = randsample(1:size(inrate_placeset,1),minobs);
-%                     indview = randsample(1:size(inrate_viewset,1),minobs);
-%                     inplace = inrate_placeset(indsplace);
-%                     inview = inrate_viewset(indview);
-%                     outplace = outrate_placeset(indsplace);
-%                     outview = outrate_viewset(indview);
+%                     minobs = min([size(inrate_baseset,1),size(inrate_secset,1),size(outrate_baseset,1),size(outrate_secset,1)]);
+%                     indsplace = randsample(1:size(inrate_baseset,1),minobs);
+%                     indview = randsample(1:size(inrate_secset,1),minobs);
+%                     inplace = inrate_baseset(indsplace);
+%                     inview = inrate_secset(indview);
+%                     outplace = outrate_baseset(indsplace);
+%                     outview = outrate_secset(indview);
 % 
 %                     [pval,tbl,stats] = anova2([inplace outplace;inview outview],minobs);
 % %                     [pval,tbl,stats] = anova2([inplace inview; outplace outview],minobs);                    
 %                     figanova = gcf;
-%                     figtitle = ['ANOVA cell'];
+%                     figtitle = [numstr(fig) '- ANOVA ' msvar_short];
 %                     if save
 %                         savefigure(figanova,figtitle,figdir2);
 %                     end
@@ -1944,7 +2409,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
 %                         ['Inter p = ' num2str(pval(3)),2]; ...
 %                         ['Inter F = ' num2str(tbl{4,5},2)]};
 %                     % Save 
-%                     figtitle = 'ANOVA stats for cell';
+%                     figtitle = [num2str(fig) '- Cell Stats' msvar_short];
 %                     if save
 %                         savefigure(h,figtitle,figdir2);
 %                     end
@@ -1952,536 +2417,20 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
 %                     fig = fig + 1;
 %                 end
                 
-                if objMain.data.placesel(cell_indMain) || objMain.data.viewsel(cell_indMain)
-
-                    % Plot pc/v vs corr smoothed maps - uncorrected
-                    for ss = 1:size(spatialvarpairs,2)
-                        msobj = spatialvarpairs{ss};
-                        if ss == 1
-                            temp = objCorr.data.pv;
-                            temptype = 'pv';
-                        elseif ss == 2
-                            temp = objCorr.data.ph;
-                            temptype = 'ph';
-                        end
-                        
-                        h = figure(fig);
-                        hold on;
-                        figname = horzcat(objtype,': ',cell_id,'Smoothed maps');
-                        set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                        for oo = 1:size(msobj,2)
-                            if ss == 2 && oo == 2
-                                continue
-                            end
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            % Plot maps from pc/v objects
-                            ax = subplot(2,2,1+(oo-1)*2);
-                            if strcmp(msobj{oo},'place')
-                                basemap = objPlace.data.maps_sm(cell_indP,:);
-                                maxC = max(basemap);
-                                title = ['vmpc smoothed place map: ' sel];
-                                fieldcolor = 'r';
-                            elseif strcmp(msobj{oo},'view')
-                                basemap = objView.data.maps_sm(cell_indV,:);
-                                maxC = max(basemap(3:end));
-                                title = ['vmsv smoothed view map: ' sel];
-                                fieldcolor = [50/256 205/256 50/256];
-                            end
-                            plotmap(basemap,msobj{oo});
-                            % If firing rate or spike count = 0, set to black
-                            settoblack(basemap,msobj{oo});
-                            % Patch boundaries of base fields
-                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                % Patch base fields
-                                for pp = 1:size(basedata.fieldcoord{ff},1)
-                                    % PATCH
-                                    if strcmp(msobj{oo},'place')
-                                        plotgrid = 3;
-                                    else
-                                        plotgrid = basedata.gridnum(ff);
-                                    end
-                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
-                                end
-                            end
-                            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                'XColor','none','YColor','none','ZColor','none',...
-                                'FontSize',14,'GridLineStyle','none','Color','none');
-                            colormap(ax,cool);
-                            ax.Title.String = title;
-                            % Plot maps from corr objects
-                            ax = subplot(2,2,2+(oo-1)*2);
-                            if ss == 1
-                                if strcmp(msobj{oo},'place')
-                                    basemap = temp(cell_indCorr).maps_sm_corrpset(1,:);
-                                    maxC = max(basemap);
-                                    title = ['vmcorr uncorrected smoothed place map: ' sel];
-                                elseif strcmp(msobj{oo},'view')
-                                    basemap = temp(cell_indCorr).maps_sm_corrvset(1,:);
-                                    maxC = max(basemap(3:end));
-                                    title = ['vmcorr uncorrected smoothed view map: ' sel];
-                                end
-                            elseif ss == 2
-                                if strcmp(msobj{oo},'place')
-                                    basemap = temp(cell_indCorr).maps_sm_corrpset(1,:);
-                                    maxC = max(basemap);
-                                    title = ['vmcorr uncorrected smoothed place map: ' sel];
-                                elseif strcmp(msobj{oo},'headdirection')
-                                    basemap = temp(cell_indCorr).maps_sm_corrhset(1,:);
-                                    maxC = max(basemap(3:end));
-                                    title = ['vmcorr uncorrected smoothed hd map: ' sel];
-                                end
-                            end
-                            plotmap(basemap,msobj{oo});
-                            % If firing rate or spike count = 0, set to black
-                            settoblack(basemap,msobj{oo});
-                            % Patch boundaries of base fields
-                            for ff = 1:size(basedata.seccomponents_perbasepx,1)
-                                % Patch base fields
-                                for pp = 1:size(basedata.fieldcoord{ff},1)
-                                    % PATCH
-                                    if strcmp(msobj{oo},'place')
-                                        plotgrid = 3;
-                                    else
-                                        plotgrid = basedata.gridnum(ff);
-                                    end
-                                    [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                    patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1,'EdgeAlpha',1);
-                                end
-                            end
-                            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                'XColor','none','YColor','none','ZColor','none',...
-                                'FontSize',14,'GridLineStyle','none','Color','none');
-                            colormap(ax,cool);
-                            ax.Title.String = title;
-                        end
-                        % Save
-                        figtitle = horzcat(cell_id,'-',num2str(fig),'Smoothed maps');
-                        if save
-                            savefigure(h,figtitle,figdir2);
-                        end
-                        close(h);
-                        fig = fig + 1;
-
-                        % Plot base maps for both objects and their fields
-                        h = figure(fig);
-                        hold on;
-                        figname = horzcat(objtype,': ','Base maps: ',sel);
-                        set(h,'Name',figname,'Units','Normalized','Position',[0 1 0.75 0.75]);
-                        for oo = 1:size(msobj,2)
-                            if ss == 2 && oo == 2
-                                continue;
-                            end
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            ax = subplot(1,2,oo);
-                            plotmap(basedata.basemapLsm,msobj{oo});
-                            % If firing rate or spike count = 0, set to black
-                            settoblack(basedata.basemapLsm,msobj{oo});
-                            colorbar off;
-                            % Scale color map
-                            switch msobj{oo}
-                                case 'place'
-                                    maxC = max(basedata.basemapLsm);
-                                    fieldcolor = 'r';
-                                case 'view'
-                                    maxC = max(basedata.basemapLsm(3:end));
-                                    fieldcolor = [50/256 205/256 50/256];
-                            end
-                            rate = text(ax,1,1,1,[num2str(maxC,2) 'Hz'],'Units','Normalized','FontSize',30,'HorizontalAlignment','right');
-                            si = text(ax,0,1,1,num2str(basedata.SI,2),'Units','Normalized','FontSize',30,'HorizontalAlignment','left');
-                            if basedata.SI > basedata.SIthr
-                                si.Color = 'r';
-                            end
-                            set(ax,'CLim',[0 maxC],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                'XColor','none','YColor','none','ZColor','none',...
-                                'FontSize',14,'GridLineStyle','none','Color','none');
-                            % Draw env boundaries
-                            patchenvbounds(msobj{oo});
-                        end
-                        % Save
-                        figtitle = horzcat(cell_id,'-',num2str(fig),'vmms Base maps');
-                        if save
-                            savefigure(h,figtitle,figdir2);
-                        end
-                        close(h);
-                        fig = fig + 1;
-
-                        % Plot pixel maps for each base field
-
-                        for oo = 1:size(msobj,2)
-                            if ss == 2 
-                                continue;
-                            end
-                            basedata = objMain.data.(msobj{oo})(cell_indMain);
-                            secdata = objMain.data.(msobj{2-oo+1})(cell_indMain);
-
-                            for ff = 1:size(basedata.seccomponents_perbasepx,1) % In mixselpv we've only extracted data for max of 3 fields per map
-                                    % Plot raw base maps with secondary pixel maps
-                                    h = figure(fig);
-                                    figname = '';
-                                    set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
-                                    hold on;
-                                    ax = subplot(1,3,1);
-                                    % Plot secondary full pixel set
-                                    tempsecmap = nan(size(basedata.secmapLsm));
-                                    tempsecmap(basedata.secmaps_raw{ff,1}(:,1)) = basedata.secmaps_raw{ff,1}(:,4);
-                                    plotmap(tempsecmap,msobj{2-oo+1});
-        %                             colormap(ax,cool);
-                                    set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                        'XColor','none','YColor','none','ZColor','none',...
-                                        'FontSize',14,'GridLineStyle','none','Color','none');
-                                    patchenvbounds('view');
-                                    % If firing rate or spike count = 0, set to black
-                                    settoblack(tempsecmap,msobj{2-oo+1});
-                                    % Patch basemap field
-                                    for pp = 1:size(basedata.fieldcoord{ff},1)
-                                        % PATCH
-                                        if strcmp(msobj{oo},'place')
-                                            plotgrid = 3;
-                                        else
-                                            plotgrid = basedata.gridnum(ff);
-                                        end
-                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                        if strcmp(msobj{oo},'place')
-                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
-                                        elseif strcmp(msobj{oo},'view')
-                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
-                                        end
-                                    end
-                                    % Patch secondary fields
-                                    for mm = 1:size(secdata.seccomponents_perbasepx,1) % For each secondary field
-                                        % Plot secondary field in consolidated pixel map
-                                        sec = secdata.fieldcoord{mm}; % Get bins for sec field
-                                        % Patch secondary fields in the consolidated pixel map
-                                        for pp = 1:size(sec,1)
-                                            % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
-                                                plotgrid = 3;
-                                            else
-                                                plotgrid = secdata.gridnum(mm);
-                                            end
-                                            [x,y,z] = converttosurf(plotgrid,sec(pp,1),sec(pp,2));
-                                            patch(x,y,z,'r','EdgeColor',[169/256 169/256 169/256],'FaceColor','none','LineWidth',1); % Dark Grey
-                                            if strcmp(msobj{2-oo+1},'place')
-                                                patch(x,y,z,'r','EdgeColor','r','FaceColor','none','LineWidth',2); % Red
-                                            elseif strcmp(msobj{2-oo+1},'view')
-                                                patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green
-                                            end
-                                        end
-                                    end
-                                    ax.Title.String = cell(size(basedata.sec_infieldrates{ff},1),1);
-                                    linked = [];
-                                    for ss = 1:size(basedata.sec_infieldrates{ff},1)
-                                        % Check if infield firing in sec field is higher than outfield firing
-                                        if basedata.sec_infieldrates{ff}(ss,1) > prctile(basedata.sec_outfieldrates{ff}{ss,1},95)
-                                            linked = horzcat(linked,',',num2str(ss));
-                                            ax.Title.String{ss,1} = horzcat('LINKED:',msobj{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.sec_infieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{ss,1},95),2),'Hz');
-                                        else
-                                            ax.Title.String{ss,1} = horzcat(msobj{2-oo+1},' Field ',num2str(ss),' Infield: ', num2str(basedata.sec_infieldrates{ff}(ss,1),2),'Hz; Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{ss,1},95),2),'Hz');
-                                        end
-                                    end
-                                    ax.Title.String{end+1,1} = ['Rawpx = ' num2str(sum(~isnan(tempsecmap)))];
-                                    if isempty(linked)
-                                        figname = horzcat(msobj{oo},' field ',num2str(ff),' not linked');
-                                    else
-                                        figname = horzcat(msobj{oo},' field ',num2str(ff),' sig linked to ',msobj{2-oo+1},' field ', linked);
-                                    end
-
-                                    % Plot smoothed sec pixel map
-                                    ax = subplot(1,3,2);
-%                                     temp1 = basedata.(['sec' mapname]){ff};
-                                    temp1 = basedata.(['secmaps_adsm' ]){ff};
-                                    switch msobj{2-oo+1}
-                                        case 'place'
-                                            maxC = nanmax(temp1);
-                                        case 'view'
-                                            maxC = nanmax(temp1(3:end));
-                                    end
-                                    plotmap(temp1,msobj{2-oo+1});
-                                    % If firing rate or spike count = 0, set to black
-                                    settoblack(temp1,msobj{2-oo+1});
-                                    % Label
-                                    pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
-                                    ax.Title.String = {horzcat('SI: ',num2str(basedata.(['secSIC_adsm' ])(ff),2),'/',num2str(pseudoSIthr,2)); ...
-                                        horzcat('Smoothpx = ',num2str(sum(~isnan(temp1)))); ...
-                                        horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_adsm{ff}),2)),2))};
-                                    ax.Title.FontSize = 16;
-                                    if basedata.(['secSIC_adsm' ])(ff)>pseudoSIthr && maxC >= 0.7 
-                                        ax.Title.Color = 'r';
-                                    end
-                                    set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                        'XColor','none','YColor','none','ZColor','none',...
-                                        'FontSize',14,'GridLineStyle','none','Color','none');
-                                    patchenvbounds('view');
-                                    % Patch basemap field
-                                    for pp = 1:size(basedata.fieldcoord{ff},1)
-                                        % PATCH
-                                        if strcmp(msobj{oo},'place')
-                                            plotgrid = 3;
-                                        else
-                                            plotgrid = basedata.gridnum(ff);
-                                        end
-                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                        if strcmp(msobj{oo},'place')
-                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
-                                        elseif strcmp(msobj{oo},'view')
-                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
-                                        end
-                                    end
-                                    % Patch fields found from smoothed conditioned maps
-                                    tempdata = basedata.cond_fieldcoord{ff};
-                                    if ~isempty(tempdata) % If there are secondary fields in conditioned maps
-                                        overlap = {};
-                                        for gg = 1:size(tempdata,1) % For each of the secondary fields
-                                            if sum(basedata.cond_fieldoverlapind{ff}{gg})>0
-                                                fieldcolor = 'y';
-                                                xxx = find(basedata.cond_fieldoverlapind{ff}{gg});
-                                                for xx = 1:size(xxx,1)
-                                                    % Does the sec field overlap with any of the base fields from the other var?
-                                                    overlap{end+1,1} = ['Base field ' num2str(ff) ' X Sec field '...
-                                                        num2str(xxx(xx))];
-                                                end
-                                            else
-                                                fieldcolor = 'b';
-                                            end
-                                        end
-                                        ax.Title.String{end+1,1} = [num2str(size(tempdata,1)) ' cond fields - mean coverage ' ...
-                                            num2str(mean(basedata.cond_fieldsizepercent{ff}),2) '% per field'];
-                                        ax.Title.String{end+1,1} = cell2mat(overlap);
-
-    %                                     % Linear or nonlinear mixed selectivity?
-    %                                     outfieldrate_basefield = basedata.tertrate_orig(ff,:);
-    %                                     outfieldrate_pseudofield = basedata.tertrate_pseudo(ff,:);
-    %                                     [hval,pval,ci,stats] = ttest(outfieldrate_basefield,outfieldrate_pseudofield,'Tail','right');
-    %                                     if hval~=0
-    %                                        ax.Title.String{end+1,1} = ['Linear pv: Outfield firing greater from ' ...
-    %                                            msobj{oo} ' field than random field'];
-    %                                     else
-    %                                        ax.Title.String{end+1,1} = ['Nonlinear pv'];
-    %                                     end
-    %                                     ax.Title.String{end+1,1} = ['h=' num2str(hval) 't=' num2str(stats.tstat,2) 'p=' num2str(pval,2)];
-
-                                    else 
-                                        ax.Title.String{end+1,1} = ['No cond fields'];
-                                    end
-
-                                    % Plot predicted sec pixel map
-                                    ax = subplot(1,3,3);
-                                    temp2 = basedata.secmaps_dist{ff};
-                                    switch msobj{2-oo+1}
-                                        case 'place'
-                                            maxC = nanmax(temp2);
-                                        case 'view'
-                                            maxC = nanmax(temp2(3:end));
-                                    end
-                                    plotmap(temp2,msobj{2-oo+1});
-                                    % If firing rate or spike count = 0, set to black
-                                    settoblack(temp2,msobj{2-oo+1});
-                                    % Label
-                                    pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
-                                    ax.Title.String = {['Predicted ' msobj{2-oo+1} ' map']; ...
-                                        ['dist ratio_' basedata.varname_short ' = ' num2str(basedata.base_distratio(ff))];...
-                                        ['dist ratio_' secdata.varname_short ' = ' num2str(basedata.sec_distratio(ff))]};
-                                    ax.Title.FontSize = 16;
-                                    if basedata.(['secSIC_adsm' ])(ff)>pseudoSIthr && maxC >= 0.7 
-                                        ax.Title.Color = 'r';
-                                    end
-                                    set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-                                        'XColor','none','YColor','none','ZColor','none',...
-                                        'FontSize',14,'GridLineStyle','none','Color','none');
-                                    patchenvbounds('view');
-                                    % Patch basemap field
-                                    for pp = 1:size(basedata.fieldcoord{ff},1)
-                                        % PATCH
-                                        if strcmp(msobj{oo},'place')
-                                            plotgrid = 3;
-                                        else
-                                            plotgrid = basedata.gridnum(ff);
-                                        end
-                                        [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
-                                        if strcmp(msobj{oo},'place')
-                                            patch(x,y,z,[1 1 1 1],'EdgeColor','r','FaceColor','none','LineWidth',1);
-                                        elseif strcmp(msobj{oo},'view')
-                                            patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green. Olive drab:[107/256 142/256 35/256], Medium sea green: [60/256 179/256 113/256]
-                                        end
-                                    end
-
-    %                                 if objMain.data.mixsel(cell_indMain)
-    %                                     % Linear or nonlinear mixed anova per field
-    %                                     if strcmp(msobj{oo},'place')
-    %                                         inplace_field = inrate_placeset((ff-1)*500+1:ff*500);
-    %                                         outplace_field = outrate_placeset((ff-1)*500+1:ff*500);
-    %                                         ind_field = randsample(1:size(inrate_viewset,1),500);
-    %                                         inview_field = inrate_viewset(ind_field);
-    %                                         outview_field = outrate_viewset(ind_field);
-    % 
-    %                                     else
-    %                                         inview_field = inrate_viewset((ff-1)*500+1:ff*500);
-    %                                         outview_field = outrate_viewset((ff-1)*500+1:ff*500);
-    %                                         ind_field = randsample(1:size(inrate_placeset,1),500);
-    %                                         inplace_field = inrate_placeset(ind_field);
-    %                                         outplace_field = outrate_placeset(ind_field);
-    %                                     end
-    %                                     [pval,tbl,stats] = anova2([inplace_field outplace_field;inview_field outview_field],500);
-    %     %                                 [pval,tbl,stats] = anova2([inplace_field inview_field; outplace_field outview_field],500);
-    %                                     figanova = gcf;
-    %                                     figtitle = ['ANOVA ' msobj{oo} ' field ' num2str(ff)];
-    %                                     if save
-    %                                         savefigure(figanova,figtitle,figdir2);
-    %                                     end
-    %                                     close(figanova);
-    %                                     if pval(3) < 0.05
-    %                                         ax.Title.String{end+1,1} = ['Nonlinear interaction: F=' num2str(tbl{4,5},2) ', p=' num2str(pval(3))];
-    %                                     else
-    %                                         ax.Title.String{end+1,1} = ['Linear: F=' num2str(tbl{4,5},2) ', p=' num2str(pval(3))];
-    %                                     end
-    %                                 end
-
-                                    % Save 
-                                    figtitle = figname;
-                                    if save
-                                        savefigure(h,figtitle,figdir2);
-                                    end
-                                    close(h);
-                                    fig = fig + 1;
-
-        %                             % Plot a selection of the pseudopopulation of smoothed conditioned maps
-        %                             h = figure(fig);
-        %                             figname = [msobj{oo} ' field ' num2str(ff) ' - pseudopopulation'];
-        %                             set(h,'Name',figname,'Units','Normalized','Position',[0 1 1 1]);
-        %                             hold on;
-        %                             temp = basedata.pseudosecSIC_adsm{ff};
-        %                             setpoints = quantile(temp,[0.25,0.5,0.75,0.975])';
-        %                             for hh = 1:size(setpoints,1)
-        %                                 inds_pseudoplot = find(abs(temp-setpoints(hh)) == min(abs(temp-setpoints(hh))),1);
-        %                                 % Plot raw map
-        %                                 ax = subplot(2,5,hh);
-        %                                 plotmap(basedata.pseudosecdataperfield{ff}{4}(inds_pseudoplot,:),msobj{2-oo+1});
-        %                                 colormap(ax,cool);
-        %                                 % If firing rate or spike count = 0, set to black
-        %                                 settoblack(basedata.pseudosecdataperfield{ff}{4}(inds_pseudoplot,:),msobj{2-oo+1});
-        % %                                 % Patch tertiary field 
-        % % %                                 for pp = 1:size(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot},1)
-        % %                                     if strcmp(msobj{oo},'place')
-        % %                                         sectemp = nan(1,1600);
-        % %                                         fieldcolor = 'r';
-        % %                                     elseif strcmp(msobj{oo},'view')
-        % %                                         sectemp = nan(1,5122);
-        % %                                         fieldcolor = [50/256 205/256 50/256];
-        % %                                     end
-        % %                                     for pp = 1:size(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot},1)
-        % %                                         px = basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot}(pp);
-        % %                                         if strcmp(msobj{oo},'place')
-        % %                                             g = 1;
-        % %                                         elseif strcmp(msobj{oo},'view')
-        % %                                             g = findgrid(px,msobj{oo});
-        % %                                         end
-        % %                                         coords = find(basedata.dummygrid{g} == px);
-        % %                                     end
-        % %                                     sectemp(basedata.pseudosecdataperfield{ff}{1}{inds_pseudoplot}) = 1;
-        % % %                                 end
-        %                                 numspk = sum(basedata.pseudosecdataperfield{ff}{3}(inds_pseudoplot,:));
-        %                                 ax.Title.String = {'Raw map';[num2str(numspk),' spk']};
-        %                                 ax.Title.FontSize = 16;
-        %                                 set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-        %                                     'XColor','none','YColor','none','ZColor','none',...
-        %                                     'FontSize',14,'GridLineStyle','none','Color','none');
-        %                                 patchenvbounds('view');
-        %                                 % Plot smoothed map
-        %                                 ax = subplot(2,5,hh+5);
-        %                                 plotmap(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
-        %                                 colormap(ax,cool);
-        %                                 % If firing rate or spike count = 0, set to black
-        %                                 settoblack(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
-        %                                 ax.Title.String = {'Smoothed map';...
-        %                                     ['SI = ' num2str(basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1),2) '/' num2str(pseudoSIthr,2)]};
-        %                                 ax.Title.FontSize = 16;
-        %                                 if basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1) > pseudoSIthr
-        %                                     ax.Title.Color = 'r';
-        %                                 end
-        %                                 set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-        %                                     'XColor','none','YColor','none','ZColor','none',...
-        %                                     'FontSize',14,'GridLineStyle','none','Color','none');
-        %                                 patchenvbounds('view');
-        %                             end
-        %                             % Plot actual sec map for comparison
-        %                             ax = subplot(2,5,5);
-        %                             temp = nan(size(basedata.secmapLsm,2),1);
-        %                             temp(basedata.secmaps_raw{ff}(:,1),1) = basedata.secmaps_raw{ff}(:,4);
-        %                             plotmap(temp,msobj{2-oo+1});
-        %                             colormap(ax,cool);
-        %                             % If firing rate or spike count = 0, set to black
-        %                             settoblack(temp,msobj{2-oo+1});
-        %                             numspk = sum(basedata.secmaps_raw{ff}(:,3));
-        %                             ax.Title.String = {'Actual raw map';[num2str(numspk),' spk']};
-        %                             ax.Title.FontSize = 16;
-        %                             set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-        %                                 'XColor','none','YColor','none','ZColor','none',...
-        %                                 'FontSize',14,'GridLineStyle','none','Color','none');
-        %                             patchenvbounds('view');
-        %                             ax = subplot(2,5,10);
-        %                             plotmap(basedata.(['sec' mapname]){ff},msobj{2-oo+1});
-        %                             colormap(ax,cool);
-        %                             % If firing rate or spike count = 0, set to black
-        %                             settoblack(basedata.(['sec' mapname]){ff},msobj{2-oo+1});
-        %                             ax.Title.String = {'Actual smoothed map';...
-        %                                 ['SI = ' num2str(basedata.(['sec' critname])(ff),2) '/' num2str(pseudoSIthr,2)]};
-        %                             ax.Title.FontSize = 16;
-        %                             if basedata.(['sec' critname])(ff) > pseudoSIthr
-        %                                 ax.Title.Color = 'r';
-        %                             end
-        %                             set(ax,'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
-        %                                 'XColor','none','YColor','none','ZColor','none',...
-        %                                 'FontSize',14,'GridLineStyle','none','Color','none');
-        %                             patchenvbounds('view');
-        %                             % Save 
-        %                             figtitle = figname;
-        %                             if save
-        %                                 savefigure(h,figtitle,figdir2);
-        %                             end
-        %                             close(h);
-        %                             fig = fig + 1;
-
-        %                             % Patch secondary fields
-        %                             for mm = 1:size(secdata.seccomponents_perbasepx,1) % For each secondary field
-        %                                 % Plot secondary field in consolidated pixel map
-        %                                 sec = secdata.fieldcoord{mm}; % Get bins for sec field
-        %                                 % Patch secondary fields in the consolidated pixel map
-        %                                 for pp = 1:size(sec,1)
-        %                                     % PATCH
-        %                                     if strcmp(msobj{2-oo+1},'place')
-        %                                         plotgrid = 3;
-        %                                     else
-        %                                         plotgrid = secdata.gridnum(mm);
-        %                                     end
-        %                                     [x,y,z] = converttosurf(plotgrid,sec(pp,1),sec(pp,2));
-        %                                     patch(x,y,z,'r','EdgeColor',[169/256 169/256 169/256],'FaceColor','none','LineWidth',1); % Dark Grey
-        %                                     if strcmp(msobj{2-oo+1},'place')
-        %                                         patch(x,y,z,'r','EdgeColor','r','FaceColor','none','LineWidth',1); % Red
-        %                                     elseif strcmp(msobj{2-oo+1},'view')
-        %                                         patch(x,y,z,'r','EdgeColor',[50/256 205/256 50/256],'FaceColor','none','LineWidth',1); % Lime green
-        %                                     end
-        %                                 end
-        %                             end 
-
-
-
-                            end
-
-
-
-                        end
-                    end
+%                 if objMain.data.placesel(cell_indMain) || objMain.data.viewsel(cell_indMain)
 
                     
-                end
+      
+%                 end
             end
         end
     end
     
+    
+    
 elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all in one page
     
-    msobj = objMain0.data.Args.msobj;
+    msvar = objMain0.data.Args.msobj;
     
     % Get SI/ISE threshold for original maps. ### TEmporary. should come from vmms object
     cells_indDiscardP = ismember(objPlace.data.origin,objMain0.data.origin(objMain0.data.discard));
@@ -2503,25 +2452,25 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
     
     % Getting SI/ISE threshold for pseudopopulation of conditioned maps
     disp('Getting sel threshold for pseudopop of conditioned maps');
-    pseudothr_orig = nan(size(msobj));
-    pseudothr_corr = nan(size(msobj));
-    for oo = 1:size(msobj,2)
+    pseudothr_orig = nan(size(msvar));
+    pseudothr_corr = nan(size(msvar));
+    for oo = 1:size(msvar,2)
         agg_orig = [];
         agg_corr = [];
-        for aa = 1:size(objMain0.data.(msobj{oo}),1)
-            if isempty(objMain0.data.(msobj{oo})(aa).pseudosecSIC_adsm)
+        for aa = 1:size(objMain0.data.(msvar{oo}),1)
+            if isempty(objMain0.data.(msvar{oo})(aa).pseudosecSIC_adsm)
                 continue;
             end
-            for bb = 1:size(objMain0.data.(msobj{oo})(aa).pseudosecdataperfield,1)
-                agg_orig = [agg_orig;objMain0.data.(msobj{oo})(aa).pseudosecSIC_adsm{bb}];
+            for bb = 1:size(objMain0.data.(msvar{oo})(aa).pseudosecdataperfield,1)
+                agg_orig = [agg_orig;objMain0.data.(msvar{oo})(aa).pseudosecSIC_adsm{bb}];
             end
         end
-        for aa = 1:size(objMain.data.(msobj{oo}),1)
-            if isempty(objMain.data.(msobj{oo})(aa).pseudosecSIC_adsm)
+        for aa = 1:size(objMain.data.(msvar{oo}),1)
+            if isempty(objMain.data.(msvar{oo})(aa).pseudosecSIC_adsm)
                 continue;
             end
-            for bb = 1:size(objMain.data.(msobj{oo})(aa).pseudosecdataperfield,1)
-                agg_corr = [agg_corr;objMain.data.(msobj{oo})(aa).pseudosecSIC_adsm{bb}];
+            for bb = 1:size(objMain.data.(msvar{oo})(aa).pseudosecdataperfield,1)
+                agg_corr = [agg_corr;objMain.data.(msvar{oo})(aa).pseudosecSIC_adsm{bb}];
             end
         end
         pseudothr_orig(oo) = prctile(agg_orig,95);
@@ -2764,12 +2713,12 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                 ax.Title.String = '1st half';
                 
                 % Plot orig pixel maps
-                if ~isnan(objMain0.data.(msobj{1})(cell_indMS0).sigfields) && ...
-                        ~isnan(objMain0.data.(msobj{2})(cell_indMS0).sigfields)
+                if ~isnan(objMain0.data.(msvar{1})(cell_indMS0).sigfields) && ...
+                        ~isnan(objMain0.data.(msvar{2})(cell_indMS0).sigfields)
                     
-                    for oo = 1:size(msobj,2)
-                        basedata = objMain0.data.(msobj{oo})(cell_indMS0);
-                        secdata = objMain0.data.(msobj{2-oo+1})(cell_indMS0);
+                    for oo = 1:size(msvar,2)
+                        basedata = objMain0.data.(msvar{oo})(cell_indMS0);
+                        secdata = objMain0.data.(msvar{2-oo+1})(cell_indMS0);
                         if oo == 1
                             if basedata.sigfields == 0
                                 continue;
@@ -2805,19 +2754,19 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                 ax = axes('Position',[col_left(2*(oo-1)+1) row_bot(4+(ff-1)*2) axwidth axheight*2]);
                             end
                             map = nan(size(basedata.basemapLsm));
-                            plotmap(map,msobj{oo});
-                            patchenvbounds(msobj{oo});
+                            plotmap(map,msvar{oo});
+                            patchenvbounds(msvar{oo});
                             axdisplay(ax,1);
                             colorbar off;
-                            if strcmp(msobj{oo},'place')
+                            if strcmp(msvar{oo},'place')
                                 fieldcolor = 'r';
-                            elseif strcmp(msobj{oo},'view')
+                            elseif strcmp(msvar{oo},'view')
                                 fieldcolor = [50/256 205/256 50/256];
                             end
                             % Patch base fields
                             for pp = 1:size(basedata.fieldcoord{ff},1)
                                 % PATCH
-                                if strcmp(msobj{oo},'place')
+                                if strcmp(msvar{oo},'place')
                                     plotgrid = 3;
                                 else
                                     plotgrid = basedata.gridnum(ff);
@@ -2825,7 +2774,7 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                 [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
                                 patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1);
                             end
-                            ax.Title.String = [msobj{oo}(1) num2str(ff)];
+                            ax.Title.String = [msvar{oo}(1) num2str(ff)];
                             % Plot sec pixels and fields
                             if isempty(fffcount)
                                 % Plot sec pixels for single selectivecells
@@ -2843,9 +2792,9 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     case 'view'
                                         maxC = nanmax(map(3:end));
                                 end
-                                plotmap(map,msobj{2-oo+1});
-                                patchenvbounds(msobj{2-oo+1});
-                                settoblack(map,msobj{2-oo+1});
+                                plotmap(map,msvar{2-oo+1});
+                                patchenvbounds(msvar{2-oo+1});
+                                settoblack(map,msvar{2-oo+1});
                                 axdisplay(ax,maxC);
                                 colormap(ax,'cool');
                                 c = colorbar;
@@ -2855,37 +2804,37 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     for dd = 1:size(basedata.cond_fieldoverlap{ff},1)
                                         if basedata.cond_fieldoverlap{ff}(dd)
                                             fieldcolor = 'y';
-                                            xxx = find(basedata.cond_fieldoverlapind{ff}{dd});
+                                            xxx = find(basedata.seccond_fieldoverlapind{ff}{dd});
                                             xxx(xxx>3) = [];
                                             if isempty(xxx)
                                                 continue;
                                             end
                                             for zz = 1:size(xxx,1)
                                                 xx = xxx(zz);
-                                                overlap{end+1,1} = ['c' msobj{2-oo+1}(1) num2str(dd) ' X ' msobj{2-oo+1}(1) ...
+                                                overlap{end+1,1} = ['c' msvar{2-oo+1}(1) num2str(dd) ' X ' msvar{2-oo+1}(1) ...
                                                     num2str(xx)];
                                                 if ~isempty(secdata.cond_fieldoverlap{xx})
                                                     for ss = 1:size(secdata.cond_fieldoverlap{xx},1)
-                                                        if any(secdata.cond_fieldoverlapind{xx}{ss})
-                                                            yy = find(secdata.cond_fieldoverlapind{xx}{ss});
+                                                        if any(secdata.seccond_fieldoverlapind{xx}{ss})
+                                                            yy = find(secdata.seccond_fieldoverlapind{xx}{ss});
                                                             if yy == ff
-                                                                link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(xx)];
                                                             else
-                                                                link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                             end
                                                         end
                                                     end
                                                 else 
-                                                    link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                    link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                 end
                                             end
                                         else
                                             fieldcolor = 'b';
                                         end
-                                        sec = basedata.cond_fieldcoord{ff}{dd};
+                                        sec = basedata.seccond_fieldcoord{ff}{dd};
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = basedata.cond_gridnum{ff}(dd);
@@ -2920,9 +2869,9 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                         map = nan(size(basedata.secmapLsm));
                                         map(basedata.secmaps_raw{ff,1}(:,1)) = basedata.secmaps_raw{ff,1}(:,4);
                                         maxC = nanmax(map(3:end));
-                                        plotmap(map,msobj{2-oo+1});
-                                        patchenvbounds(msobj{2-oo+1});
-                                        settoblack(map,msobj{2-oo+1});
+                                        plotmap(map,msvar{2-oo+1});
+                                        patchenvbounds(msvar{2-oo+1});
+                                        settoblack(map,msvar{2-oo+1});
                                         axdisplay(ax,maxC);
                                         colormap(ax,'cool');
                                         c = colorbar;
@@ -2932,16 +2881,16 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                             c.Position = [col_left(2*(oo-1)+2)+1.05*axwidth row_bot(4+2*(ff-1)) 0.9/150 axheight*2];
                                         end
 %                                         if strcmp(maptype,'raw')
-                                        if strcmp(msobj{oo},'view')
+                                        if strcmp(msvar{oo},'view')
                                             fieldcolor = 'r';
-                                        elseif strcmp(msobj{oo},'place')
+                                        elseif strcmp(msvar{oo},'place')
                                             fieldcolor = [50/256 205/256 50/256]; % Lime green
                                         end
                                         % Patch secondary fields
                                         sec = secdata.fieldcoord{fff}; % Get bins for sec field
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = secdata.gridnum(fff);
@@ -2950,18 +2899,18 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                             patch(x,y,z,'r','EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1); 
                                         end
                                         % Check if fields are reciprocally linked
-                                        ax.Title.String = {horzcat(msobj{2-oo+1}(1),num2str(fff),' Infield: ', num2str(basedata.sec_infieldrates{ff}(fff,1),2),'Hz'); ...
+                                        ax.Title.String = {horzcat(msvar{2-oo+1}(1),num2str(fff),' Infield: ', num2str(basedata.sec_infieldrates{ff}(fff,1),2),'Hz'); ...
                                             horzcat('Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{fff,1},95),2),'Hz')};
                                         if basedata.sec_infieldrates{ff}(fff,1) > prctile(basedata.sec_outfieldrates{ff}{fff,1},95)
                                             if secdata.secfieldrates{fff}(ff,1) > prctile(secdata.secfieldrates_sh{fff}{ff,1},95) % If reciprocal
                                                 ax.Title.Color = 'r';
                                                 if oo == 1
-                                                    link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(fff)];
+                                                    link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(fff)];
     %                                                 link_pre{ff,fff} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(fff)];
                                                 end
                                             else 
                                                 ax.Title.Color = 'b';
-                                                link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(fff)];
+                                                link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(fff)];
     %                                             link_pre{ff,fff} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(fff)];
                                             end
                                         else 
@@ -2978,15 +2927,15 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
 %                                         ax = axes('Position',[col_left(2*(oo-1)+2) row_bot(4+2*(ff-1)) axwidth axheight*2]); % ???? 
 %                                     end
                                     map = basedata.(['sec' mapname]){ff,1};
-                                    switch msobj{oo}
+                                    switch msvar{oo}
                                         case 'place'
                                             maxC = nanmax(map);
                                         case 'view'
                                             maxC = nanmax(map(3:end));
                                     end
-                                    plotmap(map,msobj{2-oo+1});
-                                    patchenvbounds(msobj{2-oo+1});
-                                    settoblack(map,msobj{2-oo+1});
+                                    plotmap(map,msvar{2-oo+1});
+                                    patchenvbounds(msvar{2-oo+1});
+                                    settoblack(map,msvar{2-oo+1});
                                     axdisplay(ax,maxC);
                                     colormap(ax,'cool');
                                     c = colorbar;
@@ -3000,37 +2949,37 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     for dd = 1:size(basedata.cond_fieldoverlap{ff},1) 
                                         if basedata.cond_fieldoverlap{ff}(dd)
                                             fieldcolor = 'y';
-                                            xxx = find(basedata.cond_fieldoverlapind{ff}{dd});
+                                            xxx = find(basedata.seccond_fieldoverlapind{ff}{dd});
                                             xxx(xxx>3) = [];
                                             if isempty(xxx)
                                                 continue;
                                             end
                                             for zz = 1:size(xxx,1)
                                                 xx = xxx(zz);
-                                                overlap{end+1,1} = ['c' msobj{2-oo+1}(1) num2str(dd) ' X ' msobj{2-oo+1}(1) ...
+                                                overlap{end+1,1} = ['c' msvar{2-oo+1}(1) num2str(dd) ' X ' msvar{2-oo+1}(1) ...
                                                     num2str(xx)];
                                                 if ~isempty(secdata.cond_fieldoverlap{xx})
                                                     for ss = 1:size(secdata.cond_fieldoverlap{xx},1)
-                                                        if any(secdata.cond_fieldoverlapind{xx}{ss})
-                                                            yy = find(secdata.cond_fieldoverlapind{xx}{ss});
+                                                        if any(secdata.seccond_fieldoverlapind{xx}{ss})
+                                                            yy = find(secdata.seccond_fieldoverlapind{xx}{ss});
                                                             if yy == ff
-                                                                link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(xx)];
                                                             else
-                                                                link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                             end
                                                         end
                                                     end
                                                 else 
-                                                    link_pre{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                    link_pre{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                 end
                                             end
                                         else
                                             fieldcolor = 'b';
                                         end
-                                        sec = basedata.cond_fieldcoord{ff}{dd};
+                                        sec = basedata.seccond_fieldcoord{ff}{dd};
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = basedata.cond_gridnum{ff}(dd);
@@ -3055,10 +3004,10 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                 end
 
                 % Plot corr pixel maps
-                if ~isnan(objMain.data.(msobj{1})(cell_indMS).sigfields) && ~isnan(objMain.data.(msobj{2})(cell_indMS).sigfields)
-                    for oo =1:size(msobj,2)
-                        basedata = objMain.data.(msobj{oo})(cell_indMS);
-                        secdata = objMain.data.(msobj{2-oo+1})(cell_indMS);
+                if ~isnan(objMain.data.(msvar{1})(cell_indMS).sigfields) && ~isnan(objMain.data.(msvar{2})(cell_indMS).sigfields)
+                    for oo =1:size(msvar,2)
+                        basedata = objMain.data.(msvar{oo})(cell_indMS);
+                        secdata = objMain.data.(msvar{2-oo+1})(cell_indMS);
                         if oo == 1
                             if basedata.sigfields == 0
                                 continue;
@@ -3094,19 +3043,19 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                 ax = axes('Position',[col_left(2*(oo-1)+5) row_bot(4+(ff-1)*2) axwidth axheight*2]);
                             end
                             map = nan(size(basedata.basemapLsm));
-                            plotmap(map,msobj{oo});
-                            patchenvbounds(msobj{oo});
+                            plotmap(map,msvar{oo});
+                            patchenvbounds(msvar{oo});
                             colorbar off;
                             axdisplay(ax,1);
-                            if strcmp(msobj{oo},'place')
+                            if strcmp(msvar{oo},'place')
                                 fieldcolor = 'r';
-                            elseif strcmp(msobj{oo},'view')
+                            elseif strcmp(msvar{oo},'view')
                                 fieldcolor = [50/256 205/256 50/256];
                             end
                             % Patch base fields
                             for pp = 1:size(basedata.fieldcoord{ff},1)
                                 % PATCH
-                                if strcmp(msobj{oo},'place')
+                                if strcmp(msvar{oo},'place')
                                     plotgrid = 3;
                                 else
                                     plotgrid = basedata.gridnum(ff);
@@ -3114,7 +3063,7 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                 [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
                                 patch(x,y,z,[1 1 1 1],'EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1);
                             end
-                            ax.Title.String = [msobj{oo}(1) num2str(ff)];
+                            ax.Title.String = [msvar{oo}(1) num2str(ff)];
                             if isempty(fffcount)
                                 % Plot sec pixels for single selectivecells
                                 ax = axes('Position',[col_left(2*(oo-1)+6) row_bot(4+2*(ff-1)) axwidth axheight*2]);
@@ -3130,9 +3079,9 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     case 'view'
                                         maxC = nanmax(map(3:end));
                                 end
-                                plotmap(map,msobj{2-oo+1});
-                                patchenvbounds(msobj{2-oo+1});
-                                settoblack(map,msobj{2-oo+1});
+                                plotmap(map,msvar{2-oo+1});
+                                patchenvbounds(msvar{2-oo+1});
+                                settoblack(map,msvar{2-oo+1});
                                 axdisplay(ax,maxC);
                                 colormap(ax,'cool');
                                 c = colorbar;
@@ -3142,37 +3091,37 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     for dd = 1:size(basedata.cond_fieldoverlap{ff},1)
                                         if basedata.cond_fieldoverlap{ff}(dd)
                                             fieldcolor = 'y';
-                                            xxx = find(basedata.cond_fieldoverlapind{ff}{dd});
+                                            xxx = find(basedata.seccond_fieldoverlapind{ff}{dd});
                                             xxx(xxx>3) = [];
                                             if isempty(xxx)
                                                 continue;
                                             end
                                             for zz = 1:size(xxx,1)
                                                 xx = xxx(zz);
-                                                overlap{end+1,1} = ['c' msobj{2-oo+1}(1) num2str(dd) ' X ' msobj{2-oo+1}(1) ...
+                                                overlap{end+1,1} = ['c' msvar{2-oo+1}(1) num2str(dd) ' X ' msvar{2-oo+1}(1) ...
                                                     num2str(xx)];
                                                 if ~isempty(secdata.cond_fieldoverlap{xx})
                                                     for ss = 1:size(secdata.cond_fieldoverlap{xx},1)
-                                                        if any(secdata.cond_fieldoverlapind{xx}{ss})
-                                                            yy = find(secdata.cond_fieldoverlapind{xx}{ss});
+                                                        if any(secdata.seccond_fieldoverlapind{xx}{ss})
+                                                            yy = find(secdata.seccond_fieldoverlapind{xx}{ss});
                                                             if yy == ff
-                                                                link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(xx)];
                                                             else
-                                                                link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                             end
                                                         end
                                                     end
                                                 else 
-                                                    link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                    link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                 end
                                             end
                                         else
                                             fieldcolor = 'b';
                                         end
-                                        sec = basedata.cond_fieldcoord{ff}{dd};
+                                        sec = basedata.seccond_fieldcoord{ff}{dd};
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = basedata.cond_gridnum{ff}(dd);
@@ -3216,9 +3165,9 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
 %                                             map = basedata.(['sec' mapname]){ff,1};
 %                                         end
                                         maxC = nanmax(map(3:end));
-                                        plotmap(map,msobj{2-oo+1});
-                                        patchenvbounds(msobj{2-oo+1});
-                                        settoblack(map,msobj{2-oo+1});
+                                        plotmap(map,msvar{2-oo+1});
+                                        patchenvbounds(msvar{2-oo+1});
+                                        settoblack(map,msvar{2-oo+1});
                                         axdisplay(ax,maxC);
                                         colormap(ax,'cool');
                                         c = colorbar;
@@ -3227,16 +3176,16 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                         elseif oo == 2
                                             c.Position = [col_left(2*(oo-1)+6)+1.05*axwidth row_bot(4+2*(ff-1)) 0.9/150 axheight*2];
                                         end
-                                        if strcmp(msobj{oo},'view')
+                                        if strcmp(msvar{oo},'view')
                                             fieldcolor = 'r';
-                                        elseif strcmp(msobj{oo},'place')
+                                        elseif strcmp(msvar{oo},'place')
                                             fieldcolor = [50/256 205/256 50/256]; % Lime green
                                         end
                                         % Patch secondary fields
                                         sec = secdata.fieldcoord{fff}; % Get bins for sec field
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = secdata.gridnum(fff);
@@ -3245,18 +3194,18 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                             patch(x,y,z,'r','EdgeColor',fieldcolor,'FaceColor','none','LineWidth',0.1); 
                                         end
                                         % Check if fields are reciprocally linked
-                                        ax.Title.String = {horzcat(msobj{2-oo+1}(1),num2str(fff),' Infield: ', num2str(basedata.sec_infieldrates{ff}(fff,1),2),'Hz'); ...
+                                        ax.Title.String = {horzcat(msvar{2-oo+1}(1),num2str(fff),' Infield: ', num2str(basedata.sec_infieldrates{ff}(fff,1),2),'Hz'); ...
                                             horzcat('Outfield: ', num2str(prctile(basedata.sec_outfieldrates{ff}{fff,1},95),2),'Hz')};
                                         if basedata.sec_infieldrates{ff}(fff,1) > prctile(basedata.sec_outfieldrates{ff}{fff,1},95)
                                             if secdata.sec_infieldrates{fff}(ff,1) > prctile(secdata.sec_outfieldrates{fff}{ff,1},95) % If reciprocal
                                                 ax.Title.Color = 'r';
                                                 if oo == 1
-                                                    link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(fff)];
+                                                    link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(fff)];
     %                                                 link_post{ff,fff} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(fff)];
                                                 end
                                             else 
                                                 ax.Title.Color = 'b';
-                                                link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(fff)];
+                                                link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(fff)];
     %                                             link_post{ff,fff} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(fff)];
                                             end
                                         else 
@@ -3269,15 +3218,15 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     % Plot sec pixel maps
                                     ax = axes('Position',[col_left(2*(oo-1)+6) row_bot(4+2*(ff-1)) axwidth axheight*2]);
                                     map = basedata.(['sec' mapname]){ff,1};
-                                    switch msobj{oo}
+                                    switch msvar{oo}
                                         case 'place'
                                             maxC = nanmax(map);
                                         case 'view'
                                             maxC = nanmax(map(3:end));
                                     end
-                                    plotmap(map,msobj{2-oo+1});
-                                    patchenvbounds(msobj{2-oo+1});
-                                    settoblack(map,msobj{2-oo+1});
+                                    plotmap(map,msvar{2-oo+1});
+                                    patchenvbounds(msvar{2-oo+1});
+                                    settoblack(map,msvar{2-oo+1});
                                     axdisplay(ax,maxC);
                                     colormap(ax,'cool');
                                     c = colorbar;
@@ -3290,37 +3239,37 @@ elseif strcmp(objtype,'allprop') % If plotting place, view, corr and mixsel all 
                                     for dd = 1:size(basedata.cond_fieldoverlap{ff},1)
                                         if basedata.cond_fieldoverlap{ff}(dd)
                                             fieldcolor = 'y';
-                                            xxx = find(basedata.cond_fieldoverlapind{ff}{dd});
+                                            xxx = find(basedata.seccond_fieldoverlapind{ff}{dd});
                                             xxx(xxx>3) = [];
                                             if isempty(xxx)
                                                 continue;
                                             end
                                             for zz = 1:size(xxx,1)
                                                 xx = xxx(zz);
-                                                overlap{end+1,1} = ['c' msobj{2-oo+1}(1) num2str(dd) ' X ' msobj{2-oo+1}(1) ...
+                                                overlap{end+1,1} = ['c' msvar{2-oo+1}(1) num2str(dd) ' X ' msvar{2-oo+1}(1) ...
                                                     num2str(xx)];
                                                 if ~isempty(secdata.cond_fieldoverlap{xx})
                                                     for ss = 1:size(secdata.cond_fieldoverlap{xx},1)
-                                                        if any(secdata.cond_fieldoverlapind{xx}{ss})
-                                                            yy = find(secdata.cond_fieldoverlapind{xx}{ss});
+                                                        if any(secdata.seccond_fieldoverlapind{xx}{ss})
+                                                            yy = find(secdata.seccond_fieldoverlapind{xx}{ss});
                                                             if yy == ff
-                                                                link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'RL' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'RL' msvar{2-oo+1}(1) num2str(xx)];
                                                             else
-                                                                link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                                link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                             end
                                                         end
                                                     end
                                                 else 
-                                                    link_post{end+1,1} = [msobj{oo}(1) num2str(ff) 'L' msobj{2-oo+1}(1) num2str(xx)];
+                                                    link_post{end+1,1} = [msvar{oo}(1) num2str(ff) 'L' msvar{2-oo+1}(1) num2str(xx)];
                                                 end
                                             end
                                         else
                                             fieldcolor = 'b';
                                         end
-                                        sec = basedata.cond_fieldcoord{ff}{dd};
+                                        sec = basedata.seccond_fieldcoord{ff}{dd};
                                         for pp = 1:size(sec,1)
                                             % PATCH
-                                            if strcmp(msobj{2-oo+1},'place')
+                                            if strcmp(msvar{2-oo+1},'place')
                                                 plotgrid = 3;
                                             else
                                                 plotgrid = basedata.cond_gridnum{ff}(dd);
@@ -3708,7 +3657,7 @@ if size(basemap,1) > size(basemap,2)
     basemap = basemap';
 end
 blackpx = find(basemap == 0);
-if ~isempty(blackpx)
+if ~isempty(blackpx) && ~strcmp(baseobj,'headdirection')
     for pp = 1:size(blackpx,2)
         switch baseobj
             case 'place'
@@ -3720,7 +3669,6 @@ if ~isempty(blackpx)
                 else
                     continue;
                 end
-
         end
         [x,y,z] = converttosurf(gnum,xx,yy);
         patch(x,y,z,[1 1 1 1],'FaceColor','k','FaceAlpha',0.7,'EdgeColor','none');

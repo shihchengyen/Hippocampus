@@ -133,7 +133,7 @@ if(~isempty(dir(Args.RequiredFile)))
         % already been transferred down to the subsequent view rows.
         % note that visual inspection might see it as the same when it
         % isn't, due to rounding in GUI.
-        if place_rows(row) ~= size(cst,1)
+        if place_rows(row) ~= size(cst,1) % last row will have 0 and 0 for place and hd bins, and nan for view
             if cst(place_rows(row),1) ~= cst(place_rows(row)+1,1)
                 place_rows(row) = [];
             end
@@ -212,7 +212,7 @@ if(~isempty(dir(Args.RequiredFile)))
     to_remove = [];
     for chunk = 1:size(dti, 1)
         cst_full(dti(chunk, 1): dti(chunk,2),:) = sortrows(cst_full(dti(chunk, 1): dti(chunk,2),:), [1 4]);
-        identify_dup = diff(cst_full(dti(chunk, 1): dti(chunk,2),:));
+        identify_dup = diff(cst_full(dti(chunk, 1): dti(chunk,2),:)); % duplicate consecutive place rows
         if dti(chunk, 1) - dti(chunk, 2) ~= 0
             if ~isempty(find(sum(identify_dup,2)==0))
                 to_remove = [to_remove; find(sum(identify_dup,2)==0)+dti(chunk,1)];
@@ -255,6 +255,10 @@ if(~isempty(dir(Args.RequiredFile)))
         if rem(idx,100000)==0
             disp(['view ' num2str(100*idx/length(possible))]); % percentage done output
         end
+        % debug
+        if time_repeats(possible(idx),1) == 963
+            disp('stop')
+        end
         % long formula basically checks for perfectly identical view bins
         checker = ismember(cst_full(time_repeats(possible(idx),1):time_repeats(possible(idx),1)+time_repeats(possible(idx),3)-1,4), ...
             cst_full(time_repeats(possible(idx)-1,1):time_repeats(possible(idx)-1,1)+time_repeats(possible(idx),3)-1,4));
@@ -268,6 +272,10 @@ if(~isempty(dir(Args.RequiredFile)))
     for idx = 1:length(possible)
         if rem(idx,100000)==0
             disp(['place ' num2str(100*idx/length(possible))]); % percentage done output
+        end
+        % debug
+        if time_repeats(possible(idx),1) == 963
+            disp('stop')
         end
         % Check, for view bins that repeat, if the place and head direction is also unchanging
         if cst_full(time_repeats(possible(idx),1),2) == cst_full(time_repeats(possible(idx)-1,1),2) && ...

@@ -30,6 +30,11 @@ switch var
             error('Incorrect dimensions specified for grid size');
         end
         gridmap = cell(size(gridSize,1),1);
+    case 'headdirection'
+        if size(gridSize,1) ~= 1 || size(linmap,1) ~= sum(gridSize(:,1).*gridSize(:,2))
+            error('Incorrect dimensions specified for grid size');
+        end
+        gridmap = cell(1,1);
 end
 
 for ii = 1:size(gridmap,1)
