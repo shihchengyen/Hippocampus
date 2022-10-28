@@ -18,7 +18,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Boxcar', 'SelectiveCriteria','RV', ...
-                'UseMinObs',1, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
+                'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'Alpha', 10000);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -184,7 +184,7 @@ if(~isempty(dir(Args.RequiredFile)))
         consol_arr = zeros(Args.DirSteps,NumShuffles + 1);
         interval = 1;
         if repeat == 1
-            disp('    Assigning spikes to bins...');
+            disp(['    Assigning '  num2str(size(flat_spiketimes,1)) ' spikes to bins...']);
         end
         for sp = 1:size(flat_spiketimes,1)
 
