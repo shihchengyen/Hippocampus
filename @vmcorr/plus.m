@@ -50,7 +50,7 @@ else
         r.data.placebins = [p.data.placebins; q.data.placebins];
         r.data.viewbins = [p.data.viewbins; q.data.viewbins];
         r.data.headdirectionbins = [p.data.headdirectionbins; q.data.headdirectionbins];
-        r.data.Args = p.data.Args;
+        r.data.Args = [p.data.Args; q.data.Args];
         
         % add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);

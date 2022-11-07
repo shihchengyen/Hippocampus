@@ -61,6 +61,7 @@ else
         r.data.Args.UseCorr = [p.data.Args.UseCorr; q.data.Args.UseCorr]; % overwrite
         r.data.Args.FieldThr = [p.data.Args.FieldThr; q.data.Args.FieldThr]; % overwrite
         r.data.Args.FieldSplitThr = [p.data.Args.FieldSplitThr; q.data.Args.FieldSplitThr]; % overwrite
+        r.data.Args.NumShuffles = [p.data.Args.NumShuffles; q.data.Args.NumShuffles]; % overwrite
 			
 		% add nptdata objects as well
 		r.nptdata = plus(p.nptdata,q.nptdata);
