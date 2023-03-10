@@ -6,6 +6,7 @@ function [mapG,mapGdummy]= plotmap(mapL,objtype,varargin)
 % Plot rate map in either place, spatial view or head direction frames
 % 
 % Inputs:
+% ax: plotting axis
 % mapL: linear rate map e.g. vms.data.maps_adsm
 % objtype: 'place' or 'spatialview' or 'headdirection' to specify frame 
 % 
@@ -19,10 +20,11 @@ function [mapG,mapGdummy]= plotmap(mapL,objtype,varargin)
 if min(size(mapL)) ~= 1
     error('Input map must be linear, not grid')
 end
+ax = gca;
 
 if strcmp(objtype,'place') || strcmp(objtype,'view')
-    
-    ax = gca;
+%     
+%     ax = gca;
     axis(ax,'tight');
     % Insert floor place map into larger 3D view setting
     if strcmp(objtype,'place')
@@ -42,14 +44,17 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
     ceiling_x = floor_x;
     ceiling_y = floor_y;
     ceiling_z = 40.*ones(41,41);
+%     ceiling_z = 60.*ones(41,41);
 
     walls_x = repmat([0.*ones(1,40) 0:39 40.*ones(1,40) 40:-1:0], 9, 1);
     walls_y = repmat([0:39 40.*ones(1,40) 40:-1:1 0.*ones(1,41)], 9, 1);
     walls_z = repmat([24:-1:16]', 1, 40*4 + 1);
+%     walls_z = repmat([34:-1:26]', 1, 40*4 + 1);
 
     P1_x = repmat([24.*ones(1,8) 24:31 32.*ones(1,8) 32:-1:24], 6, 1);
     P1_y = repmat([8:15 16.*ones(1,8) 16:-1:9 8.*ones(1,9)], 6, 1);
     PX_z = repmat([21:-1:16]', 1, 8*4 + 1);
+%     PX_z = repmat([31:-1:26]', 1, 8*4 + 1);
 
     P2_x = repmat([8.*ones(1,8) 8:15 16.*ones(1,8) 16:-1:8], 6, 1);
     P2_y = P1_y;
@@ -124,10 +129,10 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
 
     % Display parameters
     
-    axis(ax, 'tight');
+%     axis(ax, 'tight');
     axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim'),get(ax, 'zlim')])); % Make axes square around biggest value
     axis(ax,[0 axlim 0 axlim 0 axlim]);  
-    axis(ax,'square','off');
+%     axis(ax,'square','off');
     colormap jet;
     colorbar;
     
@@ -146,7 +151,7 @@ elseif strcmp(objtype,'headdirection')
     angles(angles>(2*pi))=angles(angles>(2*pi)) - 2*pi;
     angles(angles<=0)=angles(angles<=0) + 2*pi;
     % Normalize map, then multiply by factor if need to be scaled to place/view maps
-    mapLnorm = (mapL./(max(abs(mapL)))) .* 20;
+    mapLnorm = (mapL./(nanmax(abs(mapL)))) .* 20;
     [x, y] = pol2cart(angles, mapLnorm);
     x(end+1) = x(1);    % Make line meet itself at end
     y(end+1) = y(1);    %
@@ -154,18 +159,21 @@ elseif strcmp(objtype,'headdirection')
     c = mapL;
     c(end+1) = c(1);
 
-    if isempty(varargin)
+    if isempty(varargin) % Plot HD map with interp-colored line
         % Plot %
-        ax = gca;   
-        hMap = patch(x,y,c,'FaceColor','none','EdgeColor','interp');
-    elseif size(varargin,2) == 2 && strcmp(varargin{1},'headdirection')
+%         ax = gca;   
+        hMap = patch(x,y,c,'FaceColor','interp','EdgeColor','interp','LineWidth',3,'FaceAlpha',0.5,'EdgeAlpha',0.5);
+    elseif size(varargin,2) == 2 && strcmp(varargin{1},'headdirection') % Patch HD field within HD map
         % Plot %
-        ax = gca;
-        hMap = plot(ax,x, y, varargin{2});
+%         ax = gca;
+%         hMap = plot(ax,x, y, 'Color',varargin{2}); % Single arc
+        x(isnan(x)) = 0;
+        y(isnan(y)) = 0;
+        hMap = patch(ax,x, y, varargin{2},'FaceAlpha',0.3,'EdgeColor','none'); % patch
     else
         % If plotting both primary and secondary maps in 3D
         if strcmp(varargin{1},'place')
-            raise = 20;
+            raise = 60; % 20;
         elseif strcmp(varargin{1},'view')
             raise = 60;
         end
@@ -174,11 +182,14 @@ elseif strcmp(objtype,'headdirection')
         xplus = x+20;
         yplus = y+20;
         % Plot
-        ax = gca;
-        if size(varargin,2) == 1
-            hMap = patch(xplus,yplus,zplus,c,'FaceColor','none','EdgeColor','interp');
-        elseif size(varargin,2) == 2
-            hMap = plot3(ax,xplus, yplus,zplus, varargin{2});
+%         ax = gca;
+        if size(varargin,2) == 1 % Plot HD map with interp-colored line within place or view map
+            hMap = patch(xplus,yplus,zplus,c,'FaceColor','interp','EdgeColor','interp','LineWidth',3,'FaceAlpha',0.5,'EdgeAlpha',0.5);
+        elseif size(varargin,2) == 2 % Patching HD field within a place or view map
+%             hMap = plot3(ax,xplus, yplus,zplus, varargin{2});
+            xplus(isnan(xplus)) = 20;
+            yplus(isnan(yplus)) = 20;
+            hMap = patch(ax,xplus, yplus, zplus,varargin{2},'FaceAlpha',0.3,'EdgeColor','none'); % patch
         end 
     end
     %                     % Plot %
@@ -197,43 +208,53 @@ elseif strcmp(objtype,'headdirection')
     if isempty(varargin) 
         axis(ax, 'tight');
         axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
+        if axlim == 0
+            axlim = 1;
+        end
         axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
         line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
         line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-        axis(ax, 'square', 'off');
+%         axis(ax, 'square', 'off');
 %         axis(ax, 'square', 'off', 'tight');
         ax.FontSize = 14;
     else
         if ~strcmp(varargin{1},'headdirection')
             if strcmp(varargin{1},'place')
-                raise = 20;
+                raise = 60; % 20;
             elseif strcmp(varargin{1},'view')
                 raise = 60;
             end
             axis(ax, 'tight');
             axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
-            axsize = max([abs(x),abs(y)]);          
+            if axlim == 0
+                axlim = 1;
+            end
+            axsize = max([abs(x),abs(y)]); 
+            if isnan(axsize)
+                axsize = 20;
+            end
             line('xdata',0.95*[20-axsize 20+axsize],'ydata',[20 20],'zdata',[raise raise],'parent',ax);   
             line('xdata',[20 20],'ydata',0.95*[20-axsize 20+axsize],'zdata',[raise raise],'parent',ax); % centre-crossing axes
             if strcmp(varargin{1},'headdirection')
                 axis(ax,[1.1*(20-axsize) 1.1*axlim 1.1*(20-axsize) 1.1*axlim]); 
-                axis(ax, 'square', 'off');
-    %             axis(ax, 'square', 'off', 'tight');
+%                 axis(ax, 'square', 'off');
+%                 axis(ax, 'square', 'off', 'tight');
             else
-                axis(ax,'square','off');
+%                 axis(ax,'square','off');
             end
             ax.FontSize = 14;
             view(-35,20);
         else
             axis(ax, 'tight');
-        axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
-        axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
-        line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
-        line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-        axis(ax, 'square', 'off');
-%         axis(ax, 'square', 'off', 'tight');
+            axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim')])); % Make axes square around biggest value
+            axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
+            line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
+            line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
+    %         axis(ax, 'square', 'off');
+%             axis(ax, 'square', 'off', 'tight');
         end
     end
+    view(-35,20);
     colormap jet;
     colorbar;
 
