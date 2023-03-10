@@ -491,7 +491,8 @@ if(dnum>0)
                             ind_fields = basemapGsm{gg} > Args.FieldThr*peakrate_subset & ...
                                 basemapGsm{gg} > (nanmean(basemapLsm)+nanstd(basemapLsm));
                             % Find separate fields
-                            [fieldlabel,fieldcount] = bwlabel(ind_fields,4); % Only count adjacent pixels if they share edge, not if they share corners
+%                             [fieldlabel,fieldcount] = bwlabel(ind_fields,4); % Only count adjacent pixels if they share edge, not if they share corners
+                            [fieldlabel,fieldcount] = bwlabel(ind_fields,8); % Count adjacent pixels even if just they share corners
                             % For walls and pillars, if there are fields that wrap around split, merge them.
                             if gg > 4
                                % Find possible split fields
