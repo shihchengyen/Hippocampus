@@ -1,0 +1,17 @@
+#!/bin/bash 
+  
+#PBS -P mountainsort 
+#PBS -q serial
+#PBS -l select=1:ncpus=1:mem=12GB 
+#PBS -j oe 
+#PBS -N mountainsort
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+##--- Put your exec/application commands below ---  
+##--- For example: 
+
+matlab2016b2 -nojvm -nodisplay -nosplash -r "mountain_batch('hippo')"
+
+##--- END HERE --- 
