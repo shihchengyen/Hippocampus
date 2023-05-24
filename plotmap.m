@@ -1,6 +1,4 @@
-
-
-function [mapG,mapGdummy]= plotmap(mapL,objtype,varargin)
+function [mapG,mapGdummy,maxrate]= plotmap(mapL,objtype,varargin)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot rate map in either place, spatial view or head direction frames
@@ -23,8 +21,6 @@ end
 ax = gca;
 
 if strcmp(objtype,'place') || strcmp(objtype,'view')
-%     
-%     ax = gca;
     axis(ax,'tight');
     % Insert floor place map into larger 3D view setting
     if strcmp(objtype,'place')
@@ -44,17 +40,14 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
     ceiling_x = floor_x;
     ceiling_y = floor_y;
     ceiling_z = 40.*ones(41,41);
-%     ceiling_z = 60.*ones(41,41);
 
     walls_x = repmat([0.*ones(1,40) 0:39 40.*ones(1,40) 40:-1:0], 9, 1);
     walls_y = repmat([0:39 40.*ones(1,40) 40:-1:1 0.*ones(1,41)], 9, 1);
     walls_z = repmat([24:-1:16]', 1, 40*4 + 1);
-%     walls_z = repmat([34:-1:26]', 1, 40*4 + 1);
 
     P1_x = repmat([24.*ones(1,8) 24:31 32.*ones(1,8) 32:-1:24], 6, 1);
     P1_y = repmat([8:15 16.*ones(1,8) 16:-1:9 8.*ones(1,9)], 6, 1);
     PX_z = repmat([21:-1:16]', 1, 8*4 + 1);
-%     PX_z = repmat([31:-1:26]', 1, 8*4 + 1);
 
     P2_x = repmat([8.*ones(1,8) 8:15 16.*ones(1,8) 16:-1:8], 6, 1);
     P2_y = P1_y;
@@ -116,8 +109,6 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
     surf(walls_x, walls_y, walls_z, walls);      
     alpha 1; shading flat;
 
-    % disp(sum(sum(find(ceiling==0))) + sum(sum(find(floor==0))) + sum(sum(find(P4_TL==0))));
-
     % Plot pillars
     surf(P1_x, P1_y, PX_z, P1_BR);
     alpha 1; shading flat;
@@ -128,11 +119,24 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
     surf(P4_x, P4_y, PX_z, P4_TL);
 
     % Display parameters
-    
-%     axis(ax, 'tight');
+    if strcmp(objtype,'view')
+        if ~isnan(nanmax(mapL(3:end))) && nanmax(mapL(3:end)) ~= 0
+            maxrate = nanmax(mapL(3:end));
+        else
+            maxrate = 1;
+        end
+    else
+        if ~isnan(nanmax(mapL)) && nanmax(mapL) ~= 0
+            maxrate = nanmax(mapL);
+        else 
+            maxrate = 1;
+        end
+    end
+    set(ax,'CLim',[0 maxrate],'DataAspectRatioMode','manual','DataAspectRatio',[1 1 1],...
+                'XColor','none','YColor','none','ZColor','none',...
+                'FontSize',14,'GridLineStyle','none','Color','none');
     axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim'),get(ax, 'zlim')])); % Make axes square around biggest value
     axis(ax,[0 axlim 0 axlim 0 axlim]);  
-%     axis(ax,'square','off');
     colormap jet;
     colorbar;
     
@@ -214,7 +218,7 @@ elseif strcmp(objtype,'headdirection')
         axis(ax,[-1.1*axlim 1.1*axlim -1.1*axlim 1.1*axlim]);                         %   ..
         line('xdata',0.95*[-axlim axlim],'ydata',[0 0],'parent',ax);   
         line('xdata',[0 0],'ydata',0.95*[-axlim axlim],'parent',ax); % centre-crossing axes
-%         axis(ax, 'square', 'off');
+        axis(ax, 'square', 'off');
 %         axis(ax, 'square', 'off', 'tight');
         ax.FontSize = 14;
     else
