@@ -38,6 +38,10 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+        r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
+        r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
+        r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
+        r.data.discard = [p.data.discard; q.data.discard];
 
 		% object specific fields
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
@@ -88,6 +92,7 @@ else
 %         r.data.SICsh_dksm = [p.data.SICsh_dksm; q.data.SICsh_dksm];
         r.data.crit_sm = [p.data.crit_sm; q.data.crit_sm];
         r.data.critsh_sm = [p.data.critsh_sm; q.data.critsh_sm];
+        r.data.critthrcell = [p.data.critthrcell; q.data.critthrcell];
         r.data.crit_sm1 = [p.data.crit_sm1; q.data.crit_sm1];
         r.data.crit_sm2 = [p.data.crit_sm2; q.data.crit_sm2];
         

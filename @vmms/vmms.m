@@ -14,9 +14,9 @@ function [obj, varargout] = vmms(varargin)
 %   Dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'ObjectLevel', 'Cell',...
-                'RequiredFile','spiketrain.mat', 'GridSteps',40, ...
-                'UseCorr',1,'FieldThr',0.7,'FieldSplitThr',0.75,'NumShuffles',1000, ...
-                'FieldThrPseudo',0.6,'FieldSplitThrPseudo',0.7);
+                'RequiredFile','spiketrain.mat', 'GridSteps',40, 'pix', 100, ...
+                'UseCorr',1,'FieldThr',0.6,'FieldSplitThr',0.7,'NumShuffles',1000, ...
+                'FieldThrPseudo',0.6,'FieldSplitThrPseudo',0.7,'UseAllTrials',1,'ThresVel',1,'UseMinObs',0);
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -75,103 +75,126 @@ if(dnum>0)
     msobjpairs = {{'pc','sv'},{'pc','hd'},{'hd','sv'}};
     Args.spatialvarpairs = spatialvarpairs;
     
-    %% Selectivity of whole cell
-    
-    data.placesel = false;
-    data.viewsel = false;
-    data.headdirectionsel = false;
-%     data.mixsel = false;
-    data.discard = false;
-    
-    cd('FiltVel/1px');
+    % Load corrected object
+    cd(['FiltVel/' num2str(Args.pix) 'px']);
+    cr = load('vmcorr.mat');
+    cr = cr.vmcorr.data;
     pc = load('vmpc.mat');
     pc = pc.vmp.data;
     sv = load('vmsv.mat');
     sv = sv.vms.data;
     hd = load('vmhd.mat');
     hd = hd.vmd.data;
-    cr = load('vmcorr.mat');
-    cr = cr.vmcorr.data;
-    % Get cell SI
-    if ~Args.UseCorr % If using original pc/sv objects to define fields
-        pSI = pc.crit_sm;
-        vSI = sv.crit_sm;
-        hSI = hd.crit_sm;
-    else
-        %%% PATCH (we have two instances each of pair corrections, which to pick?)
-        error('FIX selective criteria variable name'); 
-        pSI = cr.pv.SIC_sm_corrp;
-        vSI = cr.pv.SIC_sm_corrv;
-        hSI = cr.ph.SIC_sm_corrh;
-    end
-    % Get number of spikes retained after filtering
-    numspk = sum(pc.spk_raw);
-    data.filtspkcount = numspk; 
-    if numspk < 100
+    cd ..; cd ..;
+
+    if ~pc.discard && ~sv.discard && ~hd.discard
+        data.discard = false;
+    else 
         data.discard = true;
     end
 
-%     % Get population SI threshold without the cells that have < 100 spikes. Note: population is defined by size of combined object, not cell list
-%     c_pc = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmpc.mat');
-%     c_pc = c_pc.vmp.data;
-%     c_sv = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmsv.mat');
-%     c_sv = c_sv.vms.data;
-%     c_hd = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmhd.mat');
-%     c_hd = c_hd.vmd.data;
-%     cell_indDiscardP = ismember(c_pc.origin,c_pc.origin(sum(c_pc.spk_raw,2)<100)); %%% Change in the future to a fixed var that is same in pc/sv
-%     cell_indDiscardV = ismember(c_sv.origin,c_sv.origin(sum(c_pc.spk_raw,2)<100));
-%     pSIset = c_pc.critsh_sm;
-%     vSIset = c_sv.critsh_sm;
-%     hSIset = c_hd.critsh_sm;
-%     cell_numDiscardP = find(cell_indDiscardP);
-%     cell_numDiscardV = find(cell_indDiscardV);
-%     for dd = 1:size(cell_numDiscardP,1)
-%         ind = cell_numDiscardP(dd);
-%         pSIset((ind-1)*pc.Args.NumShuffles+1:ind*pc.Args.NumShuffles) = nan;
+%     %% Selectivity of whole cell
+% 
+%     data.placesel = false;
+%     data.viewsel = false;
+%     data.headdirectionsel = false;
+% %     data.mixsel = false;
+%     data.discard = false;
+% 
+%     cd('FiltVel/1px');
+%     pc = load('vmpc.mat');
+%     pc = pc.vmp.data;
+%     sv = load('vmsv.mat');
+%     sv = sv.vms.data;
+%     hd = load('vmhd.mat');
+%     hd = hd.vmd.data;
+%     cr = load('vmcorr.mat');
+%     cr = cr.vmcorr.data;
+%     % Get cell SI
+%     if ~Args.UseCorr % If using original pc/sv objects to define fields
+%         pSI = pc.crit_sm;
+%         vSI = sv.crit_sm;
+%         hSI = hd.crit_sm;
+%     else
+%         %%% PATCH (we have two instances each of pair corrections, which to pick?)
+%         error('FIX selective criteria variable name'); 
+%         pSI = cr.pv.SIC_sm_corrp;
+%         vSI = cr.pv.SIC_sm_corrv;
+%         hSI = cr.ph.SIC_sm_corrh;
 %     end
-%     for dd = 1:size(cell_numDiscardV,1)
-%         ind = cell_numDiscardV(dd);
-%         vSIset((ind-1)*sv.Args.NumShuffles+1:ind*sv.Args.NumShuffles) = nan;
+%     % Get number of spikes retained after filtering
+%     if pc.filtspknum == sv.filtspknum || pc.filtspknum == hd.filtspknum
+%         numspk = sum(pc.spk_raw);
+%         data.filtspkcount = numspk; 
+%         if numspk < 100
+%             data.discard = true;
+%         end
+%     else 
+%         error('different numbers of spikes for each object');
 %     end
-%     pSIthr = prctile([pSI; pSIset],95); % Population threshold only
-%     vSIthr = prctile([vSI; vSIset],95); % Population threshold only
-%     hSIthr = prctile([hSI; hSIset],95);
-% %     pSIthr = max([prctile(c_pc.SICsh,95) prctile(pc.SICsh,95)]); % Both population and cell threshold
-% %     vSIthr = max([prctile(c_sv.SICsh,95) prctile(sv.SICsh,95)]); % Both population and cell threshold
+% 
+% %     % Get population SI threshold without the cells that have < 100 spikes. Note: population is defined by size of combined object, not cell list
+% %     c_pc = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmpc.mat');
+% %     c_pc = c_pc.vmp.data;
+% %     c_sv = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmsv.mat');
+% %     c_sv = c_sv.vms.data;
+% %     c_hd = load('/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis/Combined Objects/FiltVel/1px/c_vmhd.mat');
+% %     c_hd = c_hd.vmd.data;
+% %     cell_indDiscardP = ismember(c_pc.origin,c_pc.origin(sum(c_pc.spk_raw,2)<100)); %%% Change in the future to a fixed var that is same in pc/sv
+% %     cell_indDiscardV = ismember(c_sv.origin,c_sv.origin(sum(c_pc.spk_raw,2)<100));
+% %     pSIset = c_pc.critsh_sm;
+% %     vSIset = c_sv.critsh_sm;
+% %     hSIset = c_hd.critsh_sm;
+% %     cell_numDiscardP = find(cell_indDiscardP);
+% %     cell_numDiscardV = find(cell_indDiscardV);
+% %     for dd = 1:size(cell_numDiscardP,1)
+% %         ind = cell_numDiscardP(dd);
+% %         pSIset((ind-1)*pc.Args.NumShuffles+1:ind*pc.Args.NumShuffles) = nan;
+% %     end
+% %     for dd = 1:size(cell_numDiscardV,1)
+% %         ind = cell_numDiscardV(dd);
+% %         vSIset((ind-1)*sv.Args.NumShuffles+1:ind*sv.Args.NumShuffles) = nan;
+% %     end
+% %     pSIthr = prctile([pSI; pSIset],95); % Population threshold only
+% %     vSIthr = prctile([vSI; vSIset],95); % Population threshold only
+% %     hSIthr = prctile([hSI; hSIset],95);
+% % %     pSIthr = max([prctile(c_pc.SICsh,95) prctile(pc.SICsh,95)]); % Both population and cell threshold
+% % %     vSIthr = max([prctile(c_sv.SICsh,95) prctile(sv.SICsh,95)]); % Both population and cell threshold
+% %     cd(cwd);
+%     % Use past thresholds
+%     pSIthr = 0.057;
+%     vSIthr = 0.22;
+%     hSIthr = 0.13;
 %     cd(cwd);
-    % Use past thresholds
-    pSIthr = 0.057;
-    vSIthr = 0.22;
-    hSIthr = 0.13;
-    cd(cwd);
+% 
+%     % Get peak rate of adaptive-smooted rate map
+%     peakrate_pc = nanmax(pc.maps_adsm);
+%     peakrate_sv = nanmax(sv.maps_adsm); % exclude cue and hint???
+%     peakrate_hd = nanmax(hd.maps_sm);
+% 
+%     % Get selectivity of this cell
+%     if pSI>pSIthr && numspk>=100 && peakrate_pc>=0.7
+%         data.placesel = true;
+%     end
+%     if vSI>vSIthr && numspk>=100 && peakrate_sv>=0.7
+%         data.viewsel = true;
+%     end
+%     if hSI>hSIthr && numspk>=100 && peakrate_hd>=0.7
+%         data.headdirectionsel = true;
+%     end
     
-    % Get peak rate of adaptive-smooted rate map
-    peakrate_pc = nanmax(pc.maps_adsm);
-    peakrate_sv = nanmax(sv.maps_adsm); % exclude cue and hint???
-    peakrate_hd = nanmax(hd.maps_sm);
-    
-    % Get selectivity of this cell
-    if pSI>pSIthr && numspk>=100 && peakrate_pc>=0.7
-        data.placesel = true;
-    end
-    if vSI>vSIthr && numspk>=100 && peakrate_sv>=0.7
-        data.viewsel = true;
-    end
-    if hSI>hSIthr && numspk>=100 && peakrate_hd>=0.7
-        data.headdirectionsel = true;
-    end
-    
+    % Set up output structure
     for pair = 1:size(spatialvarpairs,2)
 
         msvar = spatialvarpairs{pair}; % For now, do in pairs only
         msobj = msobjpairs{pair};
         msvar_short = {msvar{1}(1),msvar{2}(1)};
         pairname_short = [msvar{1}(1) msvar{2}(1)];
-        if data.([msvar{1} 'sel']) && data.([msvar{2} 'sel'])
-            data.(pairname_short).mixsel = true;
-        else 
-            data.(pairname_short).mixsel = false;
-        end
+        % if data.([msvar{1} 'sel']) && data.([msvar{2} 'sel'])
+        %     data.(pairname_short).mixsel = true;
+        % else 
+        %     data.(pairname_short).mixsel = false;
+        % end
     
         %% Set up output variables
         for oo = 1:size(msvar,2)
@@ -265,9 +288,9 @@ if(dnum>0)
         end
     end
         
+    % For all data, regardless of selectivity
     if ~data.discard
         
-
         %% Work out mixed selective properties wuth each spatialvar as base
         for pair = 1:size(spatialvarpairs,2)
             
@@ -276,148 +299,160 @@ if(dnum>0)
             msvar_short = {msvar{1}(1),msvar{2}(1)};
             pairname_short = [msvar{1}(1) msvar{2}(1)];
             for oo = 1:size(msvar,2)
-                    % Load pv object
-                    cd ..; cd ..; cd ..;
-                    pv = load('1vmpv.mat');
-                    pv = pv.pv;
-                    stc = pv.data.sessionTimeC;
-                    stc(:,5) = [diff(stc(:,1)); 0]; % dwell time
-
-                    % Bin spikes
-                    disp('Binning spikes ...');
-                    cd(cwd);
-                    spiketrain = load('spiketrain.mat');
-                    spiketimes = spiketrain.timestamps ./ 1000; % in seconds
-                    spiketimes(spiketimes(:,1) < stc(1,1),:) = []; 
-                    binned = histcounts(spiketimes, stc(:,1))';
-                    stc(:,6) = [binned; 0];
-
-                    %% Filter pv with same criteria used in vmpc/sv
-                    disp('Filtering ...');
-                    conditions = ones(size(stc,1),1);
-                    if pc.Args.UseAllTrials == 0
-                        conditions = conditions & pv.data.good_trial_markers;
-                    end
-                    if pc.Args.ThresVel > 0
-                        conditions = conditions & get(pv,'SpeedLimit',pc.Args.ThresVel); % pv here needs to be in object form, not structure
-                    end
-                    if pc.Args.UseMinObs
-                        bins_sieved_p = pv.data.place_good_bins;
-                        bins_removed_p = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_p);
-                        bins_sieved_v = pv.data.view_good_bins;
-                        bins_removed_v = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_v);
-                        conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
-                    else
-                        bins_sieved_p = 1:(pc.Args.GridSteps * pc.Args.GridSteps);
-                        bins_removed_p = [];
-                        bins_sieved_v = 1:size(pv.data.view_intervals_count,1);
-                        bins_removed_v = [];
-                    end
-                    stc(conditions ~= 1,:) = []; % Filter stc. This will be kept for drawing pixels from in field analysis
-
-                    % Backfill duration and spikes for view bins - following code from
-                    % vmcorr
-                    stcvars = {'time','place','headdirection','view','dur','spike'};
-            %             for ss = 2:size(msvar,2)
-                    stcfill = nan(size(stc)); stcfill(:,5:6) = 0; % To avoid issues where last dur and spk count are 0 and missing next data point to back fill. 
-                    sec_durations = zeros(cr.([msvar{2-oo+1} 'bins']),cr.([msvar{oo} 'bins']));
-                    sec_spikes = zeros(cr.([msvar{2-oo+1} 'bins']),cr.([msvar{oo} 'bins']));
-                    base_durations = zeros(1,cr.([msvar{oo} 'bins']));
-                    base_spikes = zeros(1,cr.([msvar{oo} 'bins']));
-                    xbase = strcmp(stcvars,msvar{oo});
-                    xsec = strcmp(stcvars,msvar{2-oo+1});
-                    for i = 1:cr.([msvar{oo} 'bins'])
-
-                        inds = stc(:,xbase)==i;
-                        indnums = find(inds);
-                        subsample = [stc(inds,:)]; % [time place hd view dur spk]
-
-                        % Consider only samples where both place and view are sampled
-                        if strcmp(msvar{2-oo+1},'view')
-                            indnums(isnan(subsample(:,xsec)),:) = [];
-                            subsample(isnan(subsample(:,xsec)),:) = [];
-                        else
-                            indnums(subsample(:,xsec)<1,:) = [];
-                            subsample(subsample(:,xsec)<1,:) = [];
-                        end
-                        if isempty(subsample)
-                            continue;
-                        end
-
-                        % Get spikes and duration for place only
-                        base_durations(1,i) = sum(subsample(:,5));
-                        base_spikes(1,i) = sum(subsample(:,6));
-
-                        % back-filling spikes for view
-                        subsample(subsample(:,6)==0,6) = nan;
-                        subsample(:,7) = subsample(:,5)~=0;
-                        subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
-                        subsample(:,7) = [];
-                        subsample(:,6) = fillmissing(subsample(:,6), 'next');
-                        % back-filling time for view
-                        subsample(subsample(:,5)==0,5) = nan;
-                        subsample(:,5) = fillmissing(subsample(:,5), 'next');
-
-                        % remove bad view spots
-                        indnums(isnan(subsample(:,xsec)),:) = [];
-                        subsample(isnan(subsample(:,xsec)),:) = [];
-
-                        % Put backfill into sessionTimeC array
-                        stcfill(indnums,:) = subsample;
-
-                        % padding with 5122 bin
-                        subsample = [subsample; [0 1600 60 5122 0 0]];
-
-                        % sum durations
-                        sec_durations(:,i) = accumarray(subsample(:,xsec), subsample(:,5),[],[],NaN);
-                        % sum spikes
-                        sec_spikes(:,i) = accumarray(subsample(:,xsec), subsample(:,6),[],[],NaN); 
-                    end
-                    stcfill(isnan(stcfill(:,1)),:) = []; % Remove all rows without both place and view data
-                    % Remove low obs bins
-                    stcfill(~ismember(stcfill(:,2),bins_sieved_p) | ~ismember(stcfill(:,3),bins_sieved_v),:) = [];
-
-                    %%%%%% FIXXXXXXX
-                    if isnan(stcfill(end,5) )
-                        stcfill(end,5) = 0;
-                    end
-                    if isnan(stcfill(end,6))
-                        stcfill(end,6) = 0;
-                    end
-
-                    % Replace nan duration values with zero
-                    base_durations(isnan(base_durations)) = 0; % Necessary because NaNs seem to mess up the smoothing. 
-                    sec_durations(isnan(sec_durations)) = 0; 
-                    % Remove low obs bins
-                    if ~strcmp(msvar{oo},'headdirection')
-                        base_durations(eval(['bins_removed_' msvar_short{oo}])) = 0;
-                        sec_durations(:,eval(['bins_removed_' msvar_short{oo}])) = 0;
-                        base_spikes(eval(['bins_removed_' msvar_short{oo}])) = 0;
-                        sec_spikes(:,eval(['bins_removed_' msvar_short{oo}])) = 0;
-                    end
-                    if ~strcmp(msvar{2-oo+1},'headdirection')
-                        sec_durations(eval(['bins_removed_' msvar_short{2-oo+1}]),:) = 0;
-                        sec_spikes(eval(['bins_removed_' msvar_short{2-oo+1}]),:) = 0;
-                    end
-
-                    % Make maps from filtered pv object
-                    base_map = base_spikes./base_durations;
-                    sec_map = nansum(sec_spikes,2)./nansum(sec_durations,2);
-                    sec_map(nansum(sec_durations,2)==0) = nan; % restore nans to unvisited bins
-                    %%% Store pv maps
-                    data.(pairname_short).(msvar{oo}).pvmap = base_map;
-                    data.(pairname_short).(msvar{2-oo+1}).pvmap = sec_map';
-                    if numspk ~= sum(base_spikes)
-                        disp(['vmpc num spk = ' num2str(numspk) ', vmms num spk = ' num2str(sum(base_spikes))]);
-                    end
-
+                    % % Load pv object
+                    % cd ..; cd ..; cd ..;
+                    % pv = load([num2str(Args.pix) 'vmpv.mat']);
+                    % pv = pv.pv;
+                    % stc = pv.data.sessionTimeC;
+                    % stc(:,5) = [diff(stc(:,1)); 0]; % dwell time
+                    % 
+                    % % Bin spikes
+                    % disp('Binning spikes ...');
+                    % cd(cwd);
+                    % spiketrain = load('spiketrain.mat');
+                    % spiketimes = spiketrain.timestamps ./ 1000; % in seconds
+                    % spiketimes(spiketimes(:,1) < stc(1,1),:) = []; 
+                    % binned = histcounts(spiketimes, stc(:,1))';
+                    % stc(:,6) = [binned; 0];
+                    % 
+                    % %% Filter pv with same criteria used in vmpc/sv
+                    % disp('Filtering ...');
+                    % conditions = ones(size(stc,1),1);
+                    % if Args.UseAllTrials == 0
+                    %     conditions = conditions & pv.data.good_trial_markers;
+                    % end
+                    % if Args.ThresVel > 0
+                    %     conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel); % pv here needs to be in object form, not structure
+                    % end
+                    % if Args.UseMinObs
+                    %     bins_sieved_p = pv.data.place_good_bins;
+                    %     bins_removed_p = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_p);
+                    %     bins_sieved_v = pv.data.view_good_bins;
+                    %     bins_removed_v = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_v);
+                    %     conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+                    % else
+                    %     bins_sieved_p = 1:(Args.GridSteps * Args.GridSteps);
+                    %     bins_removed_p = [];
+                    %     bins_sieved_v = 1:size(pv.data.view_intervals_count,1);
+                    %     bins_removed_v = [];
+                    % end
+                    % stc(conditions ~= 1,:) = []; % Filter stc. This will be kept for drawing pixels from in field analysis
+                    % % back-filling spikes for view
+                    % stc(stc(:,6)==0,6) = nan;
+                    % stc(:,7) = stc(:,5)~=0;
+                    % stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
+                    % stc(:,7) = [];
+                    % stc(:,6) = fillmissing(stc(:,6), 'next');
+                    % stc(isnan(stc(:,6)),6) = 0;
+                    % % back-filling time for view
+                    % stc(stc(:,5)==0,5) = nan;
+                    % stc(:,5) = fillmissing(stc(:,5), 'next');
+                    % 
+                    % % Backfill duration and spikes for view bins - following code from
+                    % % vmcorr
+                    % stcvars = {'time','place','headdirection','view','dur','spike'};
+                    % stcfill = nan(size(stc)); stcfill(:,5:6) = 0; % To avoid issues where last dur and spk count are 0 and missing next data point to back fill. 
+                    % sec_durations = zeros(cr.([msvar{2-oo+1} 'bins']),cr.([msvar{oo} 'bins']));
+                    % sec_spikes = zeros(cr.([msvar{2-oo+1} 'bins']),cr.([msvar{oo} 'bins']));
+                    % base_durations = zeros(1,cr.([msvar{oo} 'bins']));
+                    % base_spikes = zeros(1,cr.([msvar{oo} 'bins']));
+                    % xbase = strcmp(stcvars,msvar{oo});
+                    % xsec = strcmp(stcvars,msvar{2-oo+1});
+                    % for i = 1:cr.([msvar{oo} 'bins'])
+                    % 
+                    %     inds = stc(:,xbase)==i;
+                    %     indnums = find(inds);
+                    %     subsample = [stc(inds,:)]; % [time place hd view dur spk]
+                    % 
+                    %     % Consider only samples where both place and view are sampled
+                    %     if strcmp(msvar{2-oo+1},'view')
+                    %         indnums(isnan(subsample(:,xsec)),:) = [];
+                    %         subsample(isnan(subsample(:,xsec)),:) = [];
+                    %     else
+                    %         indnums(subsample(:,xsec)<1,:) = [];
+                    %         subsample(subsample(:,xsec)<1,:) = [];
+                    %     end
+                    %     if isempty(subsample)
+                    %         continue;
+                    %     end
+                    % 
+                    %     % Get spikes and duration for place only
+                    %     base_durations(1,i) = sum(subsample(:,5));
+                    %     base_spikes(1,i) = sum(subsample(:,6));
+                    % 
+                    %     % % back-filling spikes for view
+                    %     % subsample(subsample(:,6)==0,6) = nan;
+                    %     % subsample(:,7) = subsample(:,5)~=0;
+                    %     % subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
+                    %     % subsample(:,7) = [];
+                    %     % subsample(:,6) = fillmissing(subsample(:,6), 'next');
+                    %     % subsample(isnan(subsample(:,6)),6) = 0;
+                    %     % % back-filling time for view
+                    %     % subsample(subsample(:,5)==0,5) = nan;
+                    %     % subsample(:,5) = fillmissing(subsample(:,5), 'next');
+                    % 
+                    %     % remove bad view spots
+                    %     indnums(isnan(subsample(:,xsec)),:) = [];
+                    %     subsample(isnan(subsample(:,xsec)),:) = [];
+                    % 
+                    %     % Put backfill into sessionTimeC array
+                    %     stcfill(indnums,:) = subsample;
+                    % 
+                    %     % padding with 5122 bin
+                    %     subsample = [subsample; [0 1600 60 5122 0 0]];
+                    % 
+                    %     % sum durations
+                    %     sec_durations(:,i) = accumarray(subsample(:,xsec), subsample(:,5),[],[],NaN);
+                    %     % sum spikes
+                    %     sec_spikes(:,i) = accumarray(subsample(:,xsec), subsample(:,6),[],[],NaN); 
+                    % end
+                    % stcfill(isnan(stcfill(:,1)),:) = []; % Remove all rows without both place and view data
+                    % % Remove low obs bins
+                    % stcfill(~ismember(stcfill(:,2),bins_sieved_p) | ~ismember(stcfill(:,3),bins_sieved_v),:) = [];
+                    % 
+                    % %%%%%% FIXXXXXXX
+                    % if isnan(stcfill(end,5) )
+                    %     stcfill(end,5) = 0;
+                    % end
+                    % if isnan(stcfill(end,6))
+                    %     stcfill(end,6) = 0;
+                    % end
+                    % 
+                    % % Replace nan duration values with zero
+                    % base_durations(isnan(base_durations)) = 0; % Necessary because NaNs seem to mess up the smoothing. 
+                    % sec_durations(isnan(sec_durations)) = 0; 
+                    % % Remove low obs bins
+                    % if ~strcmp(msvar{oo},'headdirection')
+                    %     base_durations(eval(['bins_removed_' msvar_short{oo}])) = 0;
+                    %     sec_durations(:,eval(['bins_removed_' msvar_short{oo}])) = 0;
+                    %     base_spikes(eval(['bins_removed_' msvar_short{oo}])) = 0;
+                    %     sec_spikes(:,eval(['bins_removed_' msvar_short{oo}])) = 0;
+                    % end
+                    % if ~strcmp(msvar{2-oo+1},'headdirection')
+                    %     sec_durations(eval(['bins_removed_' msvar_short{2-oo+1}]),:) = 0;
+                    %     sec_spikes(eval(['bins_removed_' msvar_short{2-oo+1}]),:) = 0;
+                    % end
+                    % 
+                    % % Make maps from filtered pv object
+                    % base_map = base_spikes./base_durations;
+                    % sec_map = nansum(sec_spikes,2)./nansum(sec_durations,2);
+                    % sec_map(nansum(sec_durations,2)==0) = nan; % restore nans to unvisited bins
+                    % %%% Store pv maps
+                    % data.(pairname_short).(msvar{oo}).pvmap = base_map;
+                    % data.(pairname_short).(msvar{2-oo+1}).pvmap = sec_map';
+                    % if pc.filtspknum ~= sum(base_spikes)
+                    %     disp(['vmpc num spk = ' num2str(pc.filtspknum) ', vmms num spk = ' num2str(sum(base_spikes))]);
+                    % end
 
                     %% Find base fields 
-            %             for oo = 1:size(msobj,2)
+                    stcfilt = eval(msobj{oo}).stcfilt;
+                    stcvars = {'timestamp','place','headdirection','view','duration','spikes'};
+                    xbase = strcmp(stcvars,msvar{oo});
+                    xsec = strcmp(stcvars,msvar{2-oo+1});
                     disp(['Delineating ' msvar{oo} ' fields ...']);
-                    if strcmp([msvar_short{1} msvar_short{2}],'hv')
-                        disp('stop')
-                    end
+                    % if strcmp([msvar_short{1} msvar_short{2}],'hv')
+                    %     disp('stop')
+                    % end
                     baseobj = eval(msobj{oo});
                     secobj = eval(msobj{2-oo+1});
                     if Args.UseCorr
@@ -429,8 +464,9 @@ if(dnum>0)
                         secmap_sm = secobj.(['maps_sm']);
                         basemapLrw = baseobj.maps_raw;
                     end
-                    SI = eval([msvar_short{oo} 'SI']);
-                    SIthr = eval([msvar_short{oo} 'SIthr']);
+                    % crit = eval([msvar_short{oo} 'SI']);
+                    crit = eval(msobj{oo}).crit_sm;    
+                    % SIthr = eval([msvar_short{oo} 'SIthr']);
                     gridSize{oo} = cr.([msvar_short{1} msvar_short{2}]).([msvar{oo} 'binDepths']);
                     basemapGsm = lineartogrid(basemapLsm',msvar{oo},gridSize{oo});
                     dummygrid = lineartogrid((1:size(basemapLsm,2))',msvar{oo},gridSize{oo});
@@ -441,14 +477,16 @@ if(dnum>0)
                             peakrate_full = nanmax(basemapLsm);
                             peakrate_subset = peakrate_full;
                             prI = 1;
-                            fieldsizethreshold = 15;
+                            fieldsizethreshold = 9;
+                            % fieldsizethreshold = 15;
                         case 'view'
                             for ii = 1:size(basemapGsm,1)
                                 maxset(ii) = nanmax(reshape(basemapGsm{ii},size(basemapGsm{ii},1)*size(basemapGsm{ii},2),1));
                             end
                             [peakrate_full,prI] = max(maxset); % Max including cue/hint
                             peakrate_subset = max(maxset(3:end)); % Max excluding cue/hint
-                            fieldsizethreshold = 15;
+                            fieldsizethreshold = 9;
+                            % fieldsizethreshold = 15;
                         case 'headdirection'
                             peakrate_full = nanmax(basemapLsm);
                             peakrate_subset = peakrate_full;
@@ -466,9 +504,7 @@ if(dnum>0)
                     fieldmaxrate_rw = [];
                     fieldmaxrate_sm = [];
                     gridnum = [];
-    %                 if strcmp(msvar{oo},'headdirection')
-    %                     disp('stop')
-    %                 end
+
     %                 if data.([msvar{oo} 'sel']) % For use when only considering selective cells. If commented out, will consider any and every field regardless of overall selectivity
                         for gg = 1:size(basemapGsm,1)
                             % Skip cue and hint view maps 
@@ -478,14 +514,8 @@ if(dnum>0)
                             % if there is too little variance in firing rates, reject
                             if Args.FieldThr*peakrate_subset < nanmean(basemapLsm) % + nanstd(basemapLsm) % nanmax(basemapLsm) < nanmean(basemapLsm) + 2*nanstd(basemapLsm)
                                 continue;
-%                             else 
-%                                 continue;
                             end
-                            
 
-%                             if nanstd(basemapLsm)/nanmean(basemapLsm) < 0.25
-%                                 continue;
-%                             end
                             % Find fields with at least 1 pixel of > 70% peak
                             % rate and > 1 std dev from mean
                             ind_fields = basemapGsm{gg} > Args.FieldThr*peakrate_subset & ...
@@ -593,8 +623,8 @@ if(dnum>0)
                         data.(pairname_short).(msvar{oo}).sigfields = 0; % Selective but no sig fields (if cell non-selective, sigfields = nan, see below)
                         data.(pairname_short).(msvar{oo}).discardfieldnum = discardfieldnum;
                         data.(pairname_short).(msvar{oo}).discardfieldreason = discardfieldreason;
-                        data.(pairname_short).(msvar{oo}).SI = SI;
-                        data.(pairname_short).(msvar{oo}).SIthr = SIthr;
+                        data.(pairname_short).(msvar{oo}).SI = crit;
+                        % data.(pairname_short).(msvar{oo}).SIthr = SIthr;
                         data.(pairname_short).(msvar{oo}).basemapLsm = basemapLsm;
                         data.(pairname_short).(msvar{oo}).basemapLrw = basemapLrw;
                         data.(pairname_short).(msvar{oo}).secmapLsm = secmap_sm;
@@ -640,22 +670,10 @@ if(dnum>0)
                         for pp = 1:size(fieldcoord{ii},1)
                             %Get corresponding secondary pixels from pv object
                             secpx = [];
-                            ind_pv = stcfill(:,xbase) == fieldlinbin{ii}(pp); % base var px
-                            secpx(:,1) = stcfill(ind_pv,xsec); % sec var px
-                            secpx(:,2) = stcfill(ind_pv,5); % dur
-                            secpx(:,3) = stcfill(ind_pv,6); % spikes
-            %                         switch msvar{oo}
-            %                             case 'place'
-            %                                 ind_pv = stcfill(:,2) == fieldlinbin{ii}(pp);
-            %                                 secpx(:,1) = stcfill(ind_pv,4); % view px
-            %                                 secpx(:,2) = stcfill(ind_pv,5); % dur
-            %                                 secpx(:,3) = stcfill(ind_pv,6); % spikes
-            %                             case 'view'
-            %                                 ind_pv = stcfill(:,4) == fieldlinbin{ii}(pp);
-            %                                 secpx(:,1) = stcfill(ind_pv,2); % place px
-            %                                 secpx(:,2) = stcfill(ind_pv,5); % dur
-            %                                 secpx(:,3) = stcfill(ind_pv,6); % spikes
-            %                         end
+                            ind_pvh = stcfilt(:,xbase) == fieldlinbin{ii}(pp); % base var px
+                            secpx(:,1) = stcfilt(ind_pvh,xsec); % sec var px
+                            secpx(:,2) = stcfilt(ind_pvh,5); % dur
+                            secpx(:,3) = stcfilt(ind_pvh,6); % spikes
                             % Get firing rates 
                             usecpx = unique(secpx(:,1));
                             usecpx(isnan(usecpx)) = [];
@@ -715,7 +733,9 @@ if(dnum>0)
                             secdata(:,3) = nansum( [secdata(:,3) tempbins(:,2)] ,2); % Sum spikes across session
                         end
                         secdata(:,4) = secdata(:,3)./secdata(:,2);
-
+                        if sum(secdata(:,4)>0) == 0
+                            disp('empty sec map');
+                        end
 
                         seccomponents_perbasepx{ii,1} = rate_components_perbasepx;
                         secmap_perbasefield{ii,1} = secdata;
@@ -794,8 +814,8 @@ if(dnum>0)
                     end
 
                     % Store data
-                    data.(pairname_short).(msvar{oo}).SI = SI;
-                    data.(pairname_short).(msvar{oo}).SIthr = SIthr;
+                    data.(pairname_short).(msvar{oo}).SI = crit;
+                    % data.(pairname_short).(msvar{oo}).SIthr = SIthr;
                     data.(pairname_short).(msvar{oo}).basemapLsm = basemapLsm;
                     data.(pairname_short).(msvar{oo}).basemapLrw = basemapLrw;
                     data.(pairname_short).(msvar{oo}).secmapLsm = secmap_sm;
@@ -820,11 +840,9 @@ if(dnum>0)
 
                     clear fieldmaxrate_sm; clear fieldmaxrate_rw; clear gridnum; clear fieldcoord; clear fieldlinbin; clear secmap_perbasefield;
                     clear seclinmap; clear rate_components_perbasepx; clear secdata; clear secpx;
-                    clear seccomponents_perbasepx; clear dummygrid; clear SI; clear SIthr; clear sec_distratio; clear secmaps_dist;
+                    clear seccomponents_perbasepx; clear dummygrid; clear crit; clear SIthr; clear sec_distratio; clear secmaps_dist;
                     clear basemaps_dist; clear base_distratio; clear base_distcorr; clear sec_distcorr;
 
-            %             end
-            %             end
             end
 
 
@@ -863,8 +881,6 @@ if(dnum>0)
                     %% Smooth
                     switch msvar{2-oo+1}
                         case 'place'
-
-            %                     gridSteps = [pc.Args.GridSteps pc.Args.GridSteps];
                             gridSteps = gridSize{2-oo+1};
                             durG = cell2mat(lineartogrid(seclindur','place',gridSteps));
                             spkG = cell2mat(lineartogrid(seclinspk','place',gridSteps));
@@ -893,7 +909,6 @@ if(dnum>0)
                         case 'view'
 
                             gazeSections = sv.gazeSections;
-            %                     binDepths = sv.binDepths;
                             binDepths = gridSize{2-oo+1};
 
                             % Assign linear bin to grid bin - left to right, bottom to top
@@ -918,7 +933,6 @@ if(dnum>0)
                                     maps_adsmGpad{jj} = spkGpad{jj}/durGpad{jj};
                                     dur_adsmGpad{jj} = durGpad{jj};
                                 else
-            %                             [maps_adsmGpad{jj},spk_adsmG,dur_adsmG] = adsmooth(durGpad{jj},spkGpad{jj},sv.Args.Alpha);
                                     [maps_adsmGpad{jj},spk_adsmG,dur_adsmGpad{jj}] = adsmooth(durGpad{jj},spkGpad{jj},1e2);
                                 end
                             end
@@ -1132,13 +1146,10 @@ if(dnum>0)
 
                     % If no significant fields, skip to next var
                     if count == 0
-                        % create nptdata so we can inherit from it
-            %                     data.(pairname_short).(msvar{oo}).secsigconfdields = 0; 
                         secsigconfdields(ii) = 0;
                         continue;
                     else 
                         secsigconfdields(ii) = min([count maxfieldcount]);
-            %                     data.(pairname_short).(msvar{oo}).secsigconfdields = min([count maxfieldcount]);
                     end
 
                     % Sort fields
@@ -1178,7 +1189,7 @@ if(dnum>0)
 
             end
 
-                    %% Stats for infield and outfield firing of sec field
+            %% Stats for infield and outfield firing of sec field
             for oo = 1:size(msvar,2)
                 disp(['Comparing secondary infield and outfield firing for base ' msvar{oo} ' field ...'])
                 % Output variables
@@ -1209,7 +1220,7 @@ if(dnum>0)
                             if sum(inds_infield) == 0 
                                 continue;
                             end
-                            meanrate_infield = sum(secdata(inds_infield,3)) / sum(secdata(inds_infield,2));
+                            meanrate_infield = sum(secdata(inds_infield,3),'omitnan') / sum(secdata(inds_infield,2),'omitnan');
 
                             % Get mean firing rates for 10000 pseudorandom same-size fields outside of secondary field
                             meanrate_outfield = nan(Args.NumShuffles,1);
@@ -1315,9 +1326,9 @@ if(dnum>0)
                         sec_infieldrates{ii,1} = sec_infieldrate;
                         sec_outfieldrates{ii,1} = sec_outfieldrate;
                     else 
-                        if data.(pairname_short).mixsel
+                        % if data.(pairname_short).mixsel
                             disp(['no sec ' msvar{2-oo+1} ' fields']);
-                        end
+                        % end
                     end
                 end
                 % Store data
@@ -1334,9 +1345,6 @@ if(dnum>0)
             for oo = 1:size(msvar,2)
                 disp(['Creating pseudopopulation of base maps for ' msvar{oo} ' field ...'])
                 test = [msvar_short{1} msvar_short{2}];
-    %             if strcmp(test,'hv') 
-    %                 disp('stop')
-    %             end
 
                 % Output variables
                 pseudosecdataperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
@@ -1594,12 +1602,7 @@ if(dnum>0)
 
                         % Generate a psuedopopulation of 1000 base fields with same num of spikes as original base field 
                         ff = 1;
-                        shuff = 1000;
-    %                     if ~strcmp(test,'hv')
-    %                         shuff = 10;
-    %                     else
-    %                         shuff = 1000; % Args.NumShuffles;
-    %                     end
+                        shuff = Args.NumShuffles;
                         attempt = 0; % Filter 2 of 2: Make sure there are enough outfield px to generate stats (This catches situations where outfield px are enough in number but scattered so that can't form coherent shuffled field without overlapping with original sec field)
                         abandon = false;
                         pseudosecmap_adsm = nan(shuff,size(data.(pairname_short).(msvar{2-oo+1}).basemapLrw,2));
@@ -1611,14 +1614,12 @@ if(dnum>0)
                         pseudocondbins_out = cell(shuff,1);
                         pseudotertbins = cell(shuff,1);
                         tic;
-    %                     if strcmp(msvar{oo},'headdirection')
-    %                         disp('stop');
-    %                     end
+                       
                         while ff <= shuff && ~abandon
 
-                            if mod(ff,100) == 0 % ff == shuff/2 % mod(ff,100) == 0
+                            % if mod(ff,100) == 0 % ff == shuff/2 % mod(ff,100) == 0
     %                             disp(['ff = ' num2str(ff)]);
-                            end
+                            % end
                             attempt = attempt + 1;
                             % Start from a random pixel that is outside of base field and has a spike
                             startpx = randsample(1:length(basedrawpx),1);
@@ -1657,17 +1658,9 @@ if(dnum>0)
                                 % If reach num of sec bins in original sec map
                                 lin_inds = dummygridbase{gnum}(startindx,startindy);
                                 lin_inds = lin_inds(~isnan(tempmap(startindx,startindy))); % base
-                                ind_pv = ismember(stcfill(:,strcmp(stcvars,msvar{oo})),lin_inds);
-                                growingpx = unique(stcfill(ind_pv,strcmp(stcvars,msvar{2-oo+1}))); % sec
-            %                         switch msvar{oo}
-            %                             case 'place'
-            %                                 ind_pv = ismember(stcfill(:,2),lin_inds);
-            %                                 growingpx = unique(stcfill(ind_pv,3));
-            %                             case 'view'
-            %                                 ind_pv = ismember(stcfill(:,3),lin_inds);
-            %                                 growingpx = unique(stcfill(ind_pv,2));
-            %                         end
-                                growingspikes = nansum(stcfill(ind_pv,6));
+                                ind_pvh = ismember(stcfilt(:,strcmp(stcvars,msvar{oo})),lin_inds);
+                                growingpx = unique(stcfilt(ind_pvh,strcmp(stcvars,msvar{2-oo+1}))); % sec
+                                growingspikes = nansum(stcfilt(ind_pvh,6));
 
                                 % If num of pseudo sec px matches num of original sec px
                                 if size(growingpx,1) > 0.9*secfieldnumbin % 0.9*secfieldnumbin %|| growingspikes > 0.5*basefieldnumspk
@@ -1688,8 +1681,8 @@ if(dnum>0)
                             % pixels of pseudo base field
                             lin_inds = dummygridbase{gnum}(startindx,startindy);
                             lin_inds = lin_inds(~isnan(tempmap(startindx,startindy))); % base
-                            ind_pv = ismember(stcfill(:,strcmp(stcvars,msvar{oo})),lin_inds);
-                            growingpx = unique(stcfill(ind_pv,strcmp(stcvars,msvar{2-oo+1}))); % sec
+                            ind_pvh = ismember(stcfilt(:,strcmp(stcvars,msvar{oo})),lin_inds);
+                            growingpx = unique(stcfilt(ind_pvh,strcmp(stcvars,msvar{2-oo+1}))); % sec
             %                     switch msvar{oo}
             %                         case 'place'
             %                             ind_pv = ismember(stcfill(:,2),lin_inds);
@@ -1698,7 +1691,7 @@ if(dnum>0)
             %                             ind_pv = ismember(stcfill(:,3),lin_inds);
             %                             growingpx = unique(stcfill(ind_pv,2));
             %                     end
-                            growingspikes = nansum(stcfill(ind_pv,6));
+                            growingspikes = nansum(stcfilt(ind_pvh,6));
 
                             nonoverlap = setdiff(growingpx,condfield_inbins);
                             if size(growingpx,1) < 0.9*secfieldnumbin % || growingspikes < 0.5*basefieldnumspk % commented out because for very directional cells, this will never pass
@@ -1719,8 +1712,8 @@ if(dnum>0)
                             usecpxs = [];
                             for pp = 1:size(lin_inds,1)
                                 secpx = [];
-                                ind_pv = stcfill(:,strcmp(stcvars,msvar{oo})) == lin_inds(pp);
-                                secpx(:,1) = stcfill(ind_pv,strcmp(stcvars,msvar{2-oo+1})); % sec px
+                                ind_pvh = stcfilt(:,strcmp(stcvars,msvar{oo})) == lin_inds(pp);
+                                secpx(:,1) = stcfilt(ind_pvh,strcmp(stcvars,msvar{2-oo+1})); % sec px
             %                         switch msvar{oo}
             %                             case 'place'
             %                                 ind_pv = stcfill(:,2) == lin_inds(pp);
@@ -1729,8 +1722,8 @@ if(dnum>0)
             %                                 ind_pv = stcfill(:,3) == lin_inds(pp);
             %                                 secpx(:,1) = stcfill(ind_pv,2); % sec px
             %                         end
-                                secpx(:,2) = stcfill(ind_pv,5); % dur
-                                secpx(:,3) = stcfill(ind_pv,6); % spk
+                                secpx(:,2) = stcfilt(ind_pvh,5); % dur
+                                secpx(:,3) = stcfilt(ind_pvh,6); % spk
 
                                 % Get firing rates 
                                 usecpx = unique(secpx(:,1));
@@ -1814,7 +1807,7 @@ if(dnum>0)
 
             % Smooth
             disp('Smoothing pseudopopulation of secondary maps ...');
-            shuff = 1000;
+            shuff = Args.NumShuffles;
             for oo = 1:size(msvar,2)
                 pseudosecmaps_sm = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 pseudosecSIC_sm = cell(data.(pairname_short).(msvar{oo}).sigfields,1);

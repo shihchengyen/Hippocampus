@@ -39,6 +39,10 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+        r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
+        r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
+        r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
+        r.data.discard = [p.data.discard; q.data.discard];
 
 		% object specific fields
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
@@ -68,6 +72,7 @@ else
         r.data.spk_raw = [p.data.spk_raw; q.data.spk_raw];
         r.data.spk_raw1 = [p.data.spk_raw1; q.data.spk_raw1];
         r.data.spk_raw2 = [p.data.spk_raw2; q.data.spk_raw2];
+        
 %         r.data.dur_adsm1 = [p.data.dur_adsm1; q.data.dur_adsm1];
 %         r.data.dur_adsm2 = [p.data.dur_adsm2; q.data.dur_adsm2];
 %         r.data.dur_adsm1 = [p.data.dur_adsm1; q.data.dur_adsm1];
@@ -95,6 +100,7 @@ else
 %         r.data.radiish = [p.data.radiish; q.data.radiish];
         r.data.crit_sm = [p.data.crit_sm; q.data.crit_sm];
         r.data.critsh_sm = [p.data.critsh_sm; q.data.critsh_sm];
+        r.data.critthrcell = [p.data.critthrcell; q.data.critthrcell];
         r.data.crit_sm1 = [p.data.crit_sm1; q.data.crit_sm1];
         r.data.crit_sm2 = [p.data.crit_sm2; q.data.crit_sm2];
 

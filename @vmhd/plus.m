@@ -37,15 +37,21 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
+        r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
+        r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
+        r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
+        r.data.discard = [p.data.discard; q.data.discard];
         
         % Full session
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
         r.data.dur_raw = [p.data.dur_raw; q.data.dur_raw];
         r.data.spk_raw = [p.data.spk_raw; q.data.spk_raw];
+        r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
         r.data.maps_sm = [p.data.maps_sm; q.data.maps_sm];
         r.data.maps_smsh = [p.data.maps_smsh; q.data.maps_smsh];
         r.data.crit_sm = [p.data.crit_sm; q.data.crit_sm];
         r.data.critsh_sm = [p.data.critsh_sm; q.data.critsh_sm];
+        r.data.critthrcell = [p.data.critthrcell; q.data.critthrcell];
         
         % First half
         r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
