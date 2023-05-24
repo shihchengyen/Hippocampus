@@ -14,7 +14,7 @@ function [obj, varargout] = vmpv(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','1binData.hdf', ...
+				'ObjectLevel','Session','RequiredFile','1binData.hdf', 'pix',100,...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -70,8 +70,8 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
-%     viewdata = h5read('binData.hdf','/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
-    viewdata = h5read('1binData.hdf','/data');
+    viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
+    % viewdata = h5read('1binData.hdf','/data');
     size(viewdata)
     cd(ori);
 
