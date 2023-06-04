@@ -41,6 +41,7 @@ else
         r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
         r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
         r.data.discard = [p.data.discard; q.data.discard];
+        r.data.rateok = [p.data.rateok; q.data.rateok];
         
         % Full session
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
