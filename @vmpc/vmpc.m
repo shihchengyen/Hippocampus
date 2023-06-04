@@ -14,7 +14,7 @@ function [obj, varargout] = vmpc(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'pix',100,...
+				'GridSteps',40, 'pix',1,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Adaptive', 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1,...
@@ -370,10 +370,15 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
                 
                 if repeat == 1
-                    if data.filtspknum < 100 && max(maps_sm(1,:),[],'omitnan') < 0.7
+                    if data.filtspknum < 100 
                         data.discard = true;
                     else 
                         data.discard = false;
+                    end
+                    if max(maps_sm(1,:),[],'omitnan') < 0.7
+                        data.rateok = false;
+                    else
+                        data.rateok = true;
                     end
                     data.maps_adsm = firing_rates_full(1,:);
                     data.maps_adsmsh = firing_rates_full(2:end,:);

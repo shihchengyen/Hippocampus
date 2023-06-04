@@ -314,10 +314,15 @@ if(~isempty(dir(Args.RequiredFile)))
         
 
         if repeat == 1
-            if data.filtspknum < 100 && max(maps_sm(1,:),[],'omitnan') < 0.7
+            if data.filtspknum < 100 
                 data.discard = true;
             else 
                 data.discard = false;
+            end
+            if max(maps_sm(1,:),[],'omitnan') < 0.7
+                data.rateok = false;
+            else
+                data.rateok = true;
             end
 %             data.SIC_adsm = sic_adsm(1);
 %             data.SICsh_adsm = sic_adsm(2:end,1);

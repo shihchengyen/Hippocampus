@@ -307,6 +307,7 @@ if(~isempty(dir(Args.RequiredFile)))
             end
 
             % Adaptive smoothing of padded grids
+            % tic;
             alpha = Args.Alpha;
             grid_smoothed_Gaze = cell(size(binDepths,1),1);
             grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1}; % No need to smooth cue
@@ -384,6 +385,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 grid_ad_size{jj} = to_fill_size;
                 
             end
+            % disp(['Adaptive smoothing took ' num2str(toc) 's']);
             
             % Unpad smoothed maps
             grid_smoothed_Gaze = unpadsvmap(grid_smoothed_Gaze,retrievemap,emptyfloorref);
@@ -423,10 +425,15 @@ if(~isempty(dir(Args.RequiredFile)))
             end
             
             if repeat == 1
-                if data.filtspknum < 100 && max(maps_sm(1,:),[],'omitnan') < 0.7
+                if data.filtspknum < 100 
                     data.discard = true;
                 else 
                     data.discard = false;
+                end
+                if max(maps_sm(1,3:end),[],'omitnan') < 0.7
+                    data.rateok = false;
+                else
+                    data.rateok = true;
                 end
                 data.maps_adsm = lambda_i(1,:);
                 data.maps_adsmsh = lambda_i(2:end,:);
