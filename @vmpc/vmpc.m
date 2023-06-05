@@ -130,7 +130,6 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
         flat_spiketimes = flat_spiketimes'; 
         flat_spiketimes = sortrows(flat_spiketimes);
-        flat_spiketimes = round(flat_spiketimes); % there are occasional errors where these are not integers and prevent indexing using these 
 
         flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
         
@@ -204,28 +203,38 @@ if(~isempty(dir(Args.RequiredFile)))
         
         spike_count_full = consol_arr';
 
-        % back-filling spikes for view bins that occupy the same time bin
-        stc(stc(:,6)==0,6) = nan;
-        stc(:,7) = stc(:,5)~=0;
-        stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
-        stc(:,7) = [];
-        stc(:,6) = fillmissing(stc(:,6), 'next');
-        stc(isnan(stc(:,6)),6) = 0;
-        % back-filling duration for view bins that occupy the same time bin
-        stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
-        stc(stc(:,5)==0,5) = nan;
-        stc(end,5) = stc_lasttime;
-        stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
-        
-        % Remove non-place and non-view rows for duration
-        stc_filt = stc(find(conditions==1),:); 
-        stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
-        stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
-        stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
-        stc_ss = stc_filt(:,[2 5]); % [place dur];
-        stc_ss = [stc_ss; [1600 0]];
+        %% This portion for place-related calculations
 
-        gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+            % Remove non-place and non-view rows for duration
+            stc_filt = stc(find(conditions==1),:); 
+            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+            stc_ss = stc_filt(:,[2 5]); % [place dur];
+            stc_ss = [stc_ss; [1600 0]];
+    
+            gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+
+        %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
+
+            % back-filling spikes for view bins that occupy the same time bin
+            stc(stc(:,6)==0,6) = nan;
+            stc(:,7) = stc(:,5)~=0;
+            stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
+            stc(:,7) = [];
+            stc(:,6) = fillmissing(stc(:,6), 'next');
+            stc(isnan(stc(:,6)),6) = 0;
+            % back-filling duration for view bins that occupy the same time bin
+            stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
+            stc(stc(:,5)==0,5) = nan;
+            stc(end,5) = stc_lasttime;
+            stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
+
+            % Remove non-place and non-view rows for duration
+            stc_filt = stc(find(conditions==1),:); 
+            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
         
         % Remove low observation bins
         spike_count = zeros(Args.NumShuffles+1,Args.GridSteps*Args.GridSteps);
@@ -240,7 +249,7 @@ if(~isempty(dir(Args.RequiredFile)))
         dur_raw = gpdur;
         spk_raw = spike_count(1,:);
         if repeat == 1
-            data.sessionTimeC = stc; % Full unfiltered 
+            data.sessionTimeC = stc; % Full unfiltered, with all place, view, hd data
             data.stcfilt = stc_filt; % Filtered for conditions and having all place, view, hd data
             data.maps_raw = to_save;
             data.dur_raw = dur_raw;
