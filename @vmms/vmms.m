@@ -396,8 +396,8 @@ if(dnum>0)
                         ind_pvh = ismember(stcfilt(:,xbase),fieldlinbin{ii});
                         secpx = stcfilt(ind_pvh,[find(strcmp(stcvars,msvar{2-oo+1})) 5 6]); % [bin, dur, spk]
                         usecpx = unique(secpx(:,1));
-                        secpx(end+1,:) = [length(data.(pairname_short).(msvar{2-oo+1}).basemapLrw) 0 0]; % without max bin, accumarray doesn't work right
-                        secdata = nan(length(data.(pairname_short).(msvar{2-oo+1}).basemapLrw),3);
+                        secpx(end+1,:) = [length(secmapLsm) 0 0]; % without max bin, accumarray doesn't work right
+                        secdata = nan(length(secmapLsm),3);
                         secdata(usecpx,1) = usecpx;
                         secdata(:,2) = accumarray(secpx(:,1),secpx(:,2));
                         secdata(:,3) = accumarray(secpx(:,1),secpx(:,3));

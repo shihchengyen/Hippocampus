@@ -75,7 +75,7 @@ else % If plotting a batch of cells
     end
     % Load cell list
     cd(cwd);
-    fid = fopen([cwd '/cell_list_11.txt'],'rt');
+    fid = fopen([cwd '/cell_list_singlecell.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
     % Make sure no empty cells
@@ -5200,50 +5200,50 @@ switch gridnum
 
 end
 
-function [gridnum,x,y] = findgrid(px,objtype)
-% returns grid number and plot coords (x goes left to right, y goes bottom
-% to top)
-
-switch objtype
-    case 'place'
-        mapLdummy = 1:1600;
-        gridnum = 3;
-        temp = flipud(reshape(mapLdummy, 40, 40)');
-    case 'view'
-        mapLdummy = 1:5122;
-        if px == 1 % Cue
-            gridnum = 1;
-            x = 1;
-            y = 1;
-        elseif px == 2 % Hint
-            gridnum = 2;
-            x = 1; 
-            y = 1;
-        elseif px >= 3 && px <= 1602 % Floor
-            gridnum = 3;
-            temp = flipud(reshape(mapLdummy(3:3+1600-1), 40, 40)');
-        elseif px >= 1603 && px <= 3202 % Ceiling
-            gridnum = 4;
-            temp = flipud(reshape(mapLdummy(1603:1603+1600-1), 40, 40)');
-        elseif px >= 3203 && px <= 4482 % Walls
-            gridnum = 5;
-            temp = flipud(reshape(mapLdummy(3203:3203+1280-1), 40*4, 8)');
-        elseif px >= 4483 && px <= 4642 % Pillar 1
-            gridnum = 6;
-            temp = flipud(reshape(mapLdummy(4483:4483+160-1), 8*4, 5)');
-        elseif px >= 4643 && px <= 4802 % Pillar 2
-            gridnum = 7;
-            temp = flipud(reshape(mapLdummy(4643:4643+160-1), 8*4, 5)');
-        elseif px >= 4803 && px <= 4962 % Pillar 3
-            gridnum = 8;
-            temp = flipud(reshape(mapLdummy(4803:4803+160-1), 8*4, 5)');
-        elseif px >= 4963 && px <= 5122 % Pillar 4
-            gridnum = 9;
-            temp = flipud(reshape(mapLdummy(4963:4963+160-1), 8*4, 5)');
-        end
-end
-[y,x] = find(temp == px);
-y = size(temp,1)-y+1;
+% function [gridnum,x,y] = findgrid(px,objtype)
+% % returns grid number and plot coords (x goes left to right, y goes bottom
+% % to top)
+% 
+% switch objtype
+%     case 'place'
+%         mapLdummy = 1:1600;
+%         gridnum = 3;
+%         temp = flipud(reshape(mapLdummy, 40, 40)');
+%     case 'view'
+%         mapLdummy = 1:5122;
+%         if px == 1 % Cue
+%             gridnum = 1;
+%             x = 1;
+%             y = 1;
+%         elseif px == 2 % Hint
+%             gridnum = 2;
+%             x = 1; 
+%             y = 1;
+%         elseif px >= 3 && px <= 1602 % Floor
+%             gridnum = 3;
+%             temp = flipud(reshape(mapLdummy(3:3+1600-1), 40, 40)');
+%         elseif px >= 1603 && px <= 3202 % Ceiling
+%             gridnum = 4;
+%             temp = flipud(reshape(mapLdummy(1603:1603+1600-1), 40, 40)');
+%         elseif px >= 3203 && px <= 4482 % Walls
+%             gridnum = 5;
+%             temp = flipud(reshape(mapLdummy(3203:3203+1280-1), 40*4, 8)');
+%         elseif px >= 4483 && px <= 4642 % Pillar 1
+%             gridnum = 6;
+%             temp = flipud(reshape(mapLdummy(4483:4483+160-1), 8*4, 5)');
+%         elseif px >= 4643 && px <= 4802 % Pillar 2
+%             gridnum = 7;
+%             temp = flipud(reshape(mapLdummy(4643:4643+160-1), 8*4, 5)');
+%         elseif px >= 4803 && px <= 4962 % Pillar 3
+%             gridnum = 8;
+%             temp = flipud(reshape(mapLdummy(4803:4803+160-1), 8*4, 5)');
+%         elseif px >= 4963 && px <= 5122 % Pillar 4
+%             gridnum = 9;
+%             temp = flipud(reshape(mapLdummy(4963:4963+160-1), 8*4, 5)');
+%         end
+% end
+% [y,x] = find(temp == px);
+% y = size(temp,1)-y+1;
 
 % Set zero firing rate (occupied) pixels to black to differentiate from other low
 % firing pixels
