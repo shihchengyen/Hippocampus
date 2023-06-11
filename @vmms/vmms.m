@@ -1086,7 +1086,7 @@ if(dnum>0)
                                     sampledpx = sampledpx(~isnan(tempmap(startindx,startindy)));
                                     % get another starting pixel if sampled field overlaps too much with sec field 
                                     if size(intersect(sampledpx,secfieldlinbin),1) > 0.25*length(secfieldlinbin) % If sampled field overlaps with more than half of sec field
-                                        if attempt == Args.NumShuffles && ff < 10
+                                        if attempt >= Args.NumShuffles && ff < 10
                                             abandon = true;
                                             disp(['Abandoning finding pseudo sec fields for ' msvar{2-oo+1} ' field ' num2str(jj)]);
                                         end
@@ -1097,7 +1097,8 @@ if(dnum>0)
                                     inds_sampled = ~isnan(tempmap(startindx,startindy));
                                     pxsub = pxsub(inds_sampled);
                                     if length(bins_infield)>length(pxsub)
-                                        error('Not enough sample pixels to draw pseudopopulation from');
+                                        disp(['ff = ' num2str(ff) ', Not enough sample pixels to draw pseudopopulation from']);
+                                        continue;
                                     end
                                     inds_keep = sort(randsample(1:length(pxsub),length(bins_infield)))';
                                     pxsub = pxsub(inds_keep);
@@ -1122,6 +1123,7 @@ if(dnum>0)
                             if meanrate_infield > prctile(meanrate_outfield,95)
                                 linkedfield(jj,1) = true;
                             end
+                            clear meanrate_outfield
                         end
                         % Store data
                         condbase_insecfieldrates{ii,1} = insecfieldrates;
