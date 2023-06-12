@@ -31,7 +31,7 @@ function [selcell_orig] = plotratemaps(objtype,criteria,save,maptype,varargin)
 sortcrit = 0;
 video = 0;
 filttype = 'FiltVel';
-pix = 100;
+pix = 1;
 
 cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
 % Saving figure directory
@@ -75,7 +75,7 @@ else % If plotting a batch of cells
     end
     % Load cell list
     cd(cwd);
-    fid = fopen([cwd '/cell_list_singlecell.txt'],'rt');
+    fid = fopen([cwd '/cell_list_11part1.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
     % Make sure no empty cells
@@ -1142,7 +1142,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
     %%% Select which plots you want to see (no limit to number selected)
     %%% summary, vmms_rawvsmooth, basemap, pixelmap, checkfilter, predmap,
     %%% linearizeddiff, lnlmixsel, fields
-    whattoplot = {'fields'}; 
+    whattoplot = {'fields','pixelmap'}; 
     
     % Basic settings
     colorset = setcolor('coolwarm64');
@@ -1987,6 +1987,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                         % Plot
                         for kk = 1:size(msvar,2)
                             basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{kk});
+                            secdata = objMain.data.(msvar_short)(cell_indMain).(msvar{2-kk+1});
                             map = basedata.basemapLsm;
                             maxC = max(map,[],'omitnan');
                             % Plot smoothed maps
@@ -2024,7 +2025,12 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                                 [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
                                                 patch(x,y,z,[1 1 1 1],'EdgeColor',color{ff},'FaceColor','none','LineWidth',1,'EdgeAlpha',1);
                                             end
-                                            fieldbintext = text(ax,1,1-(ff-1)*0.1,1,num2str(pp),'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','right');
+                                            linked = basedata.condbase_linkedfield{ff};
+                                            if ~isempty(linked)
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px-linked' num2str(linked')],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            else
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px'],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            end
                                         end
                                     else % For head direction, mark start and end of field
                                         for ff = 1:basedata.sigfields
@@ -2032,7 +2038,12 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                             section = nan(size(map));
                                             section(basedata.fieldlinbin{ff}) = 1.1*maxC;
                                             plotmap(section,msvar{kk},msvar{kk},color{ff});
-                                            fieldbintext = text(ax,1,1-(ff-1)*0.1,1,num2str(pp),'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','right');
+                                            linked = basedata.condbase_linkedfield{ff};
+                                            if ~isempty(linked)
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px-linked' num2str(linked')],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            else
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px'],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            end
                                         end
                                     end
                                 end
@@ -2430,7 +2441,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                     pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
                                     ax.Title.String = {horzcat('SI: ',num2str(basedata.(['condbase_SIC_sm' ])(ff),2),'/',num2str(pseudoSIthr,2)); ...
                                         horzcat('Smoothpx = ',num2str(sum(~isnan(temp1)))); ...
-                                        horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_adsm{ff}),2)),2))};
+                                        horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_sm{ff}),2)),2))};
                                     ax.Title.FontSize = 16;
                                     if basedata.(['condbase_SIC_sm' ])(ff)>pseudoSIthr && maxC >= 0.7 
                                         ax.Title.Color = 'r';
@@ -2628,10 +2639,10 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                     % Save 
                                     figtitle = figname;
                                     if save
-                                        savefigure(h,figtitle,figdir2);
-                                        print([figdir2 '/' figtitle],'-depsc');
+                                        savefigure(save,h,figtitle,figdir2);
+                                        % print([figdir2 '/' figtitle],'-depsc');
                                     end
-                                    close(h);
+                                    % close(h);
                                     fig = fig + 1;
     
         %                             % Plot a selection of the pseudopopulation of smoothed conditioned maps
@@ -2678,10 +2689,10 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
         %                                 patchenvbounds('view');
         %                                 % Plot smoothed map
         %                                 ax = subplot(2,5,hh+5);
-        %                                 plotmap(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+        %                                 plotmap(basedata.pseudosecmaps_sm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
         %                                 colormap(ax,cool);
         %                                 % If firing rate or spike count = 0, set to black
-        %                                 settoblack(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+        %                                 settoblack(basedata.pseudosecmaps_sm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
         %                                 ax.Title.String = {'Smoothed map';...
         %                                     ['SI = ' num2str(basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1),2) '/' num2str(pseudoSIthr,2)]};
         %                                 ax.Title.FontSize = 16;

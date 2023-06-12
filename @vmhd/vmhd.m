@@ -210,8 +210,8 @@ if(~isempty(dir(Args.RequiredFile)))
             stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
             stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
             stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
-            stc_ss = stc_filt(:,[2 5]); % [place dur];
-            stc_ss = [stc_ss; [1600 0]];
+            stc_ss = stc_filt(:,[3 5]); % [hd dur];
+            stc_ss = [stc_ss; [60 0]];
     
             gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
 

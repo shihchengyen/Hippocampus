@@ -15,8 +15,8 @@ function [obj, varargout] = vmms(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'ObjectLevel', 'Cell',...
                 'RequiredFile','spiketrain.mat', 'GridSteps',40, 'pix', 1, ...
-                'UseCorr',1,'FieldThr',0.6,'FieldSplitThr',0.7,'NumShuffles',1000, ...
-                'FieldThrPseudo',0.6,'FieldSplitThrPseudo',0.7,'UseAllTrials',1,'ThresVel',1,'UseMinObs',0);
+                'UseCorr',1,'FieldThr',0.7,'FieldSplitThr',0.75,'NumShuffles',1000, ...
+                'FieldThrPseudo',0.7,'FieldSplitThrPseudo',0.75,'UseAllTrials',1,'ThresVel',1,'UseMinObs',0);
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
@@ -207,16 +207,16 @@ if(dnum>0)
                             peakrate_full = nanmax(basemapLsm);
                             peakrate_subset = peakrate_full;
                             prI = 1;
-                            fieldsizethreshold = 9;
-                            % fieldsizethreshold = 15;
+                            % fieldsizethreshold = 9;
+                            fieldsizethreshold = 15;
                         case 'view'
                             for ii = 1:size(basemapGsm,1)
                                 maxset(ii) = nanmax(reshape(basemapGsm{ii},size(basemapGsm{ii},1)*size(basemapGsm{ii},2),1));
                             end
                             [peakrate_full,prI] = max(maxset); % Max including cue/hint
                             peakrate_subset = max(maxset(3:end)); % Max excluding cue/hint
-                            fieldsizethreshold = 9;
-                            % fieldsizethreshold = 15;
+                            % fieldsizethreshold = 9;
+                            fieldsizethreshold = 15;
                         case 'headdirection'
                             peakrate_full = nanmax(basemapLsm);
                             peakrate_subset = peakrate_full;
@@ -962,168 +962,172 @@ if(dnum>0)
                         % Output variables
                         insecfieldrates = nan(size(data.(pairname_short).(msvar{2-oo+1}).fieldlinbin,1),1);
                         outsecfieldrates = cell(size(data.(pairname_short).(msvar{2-oo+1}).fieldlinbin,1),1);
-                        linkedfield = false(size(data.(pairname_short).(msvar{2-oo+1}).fieldlinbin,1),1);
+                        linkedfield = [];
 
                         % Test if secondary pixels sampled from this base field are more likely to fall within any of the secondary fields than outside
-                        for jj = 1:size(data.(pairname_short).(msvar{2-oo+1}).condbase_fieldlinbin,1) % For each secondary field
+                        % for jj = 1:size(data.(pairname_short).(msvar{2-oo+1}).condbase_fieldlinbin,1) % For each secondary field
+                        for jj = 1:data.(pairname_short).(msvar{2-oo+1}).sigfields % For each secondary field
 
-                            % Get mean firing rate within secondary field 
-                            secfieldlinbin = data.(pairname_short).(msvar{2-oo+1}).fieldlinbin{jj}; % pixels that make up the sec field. Not all of these will be sampled from this base field
-                            bins_infield = condbase_secbins(ismember(condbase_secbins,secfieldlinbin)); % find pixels of sec field that are sampled from this base field
-                            if isempty(bins_infield) 
-                                disp(['Cond map of base field ' num2str(ii) ' does not overlap with sec field ' num2str(jj)]);
-                                continue;
-                            end
-                            meanrate_infield = mean(condbase_mapL(bins_infield),'omitnan');
-                            % debug
-                            seclinbin_sampled = secfieldlinbin(ismember(secfieldlinbin,condbase_secbins));
-                            if ~isempty(setdiff(seclinbin_sampled,bins_infield))
-                                error('error with getting overlap of sec bins');
-                            end
-                            
-                            tic;
-                            % Get mean firing rates (raw) for nshuff pseudorandom same-size fields outside of secondary field
-                            meanrate_outfield = nan(Args.NumShuffles,1);
-                            bins_outfield = condbase_secbins(~ismember(condbase_secbins,secfieldlinbin));
-                            % Generate a psuedopopulation of outfields same size as sec field 
-                            ff = 1;
-                            attempt = 0; % Filter 2 of 2: Make sure there are enough outfield px to generate stats (This catches situations where outfield px are enough in number but scattered so that can't form coherent shuffled field without overlapping with original sec field)
-                            abandon = false;
-                            if length(bins_outfield) > length(bins_infield) % Filter 1 of 2: Make sure there are enough outfield px to generate stats (This catches situations where there are just too few outfield px to begin with) 
-                                
-                                while ff <= Args.NumShuffles && ~abandon
-                                    attempt = attempt + 1;
-                                    % Start from a random pixel that is outside of base field and has a spike
-                                    startpx = randsample(1:length(bins_outfield),1);
-                                    startpx = bins_outfield(1,startpx);
-                                    if ismember(startpx,secfieldlinbin) % If random px overlaps with base field, repeat
-                    %                                 reset = true;
-                                        continue;
-                                    end
-                                    % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
-                                    [gnum,~,~,startindx,startindy] = findgrid(startpx,msvar{2-oo+1});
-                                    if ~strcmp(msvar{2-oo+1},'view')
-                                        gnum = 1;
-                                    end
-                                    
-                                    % Get the grid coords of starting px
-                                    tempmap = condbase_mapG{gnum}; % the actual sampled sec grid map
-                                    % Expand radius around starting px until hit the requisite number of px 
-                                    while length(startindx)*length(startindy) < 0.5 * size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
-    
-                                        startindx = [startindx(1)-1 startindx startindx(end)+1];
-                                        startindy = [startindy(1)-1 startindy startindy(end)+1];
-                                        % Keep within env bounds
-                                        startindx(startindx < 1 | startindx >size(dummygridsec{gnum},1)) = [];
-                                        startindy(startindy < 1 | startindy >size(dummygridsec{gnum},2)) = [];
-            
-                                        % If reach num of sec bins in original sec map
-                                        lin_inds = dummygridsec{gnum}(startindx,startindy);
-                                        lin_inds = lin_inds(~isnan(tempmap(startindx,startindy))); % base
-                                        ind_pvh = ismember(stcfilt(:,strcmp(stcvars,msvar{oo})),lin_inds);
-                                        growingpx = unique(stcfilt(ind_pvh,strcmp(stcvars,msvar{2-oo+1}))); % sec
-                                        growingspikes = sum(stcfilt(ind_pvh,6),[],'omitnan');
-            
-                                        % If fulfill criteria
-                                        if sum(sum(~isnan(tempmap(startindx,startindy)))) > length(bins_infield)
-                                            break;
-                                        end
-                                    end
-
-            %                         attempt = attempt + 1;
-            %                         % Start from a random pixel that is outside of sec field
-            %                         startpx = randsample(1:length(bins_outfield),1);
-            %                         startpx = bins_outfield(startpx);
-            %                         if ismember(startpx,secfieldlinbin) % If random px overlaps with sec field, repeat
-            % %                                 reset = true;
-            %                             continue;
-            %                         end
-            %                         % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
-            %                         switch msvar{2-oo+1}
-            %                             case 'place'
-            %                                 gnum = 1;
-            %                             case 'view'
-            %                                 if startpx == 1 || startpx == 2 % Make sure not cue or hint
-            % %                                        reset = true;
-            %                                    continue;
-            %                                 end
-            %                                 [gnum,~,~] = findgrid(startpx,msvar{2-oo+1});
-            %                             case 'headdirection'
-            %                                 gnum = 1;
-            %                         end
-            %                         % Get the grid coords of starting px
-            %                         [startindx,startindy] = find(dummygridsec{gnum} == startpx);
-            %                         tempmap = condbase_mapG{gnum}; % the actual sampled sec grid map
-            %                         % Expand radius around starting px until hit the requisite number of px 
-            %                         % while sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
-            %                         while length(startindx)*length(startindy) < size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
-            %                             if startindx(1) > 1 && startindx(end) < size(dummygridsec{gnum},1)
-            %                                 startindx = [startindx(1)-1 startindx startindx(end)+1];
-            %                             elseif startindx(1) == 1 && startindx(end) < size(dummygridsec{gnum},1)
-            %                                 startindx = [startindx startindx(end)+1];
-            %                             elseif startindx(1) > 1 && startindx(end) == size(dummygridsec{gnum},1)
-            %                                 startindx = [startindx(1)-1 startindx];
-            %                             end
-            %                             % If reach required num of px
-            %                             if sum(sum(~isnan(tempmap(startindx,startindy)))) > length(bins_infield)% length(startindx)*length(startindy) > size(linbin,1)
-            %                                 break;
-            %                             end
-            %                             if startindy(1) > 1 && startindy(end) < size(dummygridsec{gnum},2)
-            %                                 startindy = [startindy(1)-1 startindy startindy(end)+1];
-            %                             elseif startindy(1) == 1 && startindy(end) < size(dummygridsec{gnum},2)
-            %                                 startindy = [startindy startindy(end)+1];
-            %                             elseif startindy(1) > 1 && startindy(end) == size(dummygridsec{gnum},2)
-            %                                 startindy = [startindy(1)-1 startindy];
-            %                             end
-            %                             % If exceed map bounds
-            %                             if startindx(1) == 1 && startindx(end) == size(dummygridsec{gnum},1) && startindy(1) == 1 && startindy(end) == size(dummygridsec{gnum},2)
-            %                                 break;
-            %                             end
-            %                         end
-
-                                    % sampled pixels
-                                    sampledpx = dummygridsec{gnum}(startindx,startindy);
-                                    sampledpx = sampledpx(~isnan(tempmap(startindx,startindy)));
-                                    % get another starting pixel if sampled field overlaps too much with sec field 
-                                    if size(intersect(sampledpx,secfieldlinbin),1) > 0.25*length(secfieldlinbin) % If sampled field overlaps with more than half of sec field
-                                        if attempt >= Args.NumShuffles && ff < 10
-                                            abandon = true;
-                                            disp(['Abandoning finding pseudo sec fields for ' msvar{2-oo+1} ' field ' num2str(jj)]);
-                                        end
-                                        continue;
-                                    end
-                                    % Remove empty pixels from sampled field
-                                    pxsub = dummygridsec{gnum}(startindx,startindy);
-                                    inds_sampled = ~isnan(tempmap(startindx,startindy));
-                                    pxsub = pxsub(inds_sampled);
-                                    if length(bins_infield)>length(pxsub)
-                                        disp(['ff = ' num2str(ff) ', Not enough sample pixels to draw pseudopopulation from']);
-                                        continue;
-                                    end
-                                    inds_keep = sort(randsample(1:length(pxsub),length(bins_infield)))';
-                                    pxsub = pxsub(inds_keep);
-                                    % Start over if exactly the same px as field of interest
-                                    if isempty(setdiff(pxsub,secfieldlinbin))
-            %                                 reset = true;
-                                        continue;
-                                    end
-                                    % Get sec bins actually sampled 
-                                    outfieldlinbin = pxsub;
-                                    bins_outfield = condbase_secbins(ismember(condbase_secbins,outfieldlinbin));
-                                    meanrate_outfield(ff,1) = mean(condbase_mapL(bins_outfield),'omitnan');
-                                    % meanrate_outfield(ff,1) = sum(condbase_rawdata(bins_outfield,3),[],'omitnan') / sum(condbase_rawdata(bins_outfield,2),[],'omitnan');
-
-                                    ff = ff+1;
+                            % for ss = 1:data.(pairname_short).(msvar{2-oo+1}).sigfields
+                                % Get mean firing rate within secondary field 
+                                secfieldlinbin = data.(pairname_short).(msvar{2-oo+1}).fieldlinbin{jj}; % pixels that make up the sec field. Not all of these will be sampled from this base field
+                                bins_infield = condbase_secbins(ismember(condbase_secbins,secfieldlinbin)); % find pixels of sec field that are sampled from this base field
+                                if isempty(bins_infield) 
+                                    disp(['Cond map of base field ' num2str(ii) ' does not overlap with sec field ' num2str(jj)]);
+                                    continue;
                                 end
-                            end
-                            disp([num2str(Args.NumShuffles) ' outfield rates for base ' msvar{oo} ' field ' num2str(ii) ' sec ' msvar{2-oo+1} ' field ' num2str(jj) ' took ' num2str(toc) 's']);
-                            % Store data
-                            insecfieldrates(jj,1) = meanrate_infield;
-                            outsecfieldrates{jj,1} = meanrate_outfield;
-                            if meanrate_infield > prctile(meanrate_outfield,95)
-                                linkedfield(jj,1) = true;
-                            end
-                            clear meanrate_outfield
+                                meanrate_infield = mean(condbase_mapL(bins_infield),'omitnan');
+                                % debug
+                                seclinbin_sampled = secfieldlinbin(ismember(secfieldlinbin,condbase_secbins));
+                                if ~isempty(setdiff(seclinbin_sampled,bins_infield))
+                                    error('error with getting overlap of sec bins');
+                                end
+                                
+                                tic;
+                                % Get mean firing rates (raw) for nshuff pseudorandom same-size fields outside of secondary field
+                                meanrate_outfield = nan(Args.NumShuffles,1);
+                                bins_outfield = condbase_secbins(~ismember(condbase_secbins,secfieldlinbin));
+                                % Generate a psuedopopulation of outfields same size as sec field 
+                                ff = 1;
+                                attempt = 0; % Filter 2 of 2: Make sure there are enough outfield px to generate stats (This catches situations where outfield px are enough in number but scattered so that can't form coherent shuffled field without overlapping with original sec field)
+                                abandon = false;
+                                if length(bins_outfield) > length(bins_infield) % Filter 1 of 2: Make sure there are enough outfield px to generate stats (This catches situations where there are just too few outfield px to begin with) 
+                                    
+                                    while ff <= Args.NumShuffles && ~abandon
+                                        attempt = attempt + 1;
+                                        % Start from a random pixel that is outside of base field and has a spike
+                                        startpx = randsample(1:length(bins_outfield),1);
+                                        startpx = bins_outfield(1,startpx);
+                                        if ismember(startpx,secfieldlinbin) % If random px overlaps with base field, repeat
+                        %                                 reset = true;
+                                            continue;
+                                        end
+                                        % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
+                                        [gnum,~,~,startindx,startindy] = findgrid(startpx,msvar{2-oo+1});
+                                        if ~strcmp(msvar{2-oo+1},'view')
+                                            gnum = 1;
+                                        end
+                                        
+                                        % Get the grid coords of starting px
+                                        tempmap = condbase_mapG{gnum}; % the actual sampled sec grid map
+                                        % Expand radius around starting px until hit the requisite number of px 
+                                        while length(startindx)*length(startindy) < 0.5 * size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
+        
+                                            startindx = [startindx(1)-1 startindx startindx(end)+1];
+                                            startindy = [startindy(1)-1 startindy startindy(end)+1];
+                                            % Keep within env bounds
+                                            startindx(startindx < 1 | startindx >size(dummygridsec{gnum},1)) = [];
+                                            startindy(startindy < 1 | startindy >size(dummygridsec{gnum},2)) = [];
+                
+                                            % If reach num of sec bins in original sec map
+                                            lin_inds = dummygridsec{gnum}(startindx,startindy);
+                                            lin_inds = lin_inds(~isnan(tempmap(startindx,startindy))); % base
+                                            ind_pvh = ismember(stcfilt(:,strcmp(stcvars,msvar{oo})),lin_inds);
+                                            growingpx = unique(stcfilt(ind_pvh,strcmp(stcvars,msvar{2-oo+1}))); % sec
+                                            growingspikes = sum(stcfilt(ind_pvh,6),[],'omitnan');
+                
+                                            % If fulfill criteria
+                                            if sum(sum(~isnan(tempmap(startindx,startindy)))) > length(bins_infield)
+                                                break;
+                                            end
+                                        end
+    
+                %                         attempt = attempt + 1;
+                %                         % Start from a random pixel that is outside of sec field
+                %                         startpx = randsample(1:length(bins_outfield),1);
+                %                         startpx = bins_outfield(startpx);
+                %                         if ismember(startpx,secfieldlinbin) % If random px overlaps with sec field, repeat
+                % %                                 reset = true;
+                %                             continue;
+                %                         end
+                %                         % Constrain the pseudorandom population to same grid number (for spatial view) e.g. pillar only
+                %                         switch msvar{2-oo+1}
+                %                             case 'place'
+                %                                 gnum = 1;
+                %                             case 'view'
+                %                                 if startpx == 1 || startpx == 2 % Make sure not cue or hint
+                % %                                        reset = true;
+                %                                    continue;
+                %                                 end
+                %                                 [gnum,~,~] = findgrid(startpx,msvar{2-oo+1});
+                %                             case 'headdirection'
+                %                                 gnum = 1;
+                %                         end
+                %                         % Get the grid coords of starting px
+                %                         [startindx,startindy] = find(dummygridsec{gnum} == startpx);
+                %                         tempmap = condbase_mapG{gnum}; % the actual sampled sec grid map
+                %                         % Expand radius around starting px until hit the requisite number of px 
+                %                         % while sum(sum(~isnan(tempmap(startindx,startindy)))) < sum(inds_infield)
+                %                         while length(startindx)*length(startindy) < size(dummygridsec{gnum},1)*size(dummygridsec{gnum},2)
+                %                             if startindx(1) > 1 && startindx(end) < size(dummygridsec{gnum},1)
+                %                                 startindx = [startindx(1)-1 startindx startindx(end)+1];
+                %                             elseif startindx(1) == 1 && startindx(end) < size(dummygridsec{gnum},1)
+                %                                 startindx = [startindx startindx(end)+1];
+                %                             elseif startindx(1) > 1 && startindx(end) == size(dummygridsec{gnum},1)
+                %                                 startindx = [startindx(1)-1 startindx];
+                %                             end
+                %                             % If reach required num of px
+                %                             if sum(sum(~isnan(tempmap(startindx,startindy)))) > length(bins_infield)% length(startindx)*length(startindy) > size(linbin,1)
+                %                                 break;
+                %                             end
+                %                             if startindy(1) > 1 && startindy(end) < size(dummygridsec{gnum},2)
+                %                                 startindy = [startindy(1)-1 startindy startindy(end)+1];
+                %                             elseif startindy(1) == 1 && startindy(end) < size(dummygridsec{gnum},2)
+                %                                 startindy = [startindy startindy(end)+1];
+                %                             elseif startindy(1) > 1 && startindy(end) == size(dummygridsec{gnum},2)
+                %                                 startindy = [startindy(1)-1 startindy];
+                %                             end
+                %                             % If exceed map bounds
+                %                             if startindx(1) == 1 && startindx(end) == size(dummygridsec{gnum},1) && startindy(1) == 1 && startindy(end) == size(dummygridsec{gnum},2)
+                %                                 break;
+                %                             end
+                %                         end
+    
+                                        % sampled pixels
+                                        sampledpx = dummygridsec{gnum}(startindx,startindy);
+                                        sampledpx = sampledpx(~isnan(tempmap(startindx,startindy)));
+                                        % get another starting pixel if sampled field overlaps too much with sec field 
+                                        if size(intersect(sampledpx,secfieldlinbin),1) > 0.25*length(secfieldlinbin) % If sampled field overlaps with more than half of sec field
+                                            if attempt >= ff*Args.NumShuffles && ff < 10
+                                                abandon = true;
+                                                disp(['Attempt=' num2str(attempt) ', ff=' num2str(ff)]);
+                                                disp(['Abandoning finding pseudo sec fields for ' msvar{2-oo+1} ' field ' num2str(jj)]);
+                                            end
+                                            continue;
+                                        end
+                                        % Remove empty pixels from sampled field
+                                        pxsub = dummygridsec{gnum}(startindx,startindy);
+                                        inds_sampled = ~isnan(tempmap(startindx,startindy));
+                                        pxsub = pxsub(inds_sampled);
+                                        if length(bins_infield)>length(pxsub)
+                                            disp(['ff = ' num2str(ff) ', Not enough sample pixels to draw pseudopopulation from']);
+                                            continue;
+                                        end
+                                        inds_keep = sort(randsample(1:length(pxsub),length(bins_infield)))';
+                                        pxsub = pxsub(inds_keep);
+                                        % Start over if exactly the same px as field of interest
+                                        if isempty(setdiff(pxsub,secfieldlinbin))
+                %                                 reset = true;
+                                            continue;
+                                        end
+                                        % Get sec bins actually sampled 
+                                        outfieldlinbin = pxsub;
+                                        bins_outfield = condbase_secbins(ismember(condbase_secbins,outfieldlinbin));
+                                        meanrate_outfield(ff,1) = mean(condbase_mapL(bins_outfield),'omitnan');
+                                        % meanrate_outfield(ff,1) = sum(condbase_rawdata(bins_outfield,3),[],'omitnan') / sum(condbase_rawdata(bins_outfield,2),[],'omitnan');
+    
+                                        ff = ff+1;
+                                    end
+                                end
+                                disp([num2str(Args.NumShuffles) ' outfield rates for base ' msvar{oo} ' field ' num2str(ii) ' sec ' msvar{2-oo+1} ' field ' num2str(jj) ' took ' num2str(toc) 's']);
+                                % Store data
+                                insecfieldrates(jj,1) = meanrate_infield;
+                                outsecfieldrates{jj,1} = meanrate_outfield;
+                                if meanrate_infield > prctile(meanrate_outfield,95)
+                                    linkedfield(end+1,1) = jj;
+                                end
+                                clear meanrate_outfield
+                            % end
                         end
                         % Store data
                         condbase_insecfieldrates{ii,1} = insecfieldrates;
