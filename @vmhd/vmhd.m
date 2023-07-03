@@ -14,7 +14,7 @@ function [obj, varargout] = vmhd(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'DirSteps',60,...
+				'GridSteps',40, 'DirSteps',60,'pix',100,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Boxcar', 'SelectiveCriteria','RV', ...
@@ -77,7 +77,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     %%%% PATCH
     cd ..; cd ..; cd ..;
-    pv = load('1vmpv.mat');
+    pv = load([num2str(Args.pix) 'vmpv.mat']);
     pv = pv.pv;
     %%%%%%%
     
@@ -91,7 +91,7 @@ if(~isempty(dir(Args.RequiredFile)))
 %     sessionTimeInds = find(uma.data.sessionTimeDir(:,2) == 0); % Look for trial end markers
 %     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
 
-    NumShuffles = Args.NumShuffles;
+    NumShufflesSaved = Args.NumShuffles;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
         if repeat == 1
@@ -103,7 +103,7 @@ if(~isempty(dir(Args.RequiredFile)))
         end
         
         if repeat > 1
-            NumShuffles = 0;
+            Args.NumShuffles = 0;
         end
         
         if repeat == 1
@@ -113,10 +113,10 @@ if(~isempty(dir(Args.RequiredFile)))
         % spike shuffling
         
         spiketimes = spiketrain.timestamps/1000; % now in seconds
-%         maxTime = rp.data.timeStamps(end,3);
         maxTime = pv.data.rplmaxtime;
-        tShifts = [0 ((rand([1,NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
-        full_arr = repmat(spiketimes, NumShuffles+1, 1);
+        spiketimes(spiketimes>maxTime) = [];
+        tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
+        full_arr = repmat(spiketimes, Args.NumShuffles+1, 1);
         full_arr = full_arr + tShifts';
         keepers = length(spiketimes) - sum(full_arr>maxTime, 2);
         for row = 2:size(full_arr,1)
@@ -128,7 +128,6 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
         flat_spiketimes = flat_spiketimes'; 
         flat_spiketimes = sortrows(flat_spiketimes);
-        flat_spiketimes = round(flat_spiketimes); % there are occasional errors where these are not integers and prevent indexing using these 
         
         flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];
         
@@ -136,6 +135,7 @@ if(~isempty(dir(Args.RequiredFile)))
         if repeat == 1
             disp('    Filtering...');
             stc(:,5) = [diff(stc(:,1)); 0];
+            stc(:,6) = zeros(size(stc,1),1); % For spike binning
         end
         
         conditions = ones(size(stc,1),1);
@@ -162,17 +162,6 @@ if(~isempty(dir(Args.RequiredFile)))
             bins_sieved = 1:Args.DirSteps;
         end
         
-%         % calculating proportion of occupied time in each grid position across
-%         % entire session.
-% 
-%         if Args.FiltLowOcc
-%             bins_sieved = uma.data.sTDu;
-%             data.MinTrials = uma.data.Args.MinObs;
-%         else
-%             bins_sieved = uma.data.sortedDirindinfo(:,1);
-%             data.MinTrials = NaN;
-%         end
-        
         if repeat == 1 
             % Group into intervals those consecutive rows where same head dir bin is occupied
             dstc = diff(stc(:,1));
@@ -181,11 +170,13 @@ if(~isempty(dir(Args.RequiredFile)))
             stc_changing_ind = stc_changing_ind(1:end-1,:);
         end
         
-        consol_arr = zeros(Args.DirSteps,NumShuffles + 1);
-        interval = 1;
+        consol_arr = zeros(Args.DirSteps,Args.NumShuffles + 1);
+        consol_arr_p = zeros(Args.GridSteps * Args.GridSteps,Args.NumShuffles + 1);
+        
         if repeat == 1
             disp(['    Assigning '  num2str(size(flat_spiketimes,1)) ' spikes to bins...']);
         end
+        interval = 1;
         for sp = 1:size(flat_spiketimes,1)
 
             while interval < size(stc_changing_ind,1)
@@ -196,60 +187,74 @@ if(~isempty(dir(Args.RequiredFile)))
                 interval = interval + 1; % didn't fall in this interval, search in the next interval
             end   
 
-%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),2); % find the relevant place bin
-%             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2)))); % take out bins that don't satisfy filters
-%             bins_hit(~(bins_hit>0)) = []; % take out bins where place bin = 0 
-%             consol_arr(bins_hit,flat_spiketimes(sp,2)) = consol_arr(bins_hit,flat_spiketimes(sp,2)) + 1;
-
-            
-%             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3]); % find the relevant place and view bin
-            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]);
-            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
-%             if ~isempty(bins_hit)
-%                 disp('debug');
-%             end
-            if any(~(bins_hit(:,2)>0))
-                bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
-%                 if any(~(bins_hit(:,1)>0)) || any(~(bins_hit(:,3)>0)) % If want to only consider samples with place and view data
-%                     disp('problem place/view bins still exist');
-%                     bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
-%                     bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
-%                 end
+            % Bin all spikes into stc, unfiltered. If > 1 row for same time sample (i.e. large view cone), add spike to last row, backfill later
+            if flat_spiketimes(sp,2) == 1
+                stc(stc_changing_ind(interval,2),6) = stc(stc_changing_ind(interval,2),6) + 1;
             end
-%             if isempty(bins_hit)
-%                 continue;
-%             end
+            % Keep only bins that meet filter criteria and have all of place, view, and hd data
+            bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]); % find the relevant place, hd and view bin
+            bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+            bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
+            bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
             consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,2),flat_spiketimes(sp,2)) + 1;
-
+            consol_arr_p(bins_hit(:,1),flat_spiketimes(sp,2)) = consol_arr_p(bins_hit(:,1),flat_spiketimes(sp,2)) + 1; % place spikes
         end        
         
-        firing_counts = consol_arr';
+        spike_count_full = consol_arr';
 
-        % Remove non-place and non-view rows for duration
-        stc_ss = stc(find(conditions==1),[2 3 4 5]); % [place hd view dur] with new vmpv that has head dir
-%         stc_ss(~(stc_ss(:,1) > 0),:) = []; % remove place bin = 0
-%         stc_ss(isnan(stc_ss(:,3)),:) = []; % remove NaN view bins
-        stc_ss(~(stc_ss(:,2) > 0),:) = []; % remove hd bin = 0
-        stc_ss(:,[1 3]) = []; % [place dur];
-        stc_ss = [stc_ss; [60 0]];
-        gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+         %% This portion for hd-related calculations
+
+            % Remove non-place and non-view rows for duration
+            stc_filt = stc(find(conditions==1),:); 
+            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+            stc_ss = stc_filt(:,[2 5]); % [place dur];
+            stc_ss = [stc_ss; [1600 0]];
+    
+            gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+
+        %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
+
+            % back-filling spikes for view bins that occupy the same time bin
+            stc(stc(:,6)==0,6) = nan;
+            stc(:,7) = stc(:,5)~=0;
+            stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
+            stc(:,7) = [];
+            stc(:,6) = fillmissing(stc(:,6), 'next');
+            stc(isnan(stc(:,6)),6) = 0;
+            % back-filling duration for view bins that occupy the same time bin
+            stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
+            stc(stc(:,5)==0,5) = nan;
+            stc(end,5) = stc_lasttime;
+            stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
+
+            % Remove non-place and non-view rows for duration
+            stc_filt = stc(find(conditions==1),:); 
+            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
         
         % Remove low observation bins
-        firing_counts_full = zeros(NumShuffles+1,Args.DirSteps);
+        spike_count = zeros(Args.NumShuffles+1,Args.DirSteps);
         gpdur = zeros(1,Args.DirSteps);
-        firing_counts_full(:,bins_sieved) = firing_counts(:,bins_sieved);
+        spike_count(:,bins_sieved) = spike_count_full(:,bins_sieved);
         gpdur(1,bins_sieved) = gpdurfull(1,bins_sieved);
         
-        firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
+        maps_raw = spike_count./repmat(gpdur,size(spike_count,1),1);
 
         % Save raw maps
-        to_save = firing_rates_full_raw(1,:);
+        to_save = maps_raw(1,:);
         dur_raw = gpdur;
-        spk_raw = firing_counts_full(1,:);
+        spk_raw = spike_count(1,:);
         if repeat == 1
+            data.sessionTimeC = stc; % Full unfiltered, with all place, view, hd data
+            data.stcfilt = stc_filt; % Filtered for conditions and leaving only place and view
             data.maps_raw = to_save;
             data.dur_raw = dur_raw;
             data.spk_raw = spk_raw;
+            data.filtspknum = sum(consol_arr_p(:,1));
         elseif repeat == 2
             data.maps_raw1 = to_save;
             data.dur_raw1 = dur_raw;
@@ -268,11 +273,11 @@ if(~isempty(dir(Args.RequiredFile)))
 %                 nan_track = isnan(to_save);
                 
                 % Reshape shuffled maps
-                to_smooth = firing_rates_full_raw;
+                to_smooth = maps_raw;
                 % Smooth with moving window average of n bins
                 n = 5;
 %                 [firing_rates_full]=smoothDirMap(to_smooth,n,Args.DirSteps); % legacy
-                [firing_rates_full]=smoothdir(to_smooth,n,Args.DirSteps);
+                [maps_sm]=smoothdir(to_smooth,n,Args.DirSteps);
                 % smoothing part ends
                 
                 if repeat == 1
@@ -282,21 +287,21 @@ if(~isempty(dir(Args.RequiredFile)))
 %                     data.dur_adsmsh = to_fill_time(2:end,:);
 %                     data.radii = to_fill_radius(1,:);
 %                     data.radiish = to_fill_radius(2:end,:);
-                    data.maps_sm = firing_rates_full(1,:);
-                    data.maps_smsh = firing_rates_full(2:end,:);
+                    data.maps_sm = maps_sm(1,:);
+                    data.maps_smsh = maps_sm(2:end,:);
 %                     data.maps_dksm = maps_dksm(1,:);
 %                     data.maps_dksmsh = maps_dksm(2:end,:);
                 elseif repeat == 2
 %                     data.maps_adsm1 = firing_rates_full(1,:);
 %                     data.dur_adsm1 = to_fill_time(1,:); 
 %                     data.radii1 = to_fill_radius(1,:);
-                    data.maps_sm1 = firing_rates_full(1,:);
+                    data.maps_sm1 = maps_sm(1,:);
 %                     data.maps_dksm1 = maps_dksm(1,:);
                 elseif repeat == 3
 %                     data.maps_adsm2 = firing_rates_full(1,:);
 %                     data.dur_adsm2 = to_fill_time(1,:);
 %                     data.radii2 = to_fill_radius(1,:);
-                    data.maps_sm2 = firing_rates_full(1,:);
+                    data.maps_sm2 = maps_sm(1,:);
 %                     data.maps_dksm2 = maps_dksm(1,:);
                 end
 
@@ -307,9 +312,9 @@ if(~isempty(dir(Args.RequiredFile)))
 %             end
 
             % Rayleigh vector
-            binSize=(pi*2)/length(firing_rates_full(1,:));
+            binSize=(pi*2)/length(maps_sm(1,:));
             binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
-            binWeights=firing_rates_full./(max(firing_rates_full,[],2));
+            binWeights=maps_sm./(max(maps_sm,[],2));
             S=sum( sin(binAngles).*binWeights , 2);
             C=sum( cos(binAngles).*binWeights , 2);
             R=sqrt(S.^2+C.^2);
@@ -319,10 +324,21 @@ if(~isempty(dir(Args.RequiredFile)))
         
 
         if repeat == 1
+            if data.filtspknum < 100 
+                data.discard = true;
+            else 
+                data.discard = false;
+            end
+            if max(maps_sm(1,:),[],'omitnan') < 0.7
+                data.rateok = false;
+            else
+                data.rateok = true;
+            end
 %             data.SIC_adsm = sic_adsm(1);
 %             data.SICsh_adsm = sic_adsm(2:end,1);
             data.crit_sm = meanR(1,1);
             data.critsh_sm = meanR(2:end,1);
+            data.critthrcell = prctile(meanR(2:end,1),95);
 %             data.SIC_dksm = sic_dksm(1);
 %             data.SICsh_dksm = sic_dksm(2:end,1);
         %     data.median_occ_firings = median_stats';
@@ -346,6 +362,7 @@ if(~isempty(dir(Args.RequiredFile)))
     end
 
             % create nptdata so we can inherit from it   
+            Args.NumShuffles = NumShufflesSaved;
             data.DirBins = Args.DirSteps;
             data.numSets = 1;
             data.Args = Args;

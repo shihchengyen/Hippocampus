@@ -17,7 +17,7 @@ function [gridmap] = lineartogrid(linmap,var,gridSize)
 % Inputs:
 % linmap: 1D linear map, must be 1600 x nshuff or 5122 x nshuff
 % var: 'place' or 'spatialview'
-% gridSize: specifications for dimensions of 2D map
+% gridSize: specifications for dimensions of 2D map. e.g. [40 40]
 
 switch var
     case 'place'

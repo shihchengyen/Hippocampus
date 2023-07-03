@@ -45,11 +45,11 @@ else
 			+ q.data.setIndex(2:end))];
         
         % object specific fields
-        r.data.filtspkcount = [p.data.filtspkcount; q.data.filtspkcount];
+        % r.data.filtspkcount = [p.data.filtspkcount; q.data.filtspkcount];
 %         r.data.mixsel = [p.data.mixsel; q.data.mixsel];
-        r.data.placesel = [p.data.placesel; q.data.placesel];
-        r.data.viewsel = [p.data.viewsel; q.data.viewsel];
-        r.data.headdirectionsel = [p.data.headdirectionsel; q.data.headdirectionsel];
+        % r.data.placesel = [p.data.placesel; q.data.placesel];
+        % r.data.viewsel = [p.data.viewsel; q.data.viewsel];
+        % r.data.headdirectionsel = [p.data.headdirectionsel; q.data.headdirectionsel];
         r.data.discard = [p.data.discard; q.data.discard];
         r.data.pv = [p.data.pv; q.data.pv];
         r.data.ph = [p.data.ph; q.data.ph];
