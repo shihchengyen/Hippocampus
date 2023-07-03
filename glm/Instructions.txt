@@ -1,0 +1,31 @@
+For Eichenbaum method:
+Use 'glm_eichenbaum.m' or 'glm_eichenbaum_p.m' to output a .mat file with the results. The results also contain the likelihood ratios, which should be be used for the chi-squared test as according to Eichenbaum.
+To visualise, load the results file and use 'glm_eichenbaum_plot.m' or 'glm_eichenbaum_p_plot.m' accordingly. 
+
+The main difference between 'glm_eichenbaum.m' and 'glm_eichenbaum_p.m' is that the former models the spatialview fields as 3D gaussian functions and the positioning of the view grids remains unchanged, while the latter models the spatialview fields as 2D gaussian functions over a "flattened" maze as depicted in '2d spatial view ver2.png'. In this image, the light blue rectangles represent padding that "connects" different areas of the maze.
+
+A specified number of fields can be fitted to a single dataset (the .mat file includes AIC values to help decide the optimal number).
+
+Example images of results for 5 fitted fields from the 2018/11/01 session, channel019, cell02 dataset are given. 'glm_eichenbaum_p.m' is run with padding disabled.
+'181101ch019c2 5fieldview 1ms 3D scaled.png' gives the result from 'glm_eichenbaum.m'.
+'181101ch019c2 5fieldview 1ms.png' gives the result from 'glm_eichenbaum_p.m'.
+
+In order for padding to "connect" different areas, datapoints (the independent variables including bin number and spike count) are duplicated. With padding disabled, the two methods will have comparable datapoints , so the log-likihood values can be compared.
+In comparing the log-likelihood values between these two methods (as well as for the 2018/11/02 session, channel019, cell02 dataset), for the same number of fields fitted, it was found that 'glm_eichenbaum.m' consistently gave slightly better log-likelihood values than 'glm_eichenbaum_p.m'. Below are the log-likelihood values for 5 fields fitted.
+
+(20181101ch019c2)
+3D llh 5fields = -1.1276e+04
+2D llh 5fields = -1.1463e+04
+(20181102ch019c2)
+3D llh 5fields = -5.2677e+03
+2D llh 5fields = -5.3418e+03
+
+However, 'glm_eichenbaum.m' seems to take longer to run. For 181101ch019c2, 'glm_eichenbaum.m' took about 11-12 days while 'glm_eichenbaum_p.m' took about 2-3 days.
+
+=====================================
+
+For Hardcastle method:
+Use 'glm_hardcastle.m'. The p-tests are performed with 'hardcastle_testing.m'.
+To visualise, load the results file and use 'hardcastle_testing.m'.
+
+'ln_poisson_model_vmpv.m' is based on code from Hardcastle and handles the likelihood function. Calculation of the roughness (smoothing) penalty is dependent on the layout of the maze grids (especially for view) and should be changed if using a different maze.
