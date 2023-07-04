@@ -1,7 +1,7 @@
 function [gridmap] = lineartogrid(linmap,var,gridSize)
 
 % This function converts linear array to 2D grid format
-% Grid bins are numbered left to right, bottom to top
+% Grid bins are numbered left to right, bottom to top (plot coords)
 % e.g. 1600 x 1 linear place map to a single 40 x 40 grid map
 % e.g. 5122 x 1 linear spatial view map to 9 2D grid maps
 %  - Grid 1: Cue
@@ -15,8 +15,8 @@ function [gridmap] = lineartogrid(linmap,var,gridSize)
 %  - Grid 9: Pillar 4 top left 8 x 32
 
 % Inputs:
-% linmap: 1D linear map, must be 1600 x nshuff or 5122 x nshuff
-% var: 'place' or 'spatialview'
+% linmap: 1D linear map, must be 1600 x nshuff or 5122 x nshuff or 60 x nshuff
+% var: 'place' or 'view' or 'headdirection'
 % gridSize: specifications for dimensions of 2D map. e.g. [40 40]
 
 switch var
@@ -43,12 +43,17 @@ for ii = 1:size(gridmap,1)
     % Assign linear bin to grid bin. Note that this goes left
     % to right, bottom to top
     for mm = 1:gridSize(ii,1)*gridSize(ii,2) % For every point in linear map
+        
         if mod(mm,gridSize(ii,2)) == 0
             y = gridSize(ii,2); % y dim of matrix
         else
             y = mod(mm,gridSize(ii,2));
         end
-        x = gridSize(ii,1)-ceil(mm/gridSize(ii,2))+1; % x dim of matrix
+        if strcmp(var,'place') || strcmp(var,'view')
+            x = gridSize(ii,1)-ceil(mm/gridSize(ii,2))+1; % x dim of matrix
+        elseif strcmp(var,'headdirection')
+            x = mm;
+        end
         indbins_lin = mm + sum(gridSize(1:ii-1,1).*gridSize(1:ii-1,2));
         % Assign
         temp(x,y,:) = linmap(indbins_lin,:);

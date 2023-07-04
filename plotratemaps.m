@@ -75,7 +75,7 @@ else % If plotting a batch of cells
     end
     % Load cell list
     cd(cwd);
-    fid = fopen([cwd '/cell_list_11part1.txt'],'rt');
+    fid = fopen([cwd '/cell_list_singlecell.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
     % Make sure no empty cells
@@ -4265,7 +4265,8 @@ elseif strcmp(objtype,'trajectory')
             spktime = spktime.timestamps/1000;
             cd ..; cd ..; cd ..;
             % Load behavioral data
-            pv = load([num2str(pix) 'vmpv.mat']);
+            % pv = load([num2str(pix) 'vmpv.mat']);
+            pv = load('vmpv_Fixed1.mat');
             pv = pv.pv.data;
             pvdata = pv.sessionTimeC;
             % Load trial structure and markers
@@ -4461,14 +4462,17 @@ elseif strcmp(objtype,'trajectory')
             viewz = nan(size(pvdata,1),4);
             tic;
             disp('extracting coords');
-            for pp = 1:size(pvdata,1)
-                % Leave as NaNs the times when view is on cue, hint or nan
-                if pvdata(pp,viewcol) < 3 || isnan(pvdata(pp,viewcol))
-                    continue;
-                end
-                [whichgrid,binx,biny] = findgrid(pvdata(pp,viewcol),'view');
-                [viewx(pp,:) viewy(pp,:) viewz(pp,:)] = converttosurf(whichgrid,binx,biny);
-            end
+            % for pp = 1:size(pvdata,1)
+            %     % Leave as NaNs the times when view is on cue, hint or nan
+            %     if pvdata(pp,viewcol) < 3 || isnan(pvdata(pp,viewcol))
+            %         continue;
+            %     end
+            %     [whichgrid,binx,biny] = findgrid(pvdata(pp,viewcol),'view');
+            %     [viewx(pp,:) viewy(pp,:) viewz(pp,:)] = converttosurf(whichgrid,binx,biny);
+            % end
+            [whichgrid,binx,biny] = findgrid(pvdata(:,viewcol),'view');
+            [viewx viewy viewz] = converttosurf(whichgrid,binx,biny);
+
             if ~usingbinnedplacedata
                 viewx = (viewx/40)*25-12.5;
                 viewy = (viewy/40)*25-12.5;
@@ -4846,6 +4850,7 @@ elseif strcmp(objtype,'trajectory')
             end
             if video
                 writeVideo(v,mov);
+                close all;
             end
         end
         
@@ -5073,143 +5078,143 @@ cd(cwd);
 close(figure(h));
 
 
-function [x,y,z] = converttosurf(gridnum,bx,by)
-
-switch gridnum
-
-    case 3 % Floor
-        
-        x = [bx-1 bx-1 bx bx];
-        y = [by-1 by by by-1];
-        z = [0 0 0 0];
-
-    case 4 % Ceiling
-        
-        x = [bx-1 bx-1 bx bx];
-        y = [by-1 by by by-1];
-        z = [40 40 40 40];
-
-    case 5 % Walls
-        
-        face = ceil(bx/40);
-        startx = mod(bx,40);
-        if startx == 0
-            startx = 40;
-        end
-
-        switch face
-            case 1 % Left
-                x = [0 0 0 0];
-                y = [0+startx-1 0+startx-1 0+startx 0+startx];
-            case 2 % Top
-                x = [0+startx-1 0+startx-1 0+startx 0+startx];
-                y = [40 40 40 40];
-            case 3 % Right
-                x = [40 40 40 40];
-                y = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
-            case 4 % Bottom
-                x = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
-                y = [0 0 0 0];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 6 % Pillar 1 bottom right
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-
-        switch face
-            case 1 % Left
-                x = [24 24 24 24];
-                y = [8+startx-1 8+startx-1 8+startx 8+startx];
-            case 2 % Top
-                x = [24+startx-1 24+startx-1 24+startx 24+startx];
-                y = [16 16 16 16];
-            case 3 % Right
-                x = [32 32 32 32];
-                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-            case 4 % Bottom
-                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-                y = [8 8 8 8];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 7 % Pillar 2 bottom left
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-    
-        switch face
-            case 1 % Left
-                x = [8 8 8 8];
-                y = [8+startx-1 8+startx-1 8+startx 8+startx];
-            case 2 % Top
-                x = [8+startx-1 8+startx-1 8+startx 8+startx];
-                y = [16 16 16 16];
-            case 3 % Right
-                x = [16 16 16 16];
-                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-            case 4 % Bottom
-                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-                y = [8 8 8 8];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 8 % Pillar 3 top right
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-        
-        switch face
-            case 1 % Left
-                x = [24 24 24 24];
-                y = [24+startx-1 24+startx-1 24+startx 24+startx];
-            case 2 % Top
-                x = [24+startx-1 24+startx-1 24+startx 24+startx];
-                y = [32 32 32 32];
-            case 3 % Right
-                x = [32 32 32 32];
-                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-            case 4 % Bottom
-                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-                y = [24 24 24 24];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 9 % Pillar 4 top left
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-        
-        switch face
-            case 1 % Left
-                x = [8 8 8 8];
-                y = [24+startx-1 24+startx-1 24+startx 24+startx];
-            case 2 % Top
-                x = [8+startx-1 8+startx-1 8+startx 8+startx];
-                y = [32 32 32 32];
-            case 3 % Right
-                x = [16 16 16 16];
-                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-            case 4 % Bottom
-                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-                y = [24 24 24 24];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-end
+% function [x,y,z] = converttosurf(gridnum,bx,by)
+% 
+% switch gridnum
+% 
+%     case 3 % Floor
+% 
+%         x = [bx-1 bx-1 bx bx];
+%         y = [by-1 by by by-1];
+%         z = [0 0 0 0];
+% 
+%     case 4 % Ceiling
+% 
+%         x = [bx-1 bx-1 bx bx];
+%         y = [by-1 by by by-1];
+%         z = [40 40 40 40];
+% 
+%     case 5 % Walls
+% 
+%         face = ceil(bx/40);
+%         startx = mod(bx,40);
+%         if startx == 0
+%             startx = 40;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [0 0 0 0];
+%                 y = [0+startx-1 0+startx-1 0+startx 0+startx];
+%             case 2 % Top
+%                 x = [0+startx-1 0+startx-1 0+startx 0+startx];
+%                 y = [40 40 40 40];
+%             case 3 % Right
+%                 x = [40 40 40 40];
+%                 y = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+%             case 4 % Bottom
+%                 x = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+%                 y = [0 0 0 0];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 6 % Pillar 1 bottom right
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [24 24 24 24];
+%                 y = [8+startx-1 8+startx-1 8+startx 8+startx];
+%             case 2 % Top
+%                 x = [24+startx-1 24+startx-1 24+startx 24+startx];
+%                 y = [16 16 16 16];
+%             case 3 % Right
+%                 x = [32 32 32 32];
+%                 y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%             case 4 % Bottom
+%                 x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%                 y = [8 8 8 8];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 7 % Pillar 2 bottom left
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [8 8 8 8];
+%                 y = [8+startx-1 8+startx-1 8+startx 8+startx];
+%             case 2 % Top
+%                 x = [8+startx-1 8+startx-1 8+startx 8+startx];
+%                 y = [16 16 16 16];
+%             case 3 % Right
+%                 x = [16 16 16 16];
+%                 y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%             case 4 % Bottom
+%                 x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%                 y = [8 8 8 8];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 8 % Pillar 3 top right
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [24 24 24 24];
+%                 y = [24+startx-1 24+startx-1 24+startx 24+startx];
+%             case 2 % Top
+%                 x = [24+startx-1 24+startx-1 24+startx 24+startx];
+%                 y = [32 32 32 32];
+%             case 3 % Right
+%                 x = [32 32 32 32];
+%                 y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%             case 4 % Bottom
+%                 x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%                 y = [24 24 24 24];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 9 % Pillar 4 top left
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [8 8 8 8];
+%                 y = [24+startx-1 24+startx-1 24+startx 24+startx];
+%             case 2 % Top
+%                 x = [8+startx-1 8+startx-1 8+startx 8+startx];
+%                 y = [32 32 32 32];
+%             case 3 % Right
+%                 x = [16 16 16 16];
+%                 y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%             case 4 % Bottom
+%                 x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%                 y = [24 24 24 24];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+% end
 
 % function [gridnum,x,y] = findgrid(px,objtype)
 % % returns grid number and plot coords (x goes left to right, y goes bottom

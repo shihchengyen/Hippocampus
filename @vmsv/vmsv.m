@@ -76,8 +76,8 @@ if(~isempty(dir(Args.RequiredFile)))
     %%%%%%%
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
-    pv = load([num2str(Args.pix) 'vmpv.mat']);
-    % pv = load('vmpv_YY_1px.mat');
+    % pv = load([num2str(Args.pix) 'vmpv.mat']);
+    pv = load('vmpv_Fixed1.mat');
     % pv = load('vmpv.mat');
     pv = pv.pv;
     %%%%%%%%%%

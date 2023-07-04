@@ -15,7 +15,7 @@ function [obj, varargout] = vmcorr(varargin)
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
 				'GridSteps',40, 'pix',1,...
-                'ShuffleLimits',[0.1 0.9], 'NumShuffles',100000, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4, 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1, 'StartOrig',0,'AlphaPlace',10000,'AlphaView',1000,...
                 'ConvergeLim',0.001,'LLHIterLim',1000,'UseIterLim',0); 
@@ -107,11 +107,6 @@ if(~isempty(dir(Args.RequiredFile)))
             Var1 = spatialvarpairs{combi}{1};
             Var2 = spatialvarpairs{combi}{2};
             combiname = [lower(Var1(1)) lower(Var2(1))];
-            
-            % Debug
-            if combi == 3
-                disp('hd x v');
-            end
         
             if repeat == 1
     %             stc = pv.data.sessionTimeC;
@@ -151,7 +146,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         bins_sieved_var1 = pv.data.view_good_bins;
                         bins_removed_var1 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var1);
                     case 'headdirection' %%% FIX
-                        
+
                 end
                 switch Var2
                     case 'place'
@@ -161,7 +156,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         bins_sieved_var2 = pv.data.view_good_bins;
                         bins_removed_var2 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var2);
                     case 'headdirection' %%FIX
-                        
+
                 end
                     conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
             else
@@ -249,12 +244,14 @@ if(~isempty(dir(Args.RequiredFile)))
 
             %% Consolidate pv array into view by place bin array
 
+            if strcmp(Var2,'headdirection')
+                disp('debug')
+            end
             % remove filtered rows
             stc_ssv = stc(conditions == 1,:);
             stc_colnames = {'time','place','headdirection','view','dur','spk'};
             keepcol = [find(ismember(stc_colnames,spatialvarpairs{combi}{1})) ...
                 find(ismember(stc_colnames,spatialvarpairs{combi}{2}))];
-%             stc_ssv = stc(conditions==1,[keepcol 5 6]);
 
             % Initialise variables
             var1_durations1 = nan(1,pv.data.([Var1 'bins']));
@@ -265,15 +262,21 @@ if(~isempty(dir(Args.RequiredFile)))
 
                 inds = stc_ssv(:,keepcol(1))==ii;
                 subsample = stc_ssv(inds,:);
-                % Consider only samples where both variables are sampled (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
-                for cc = 1:length(keepcol)
-                    if strcmp(spatialvarpairs{combi}(cc),'view')
-                        subsample(isnan(subsample(:,keepcol(cc))),:) = [];
-                    else 
-                        subsample(subsample(:,keepcol(cc)) < 1) = [];
-                    end
-                end
+                % Consider only samples where all spatial variables are
+                % sample (in line with the way vmpc/sv/hd are filtered)
+                % (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
+                subsample( subsample(:,ismember(stc_colnames,'place'))==0 |...
+                            isnan(subsample(:,ismember(stc_colnames,'view'))) |...
+                            subsample(:,ismember(stc_colnames,'headdirection'))==0,:) = [];
+                % for cc = 1:length(keepcol)
+                %     if strcmp(spatialvarpairs{combi}(cc),'view')
+                %         subsample(isnan(subsample(:,keepcol(cc))),:) = [];
+                %     else 
+                %         subsample(subsample(:,keepcol(cc)) < 1) = [];
+                %     end
+                % end
                 if ~isempty(subsample) 
+                    
                     % Get spikes and duration for place only
                     var1_durations1(1,ii) = sum(subsample(:,5));
                     var1_spikes1(1,ii) = sum(subsample(:,6));
@@ -284,9 +287,11 @@ if(~isempty(dir(Args.RequiredFile)))
                     subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
                     subsample(:,7) = [];
                     subsample(:,6) = fillmissing(subsample(:,6), 'next'); % In current version of pv, time and spikes are recorded in last repeat bin
+                    subsample(isnan(subsample(:,6)),6) = 0;
                     % back-filling time for Var2
                     subsample(subsample(:,5)==0,5) = nan;
                     subsample(:,5) = fillmissing(subsample(:,5), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+                    subsample(isnan(subsample(:,5)),5) = 0;
                     % padding with max Var2 bin
                     if subsample(end,keepcol(2)) ~= pv.data.([Var2 'bins'])
     %                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
@@ -294,8 +299,11 @@ if(~isempty(dir(Args.RequiredFile)))
                         segment(1,keepcol) = [ii pv.data.([Var2 'bins'])];
                         subsample = [subsample; segment];
                     end
-                    % remove bad view spots
-                    subsample(isnan(subsample(:,keepcol(ismember(spatialvarpairs{combi},'view')))),:) = [];
+                    if strcmp(Var2,'headdirection') && any(subsample(:,3) == 54) && any(isnan(subsample(:,6)))
+                        disp('debug')
+                    end
+                    % % remove bad view spots
+                    % subsample(isnan(subsample(:,keepcol(ismember(spatialvarpairs{combi},'view')))),:) = [];
                     % sum durations
     %                 full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
                     full_durations1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,5),[],[],0);
@@ -328,6 +336,107 @@ if(~isempty(dir(Args.RequiredFile)))
     %             disp(sum(temp_p));
     %             disp(sum(temp_v));
     %         end
+
+            % remove filtered rows
+%             stc_ssv = stc(conditions == 1,:);
+%             stc_colnames = {'time','place','headdirection','view','dur','spk'};
+%             keepcol = [find(ismember(stc_colnames,spatialvarpairs{combi}{1})) ...
+%                 find(ismember(stc_colnames,spatialvarpairs{combi}{2}))];
+% %             stc_ssv = stc(conditions==1,[keepcol 5 6]);
+% 
+%             % Initialise variables
+%             var1_durations1 = nan(1,pv.data.([Var1 'bins']));
+%             var1_spikes1 = zeros(1,pv.data.([Var1 'bins']));
+%             full_durations1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+%             full_spikes1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+%             for ii = 1:pv.data.([Var1 'bins'])
+% 
+%                 inds = stc_ssv(:,keepcol(1))==ii;
+%                 subsample = stc_ssv(inds,:);
+%                 % Consider only samples where both variables are sampled (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
+%                 for cc = 1:length(keepcol)
+%                     if strcmp(spatialvarpairs{combi}(cc),'view')
+%                         subsample(isnan(subsample(:,keepcol(cc))),:) = [];
+%                     else 
+%                         subsample(subsample(:,keepcol(cc)) < 1) = [];
+%                     end
+%                 end
+%                 if ~isempty(subsample) 
+%                     % Get spikes and duration for place only
+%                     var1_durations1(1,ii) = sum(subsample(:,5));
+%                     var1_spikes1(1,ii) = sum(subsample(:,6));
+%                     % back-filling spikes for Var2
+%                     subsample(subsample(:,6)==0,6) = nan;
+%     %                 subsample(:,7) = circshift(subsample(:,5)~=0 ,-1); % Use only if spike is recorded in first bin of view set and time in last bin (like how it was before)
+%                     subsample(:,7) = subsample(:,5)~=0;
+%                     subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
+%                     subsample(:,7) = [];
+%                     subsample(:,6) = fillmissing(subsample(:,6), 'next'); % In current version of pv, time and spikes are recorded in last repeat bin
+%                     % back-filling time for Var2
+%                     subsample(subsample(:,5)==0,5) = nan;
+%                     subsample(:,5) = fillmissing(subsample(:,5), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+%                     % padding with max Var2 bin
+%                     if subsample(end,keepcol(2)) ~= pv.data.([Var2 'bins'])
+%     %                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
+%                         segment = [0 0 0 0 0 0];
+%                         segment(1,keepcol) = [ii pv.data.([Var2 'bins'])];
+%                         subsample = [subsample; segment];
+%                     end
+%                     % remove bad view spots
+%                     subsample(isnan(subsample(:,keepcol(ismember(spatialvarpairs{combi},'view')))),:) = [];
+%                     % sum durations
+%     %                 full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
+%                     full_durations1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,5),[],[],0);
+%                     % sum spikes % Method 1 of 2 to bin spikes (counter check Method 2
+%                     full_spikes1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,6),[],[],0);
+%                 end
+%             end
+% 
+%             % Filter out low-sampled bins
+%             var1_durations1(isnan(var1_durations1)) = 0; % Necessary because NaNs seem to mess up the smoothing. Can't do the same for full_durations because it is being used to compute llh and will erroneously give inf. 
+%     %         full_durations(isnan(full_durations)) = 0; 
+%             full_durations1(isnan(full_durations1)) = 0;
+%             var1_durations1(bins_removed_var1) = 0;
+%             full_durations1(bins_removed_var2,:) = 0;
+%             full_durations1(:,bins_removed_var1) = 0;
+%             var1_spikes1(bins_removed_var1) = 0;
+%             full_spikes1(bins_removed_var2,:) = 0;
+%             full_spikes1(:,bins_removed_var1) = 0;
+% 
+%             var1_array_orig = var1_spikes1./var1_durations1;
+%             var2_array_orig = sum(full_spikes1,2)./sum(full_durations1,2);
+
+            % Debug
+            cd(['FiltVel/' num2str(Args.pix) 'px']);
+            switch Var1
+                case 'place'
+                    Var1obj = load('vmpc.mat');
+                    Var1obj = Var1obj.vmp;
+                case 'view'
+                    Var1obj = load('vmsv.mat');
+                    Var1obj = Var1obj.vms;
+                case 'headdirection'
+                    Var1obj = load('vmhd.mat');
+                    Var1obj = Var1obj.vmd;
+            end
+            switch Var2
+                case 'place'
+                    Var2obj = load('vmpc.mat');
+                    Var2obj = Var2obj.vmp;
+                case 'view'
+                    Var2obj = load('vmsv.mat');
+                    Var2obj = Var2obj.vms;
+                case 'headdirection'
+                    Var2obj = load('vmhd.mat');
+                    Var2obj = Var2obj.vmd;
+            end
+            cd(ori);
+            diffs1 = reshape(var1_array_orig,length(var1_array_orig),1) - reshape(Var1obj.data.maps_raw,length(Var1obj.data.maps_raw),1);
+            diffs2 = reshape(var2_array_orig,length(var2_array_orig),1) - reshape(Var2obj.data.maps_raw,length(Var2obj.data.maps_raw),1);
+            if sum(diffs1,[],'omitnan') ~= 0 || sum(diffs2,[],'omitnan') ~= 0
+                disp('error in binning spikes');
+            end
+
 
             %% Compute covariance matrix
             if repeat == 1
@@ -363,20 +472,21 @@ if(~isempty(dir(Args.RequiredFile)))
             % Removing hint and cue effects
             var2_array_orig_trun = var2_array_orig;
             full_durations1_trun = full_durations1;
-            if strcmp(Var2,'view')
-                 % disregard cue and hint bins
-                var2_array_orig_trun(1:2) = nan;
-                full_durations1_trun(1:2,:) = 0;
-            end
+            % if strcmp(Var2,'view')
+            %      % disregard cue and hint bins
+            %     var2_array_orig_trun(1:2) = nan;
+            %     full_durations1_trun(1:2,:) = 0;
+            % end
 
             % Predicted rate as a function of var2
-            topterm = nansum(var1_array_orig.*full_durations1_trun,2);
-            bottomterm = nansum(full_durations1_trun,2);
+            topterm = sum(var1_array_orig.*full_durations1_trun,2,'omitnan');
+            bottomterm = sum(full_durations1_trun,2,'omitnan');
             var2_array_pred = topterm./bottomterm; % raw map
 
+            % Smoothing predicted maps
             switch Var2
                 case 'view'
-                    % Adaptive smooth predicted view map
+                    % Adaptive smooth 
                     % transform from linear to grid
                     toptermG = lineartogrid(topterm,'view',viewbinDepths);
                     bottomtermG = lineartogrid(bottomterm,'view',viewbinDepths);
@@ -403,6 +513,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     n = 5; % Boxcar window of 5
                     [var2_array_pred_adsm] = smoothdir(var2_array_pred,n,pv.data.([Var2 'bins']));
                 case 'place'
+                    % Adaptive smooth
                     toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
                     bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
                     [p_array_pred_adsmG,~,~] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
@@ -412,16 +523,18 @@ if(~isempty(dir(Args.RequiredFile)))
 
             % If place cell firing is only mod by location, and view influence is attributable only to inhomogeous sampling, 
             % then dr = 0. If dr is significant, place cell is view-modulated.
+            % ratio measures goodness of fit between obs and pred, 0 =
+            % perfect prediction. 
             ratio = log((1+var2_array_orig_trun)./(1+var2_array_pred)); % Muller 1994 
     %         ratio = log(1+sv_array_orig_trun)./(1+sv_array_pred); % Cacucci 2004
-            dr_var2 = nansum(abs(ratio))/sum(bottomterm>0); 
+            dr_var2 = sum(abs(ratio),[],'omitnan')/sum(bottomterm>0); % influence of var2 on var1
             % Correlation between orig and predicted view maps
             vis = ~isnan(var2_array_orig_trun);
             dcorr_var2 = corr2(var2_array_orig_trun(vis),var2_array_pred(vis));
 
             % Predicted rate as a function of var1
-            topterm = nansum(var2_array_orig_trun.*full_durations1_trun,1);
-            bottomterm = nansum(full_durations1_trun,1);
+            topterm = sum(var2_array_orig_trun.*full_durations1_trun,1,'omitnan');
+            bottomterm = sum(full_durations1_trun,1,'omitnan');
             var1_array_pred = topterm./bottomterm; % raw map
 
             % Adaptive smooth predicted var1 map
@@ -464,7 +577,7 @@ if(~isempty(dir(Args.RequiredFile)))
             % then dr = 0. If dr is significant, view cell is place-modulated.
             ratio = log((1+var1_array_orig)./(1+var1_array_pred)); % Muller 1994
     %         ratio = log(1+p_array_orig)./(1+p_array_pred); % Cacucci 2004 
-            dr_var1 = nansum(abs(ratio))/sum(bottomterm>0);
+            dr_var1 = sum(abs(ratio),[],'omitnan')/sum(bottomterm>0); % influence of var1 on var2
             % Correlation between orig and predicted place maps
             vis = ~isnan(var1_array_orig);
             dcorr_var1 = corr2(var1_array_orig(vis)',var1_array_pred(vis)');
@@ -513,7 +626,11 @@ if(~isempty(dir(Args.RequiredFile)))
                 % Starting llh ( upper limit of factorial 170, anything beyond that becomes Inf )
     %             full_durations1(full_durations1==0) = nan; % zeros mess up llh calculation
                 for ii = 1:size(var1_array_set,1)
-                    llh = sum( nansum(full_spikes1.*log(var1_array_set(ii,:).*full_durations1.*var2_array_set(:,ii))) - nansum(var1_array_set(ii,:).*full_durations1.*var2_array_set(:,ii)) - nansum(log(factorial(var2_spikes_temp))) );
+                    pidjtij = var1_array_set(ii,:).*full_durations1.*var2_array_set(:,ii);
+                    term1 = full_spikes1.*log(pidjtij);
+                    term3 = log(factorial(var2_spikes_temp));
+                    midterm = term1 - pidjtij - term3;
+                    llh = sum(sum(midterm,1,'omitnan'),2,'omitnan');
                     llh_vec(end+1,1) = llh;
                 end
                 if isinf(llh) % Evaluate the 2nd llh in the set since that is the starting point of the iterations
@@ -574,7 +691,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     var2_array_set = [var2_array_set var2_array];
                     var2_spk_set = [var2_spk_set spk];
 
-                    llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
+                    pidjtij = var1_array.*full_durations1.*var2_array;
+                    term1 = full_spikes1.*log(pidjtij);
+                    term3 = log(factorial(var2_spikes_temp));
+                    midterm = term1 - pidjtij - term3;
+                    llh = sum(sum(midterm,1,'omitnan'),2,'omitnan');
+                    % llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
                     llh_vec(end+1,1) = llh;
     %                 llh = sum( nansum(full_spikes1.*log(p_array_set(ii,:).*full_durations1.*sv_array_set(:,ii))) - nansum(p_array_set(ii,:).*full_durations1.*sv_array_set(:,ii)) - nansum(log(factorial(view_spikes_temp))) );
 
@@ -721,7 +843,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     var1_array_set = [var1_array_set; var1_array];
                     var1_spk_set = [var1_spk_set; spk];
 
-                    llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
+                    pidjtij = var1_array.*full_durations1.*var2_array;
+                    term1 = full_spikes1.*log(pidjtij);
+                    term3 = log(factorial(var2_spikes_temp));
+                    midterm = term1 - pidjtij - term3;
+                    llh = sum(sum(midterm,1,'omitnan'),2,'omitnan');
+                    % llh = sum( nansum(full_spikes1.*log(var1_array.*full_durations1.*var2_array)) - nansum(var1_array.*full_durations1.*var2_array) - nansum(log(factorial(var2_spikes_temp))) );
                     llh_vec(end+1,1) = llh;
 
                     if Args.UseIterLim % Converge if can find max within 1000 iterations

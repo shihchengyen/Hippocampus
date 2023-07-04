@@ -70,9 +70,9 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
-    viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
+    % viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
     % viewdata = h5read('1binData.hdf','/data');
-    % viewdata = h5read('binData4.hdf','/data');
+    viewdata = h5read('binData_Fixed1.hdf','/data');
     size(viewdata)
     cd(ori);
 
