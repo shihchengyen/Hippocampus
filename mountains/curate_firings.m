@@ -13,10 +13,13 @@ function curate_firings(exclude_labels)
     if ~exist('exclude_labels','var')
         exclude_labels = {'reject', 'noise', 'artifact'};
     end
+    
+    % Move 'sorting-curation.json' to the channel directory
+    movefile ~/Downloads/sorting-curation.json .
 
     % Read in sorting and curation tags
     sorting = readmda('output/firings.mda');
-    curation_tags = jsondecode(fileread('~/Downloads/sorting-curation.json'));
+    curation_tags = jsondecode(fileread('sorting-curation.json'));
     num_clusters = max(sorting(3,:));
     
     % Map new cluster labels to merged clusters
