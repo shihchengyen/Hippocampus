@@ -28,8 +28,8 @@ else
 end
 
 % Construct new stc, with each row representing a time bin
-bin_stc = nan(size(stc,1),3);
-bin_stc(1,1:3) = stc(2,1);
+bin_stc = nan(size(stc,1),4);
+bin_stc(1,1:4) = stc(2,1:4);
 
 current_tbin = 1; % refers to bin_stc row being filled
 stc_last = 2;
@@ -55,11 +55,11 @@ while bin_stc(current_tbin, 1) + tbin_size <= stc(end,1)
             if length(match_idx) > 1
                 bin_stc(match_b_idx, 1) = bin_stc(current_tbin, 1);
                 for i = 1:length(match_idx)
-                    bin_stc(current_tbin+i-1, 2:3) = stc(match_idx(i), 2:3);
+                    bin_stc(current_tbin+i-1, 2:4) = stc(match_idx(i), 2:4);
                 end
                 current_tbin = current_tbin + length(match_idx) - 1; % update index of latest filled tbin
             else
-                bin_stc(current_tbin, 2:3) = stc(stc_last, 2:3);
+                bin_stc(current_tbin, 2:4) = stc(stc_last, 2:4);
             end
             
             bin_stc(current_tbin+1, 1) = bin_stc(current_tbin, 1) + tbin_size;
@@ -72,12 +72,12 @@ while bin_stc(current_tbin, 1) + tbin_size <= stc(end,1)
 end
 
 bin_stc = bin_stc(~isnan(bin_stc(:,1)),:);
-bin_stc(:,4) = zeros(size(bin_stc,1),1); % 4th col contains number of spikes
+bin_stc(:,5) = zeros(size(bin_stc,1),1); % 5th col contains number of spikes
 
 % place/view bin sieving
 rows_remove = [];
 for k = 1:size(bin_stc,1)
-    if ~any(place_bins_sieved == bin_stc(k,2)) || ~any(view_bins_sieved == bin_stc(k,3))
+    if ~any(place_bins_sieved == bin_stc(k,2)) || ~any(view_bins_sieved == bin_stc(k,4))
         rows_remove = [rows_remove k];
     end
 end
@@ -88,13 +88,14 @@ bin_stc(rows_remove,:) = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Simulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-type = 'place';
+% 'place' / 'headdirection' / 'spatialview' / 'ph' / 'pv' / 'hv' / 'phv'
+type = 'place';  
 active_mean = 5;
 background_mean = 0.5;
 
 %%% Specify field bins here %%%
 active_place = [];
+active_hd = [];
 active_view = [];
 %%%%%%%%%%%%%%%%%%%%%%
 
@@ -102,27 +103,65 @@ switch type
     case 'place'
         for row = 1:size(bin_stc)
             if contains(active_place, bin_stc(row, 2))
-                bin_stc(row, 4) = poissrnd(active_mean*tbin_size);
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
             else
-                bin_stc(row, 4) = poissrnd(background_mean*tbin_size);
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
+            end
+        end
+    case 'headdirection'
+        for row = 1:size(bin_stc)
+            if contains(active_hd, bin_stc(row, 3))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
+            else
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
             end
         end
     case 'spatialview'
         for row = 1:size(bin_stc)
-            if contains(active_view, bin_stc(row, 3))
-                bin_stc(row, 4) = poissrnd(active_mean*tbin_size);
+            if contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
             else
-                bin_stc(row, 4) = poissrnd(background_mean*tbin_size);
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
             end
         end
-    case 'joint'
+    case 'ph'
         for row = 1:size(bin_stc)
-            if contains(active_place, bin_stc(row, 2)) && contains(active_view, bin_stc(row, 3))
-                bin_stc(row, 4) = poissrnd(active_mean*tbin_size);
-            elseif contains(active_place, bin_stc(row, 2)) || contains(active_view, bin_stc(row, 3))
-                bin_stc(row, 4) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
+            if contains(active_place, bin_stc(row, 2)) && contains(active_hd, bin_stc(row, 3))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
+            elseif contains(active_place, bin_stc(row, 2)) || contains(active_hd, bin_stc(row, 3))
+                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
             else
-                bin_stc(row, 4) = poissrnd(background_mean*tbin_size);
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
+            end
+        end
+    case 'pv'
+        for row = 1:size(bin_stc)
+            if contains(active_place, bin_stc(row, 2)) && contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
+            elseif contains(active_place, bin_stc(row, 2)) || contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
+            else
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
+            end
+        end
+    case 'hv'
+        for row = 1:size(bin_stc)
+            if contains(active_hd, bin_stc(row, 3)) && contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
+            elseif contains(active_hd, bin_stc(row, 3)) || contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
+            else
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
+            end
+        end
+    case 'phv'
+        for row = 1:size(bin_stc)
+            if contains(active_place, bin_stc(row, 2)) && contains(active_hd, bin_stc(row, 3)) && contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
+            elseif contains(active_place, bin_stc(row, 2)) || contains(active_hd, bin_stc(row, 3)) || contains(active_view, bin_stc(row, 4))
+                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
+            else
+                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
             end
         end
     otherwise

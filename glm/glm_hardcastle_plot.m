@@ -1,12 +1,14 @@
-function glm_hardcastle_plot(params, model, fc, tbin_size)
+function glm_hardcastle_plot(hc_results, model, fc)
 %	
 %	PARAMETERS:
-%	params - hc_results.params_consol
-%	model - 'place' / 'view' / 'both'
+%	hc_results - struct output of glm_hardcastle
+%	model - 'place' / 'headdirection' / 'view' / 
+%           'ph' / 'pv' / 'hv' / 'phv'
 %	fc - fold to visualise
-%	tbin_size - hc_results.tbin_size
 
 % Code adapted from plotgridmap.m
+params = hc_results.params_consol;
+tbin_size = hc_results.tbin_size;
 
 floor_x = repmat(0:40, 41, 1);
 floor_y = flipud(repmat([0:40]', 1, 41));
@@ -50,24 +52,32 @@ P3_TR = flipud(reshape(4803:4803+160-1, 8*4, 5)');
 P4_TL = flipud(reshape(4963:4963+160-1, 8*4, 5)');
 
 switch model
-    case 'place'
-        place_params = params{fc, 2};
-    case 'view'
-        view_params = params{fc, 3};
-    case 'both'
+    case 'phv'
         place_params = params{fc, 1}(1:1600);
-        view_params = params{fc, 1}(1601:1600+5122);
+        hd_params = params{fc, 1}(1601:1600+60);
+        view_params = params{fc, 1}(1601+60:1600+60+5122);
+    case 'ph'
+        place_params = params{fc, 2}(1:1600);
+        hd_params = params{fc, 2}(1601:1600+60);
+    case 'pv'
+        place_params = params{fc, 3}(1:1600);
+        view_params = params{fc, 3}(1601:1600+5122);
+    case 'hv'
+        hd_params = params{fc, 4}(1:60);
+        view_params = params{fc, 4}(61:60+5122);
+    case 'place'
+        place_params = params{fc, 5};
+    case 'headdirection'
+        hd_params = params{fc, 6};
+    case 'view'
+        view_params = params{fc, 7};
 end
 
-if strcmp(model, 'place') || strcmp(model, 'both')
+if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcmp(model, 'phv')
     fp = figure('Name','Place plot');
     ratemap = nan(1600,1);
     for k = 1:size(ratemap,1)
-        ratemap(k) = exp(place_params(k));
-    end
-    
-    if nargin > 3
-        ratemap = ratemap / tbin_size;
+        ratemap(k) = exp(place_params(k))/tbin_size;
     end
     
     surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(1:1600), 40, 40)'));
@@ -78,15 +88,25 @@ if strcmp(model, 'place') || strcmp(model, 'both')
     
 end
 
-if strcmp(model, 'view') || strcmp(model, 'both')
+if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') || strcmp(model, 'phv')
+    fp = figure('Name','Head direction plot');
+    ratemap = nan(60,1);
+    for k = 1:size(ratemap,1)
+        ratemap(k) = exp(hd_params(k))/tbin_size;
+    end
+    
+    pax = polaraxes;
+    polarplot(pax, deg2rad((0:60)*360/60), [ratemap; ratemap(1)]);
+    pax.ThetaZeroLocation = 'top';
+    pax.ThetaDir = 'clockwise';
+    
+end
+
+if strcmp(model, 'view') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
     fv = figure('Name','View plot');
     ratemap = nan(5122,1);
     for k = 1:size(ratemap,1)
-        ratemap(k) = exp(view_params(k));
-    end
-
-    if nargin > 3
-        ratemap = ratemap / tbin_size;
+        ratemap(k) = exp(view_params(k))/tbin_size;
     end
 
     % Plot floor

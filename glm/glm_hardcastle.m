@@ -18,63 +18,60 @@ bin_stc = glm_data.bin_stc;
 tbin_size = glm_data.tbin_size;
 
 first_feature_bins = 1600;
-second_feature_bins = 5122;
+second_feature_bins = 60;
+third_feature_bins = 5122;
 
 % Beta values for smoothing parameters
 beta_place = 3e0;
+beta_hd = 3e0;
 beta_view = 3e0;
 
 % Start to fill in x and y matrices
 samples_total = size(bin_stc,1);
-x = zeros(samples_total,first_feature_bins+second_feature_bins);
-y = zeros(samples_total,1);
+x = zeros(samples_total,first_feature_bins+second_feature_bins+third_feature_bins);
+y = bin_stc(1:end,5);
 
 for k = 1:samples_total
     x(k,bin_stc(k,2)) = 1;
     x(k,first_feature_bins+bin_stc(k,3)) = 1;
-end
-
-spike_latest = 1;
-for k = 1:size(bin_stc,1)
-    for g = spike_latest:length(spiketimes)
-        if spiketimes(g) > bin_stc(k,1) + tbin_size
-            spike_latest = g;
-            break
-        elseif spiketimes(g) > bin_stc(k,1)
-            y(k) = y(k) + 1;
-        end
-    end
+    x(k,first_feature_bins+second_feature_bins+bin_stc(k,4)) = 1;
 end
 
 %%% inputs done %%%
 
 %%%%%%%%%% looping train-test splits %%%%%%%%%%
 
-modelType = [1 1; 
-    1 0; 
-    0 1]; % testing for mixed model, place model, view model
+modelType = [1 1 1;
+    1 1 0;
+    1 0 1;
+    0 1 1;
+    1 0 0;
+    0 1 0;
+    0 0 1]; % testing for mixed model, ph model, pv model, hv model, place model, hd model, view model
+modelName = {'phv', 'ph', 'pv', 'hv', 'place', 'headdirection', 'spatialview'};
 
 folds = fc;
+num_models = size(modelType, 1);
 
 edges = round(linspace(1,length(y)+1, (5*folds)+1)); % splits dataset into 5xfold sections, to sample folds across time
 
-testFit = nan(folds, 3);
-trainFit = nan(folds, 3);
-testFit_pure = nan(folds, 3);
-trainFit_pure = nan(folds, 3);
-paramsAll = cell(folds, 3);
+testFit = nan(folds, num_models);
+trainFit = nan(folds, num_models);
+testFit_pure = nan(folds, num_models);
+trainFit_pure = nan(folds, num_models);
+paramsAll = cell(folds, num_models);
 
-for model_type = 1:3 % test different models on this dataset
+for model_type = 1:num_models % test different models on this dataset
 
-    param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2), 1); % random initialization
-    disp(['Fitting model ' num2str(model_type)])
+    param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
+    disp(['Fitting model ', modelName{model_type}])
 
     for k = 1:folds
 %                 disp('selectivity, params used, fold');
-        param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2), 1); % reset across folds
+        param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % reset across folds
 %                 disp([cell_type model_type k]);
 
-        disp(num2str(k))
+        fprintf('Fold #%d\n',k)
 
         test_ind  = [edges(k):edges(k+1)-1 edges(k+folds):edges(k+folds+1)-1 ...
             edges(k+2*folds):edges(k+2*folds+1)-1 edges(k+3*folds):edges(k+3*folds+1)-1 ...
@@ -85,15 +82,28 @@ for model_type = 1:3 % test different models on this dataset
         train_spikes = y(train_ind);
         test_spikes = y(test_ind);
 
-        if model_type == 1 % keep all columns (both place and view info)
-            train_A = x(train_ind,:);
-            test_A = x(test_ind,:);
-        elseif model_type == 2 % keep place info only
-            train_A = x(train_ind,1:first_feature_bins);
-            test_A = x(test_ind,1:first_feature_bins);
-        else % keep view info only
-            train_A = x(train_ind,1+first_feature_bins:end);
-            test_A = x(test_ind,1+first_feature_bins:end);            
+        switch model_type
+            case 1 % keep all columns (place, head direction and view info)
+                train_A = x(train_ind,:);
+                test_A = x(test_ind,:);
+            case 2 % drop view info only
+                train_A = x(train_ind,1:first_feature_bins+second_feature_bins);
+                test_A = x(test_ind,1:first_feature_bins+second_feature_bins);
+            case 3 % drop head direction info only
+                train_A = x(train_ind,[1:first_feature_bins 1+first_feature_bins+second_feature_bins:end]);
+                test_A = x(test_ind,[1:first_feature_bins 1+first_feature_bins+second_feature_bins:end]);
+            case 4 % drop place info only
+                train_A = x(train_ind,1+first_feature_bins:end);
+                test_A = x(test_ind,1+first_feature_bins:end);
+            case 5 % keep place info only
+                train_A = x(train_ind,1:first_feature_bins);
+                test_A = x(test_ind,1:first_feature_bins);
+            case 6 % keep head direction info only
+                train_A = x(train_ind,1+first_feature_bins:first_feature_bins+second_feature_bins);
+                test_A = x(test_ind,1+first_feature_bins:first_feature_bins+second_feature_bins);
+            case 7 % keep view info only
+                train_A = x(train_ind,1+first_feature_bins+second_feature_bins:end);
+                test_A = x(test_ind,1+first_feature_bins+second_feature_bins:end);            
         end
 
         opts = optimset('Gradobj','on','Hessian','on','Display','off');
@@ -101,7 +111,7 @@ for model_type = 1:3 % test different models on this dataset
         data{2} = train_spikes;
         init_param = param;
         % bottom part all adapted from reference github code
-        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),first_feature_bins,second_feature_bins,beta_place,beta_view), init_param, opts);
+        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),first_feature_bins,second_feature_bins,third_feature_bins,beta_place,beta_hd,beta_view), init_param, opts);
 
         % test fit
 
@@ -138,15 +148,16 @@ for model_type = 1:3 % test different models on this dataset
 end
     
 %glm_hardcastle_results.inputs = [x y];
-hc_results.training_fits = trainFit; % for each dataset (joint, place, view behavior), store n_folds x model_type training likelihood values (with subtraction of mean model)
+hc_results.training_fits = trainFit; % for each dataset (phv, ph, pv, hv, place, hd, view behavior), store n_folds x model_type training likelihood values (with subtraction of mean model)
 hc_results.training_fits_pure = trainFit_pure; % training likelihood without comparison to mean model
 hc_results.testing_fits = testFit; % test likelihood with comparison to mean model
 hc_results.testing_fits_pure = testFit_pure; % test likelihood without comparison to mean model
 hc_results.params_consol = paramsAll; % weights stored here
 
-hc_results.smoothing_beta = cell(2,1);
+hc_results.smoothing_beta = cell(3,1);
 hc_results.smoothing_beta{1} = beta_place;
-hc_results.smoothing_beta{2} = beta_view;
+hc_results.smoothing_beta{2} = beta_hd;
+hc_results.smoothing_beta{3} = beta_view;
 
 hc_results.tbin_size = tbin_size;
 %hc_results.ThresVel = glm_vmpvData.ThresVel;

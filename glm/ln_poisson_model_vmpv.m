@@ -1,10 +1,10 @@
 % this function is a slimmer version of the github reference version (since
-% we only have view and place). linked below:
+% we only have view, place and head direction). linked below:
 % https://github.com/GiocomoLab/ln-model-of-mec-neurons/blob/master/ln_poisson_model.m
 %
-% inserted 2 arguments to track place/view bins as well (for ease of use)
+% inserted 3 arguments to track place/head direction/view bins as well (for ease of use)
 
-function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,np,nv,beta_p,beta_v)
+function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,np,nh,nv,beta_p,beta_h,beta_v)
 
     X = data{1}; % subset of A
     Y = data{2}; % number of spikes
@@ -15,7 +15,7 @@ function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,np,nv,bet
 
     % roughness regularizer weight - note: these are tuned using the sum of f,
     % and thus have decreasing influence with increasing amounts of data
-    b_pos = beta_p; b_view = beta_v;
+    b_pos = beta_p; b_hd = beta_h; b_view = beta_v;
 
     % start computing the Hessian
     rX = bsxfun(@times,rate,X);
@@ -25,15 +25,20 @@ function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,np,nv,bet
 
     % initialize parameter-relevant variables
     J_pos = 0; J_pos_g = []; J_pos_h = [];
+    J_hd = 0; J_hd_g = []; J_hd_h = [];
     J_view = 0; J_view_g = []; J_view_h = [];
 
     % find the parameters
-    numPos = np; numView = nv; % hardcoded: number of parameters
-    [param_pos,param_view] = find_param(param,modelType,numPos,numView);
+    numPos = np; numHD = nh; numView = nv; % hardcoded: number of parameters
+    [param_pos,param_hd,param_view] = find_param(param,modelType,numPos,numHD,numView);
 
     % compute the contribution for f, df, and the hessian
     if ~isempty(param_pos)
         [J_pos,J_pos_g,J_pos_h] = rough_penalty_pos(param_pos,b_pos);
+    end
+    
+    if ~isempty(param_hd)
+        [J_hd,J_hd_g,J_hd_h] = rough_penalty_hd(param_hd,b_hd);
     end
 
     if ~isempty(param_view)
@@ -42,9 +47,9 @@ function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,np,nv,bet
 
     %% compute f, the gradient, and the hessian
 
-    f = sum(rate-Y.*u) + J_pos + J_view;
-    df = real(X' * (rate - Y) + [J_pos_g; J_view_g]);
-    hessian = hessian_glm + blkdiag(J_pos_h,J_view_h);
+    f = sum(rate-Y.*u) + J_pos + J_hd + J_view;
+    df = real(X' * (rate - Y) + [J_pos_g; J_hd_g; J_view_g]);
+    hessian = hessian_glm + blkdiag(J_pos_h,J_hd_h,J_view_h);
 
 end
     
@@ -62,6 +67,22 @@ function [J,J_g,J_h] = rough_penalty_pos(param,beta)
     J_g = beta*M*param;
     J_h = beta*M;
 
+end
+
+function [J,J_g,J_h] = rough_penalty_hd(param,beta)
+    
+    numParam = numel(param);
+    D1 = spdiags(ones(numParam,1)*[-1 1],0:1,numParam-1,numParam);
+    DD1 = D1'*D1;
+    
+    % to correct the smoothing across first and last bin
+    DD1(1,:) = circshift(DD1(2,:),[0 -1]);
+    DD1(end,:) = circshift(DD1(end-1,:),[0 1]);
+    
+    J = beta*0.5*param'*DD1*param;
+    J_g = beta*DD1*param;
+    J_h = beta*DD1;
+    
 end
 
 function [J,J_g,J_h] = rough_penalty_spatialview(param,beta)
@@ -157,17 +178,29 @@ function [J,J_g,J_h] = rough_penalty_spatialview(param,beta)
 end
 
 %% function to find the right parameters given the model type
-function [param_pos,param_view] = find_param(param,modelType,numPos,numView)
+function [param_pos,param_hd,param_view] = find_param(param,modelType,numPos,numHD,numView)
 
-    param_pos = []; param_view = [];
+    param_pos = []; param_hd = []; param_view = [];
 
-    if all(modelType == [1 0])
+    if all(modelType == [1 0 0])
         param_pos = param;
-    elseif all(modelType == [0 1])
+    elseif all(modelType == [0 1 0])
+        param_hd = param;
+    elseif all(modelType == [0 0 1])
         param_view = param;
-    elseif all(modelType == [1 1])
+    elseif all(modelType == [1 1 0])
+        param_pos = param(1:numPos);
+        param_hd = param(numPos+1:numPos+numHD);
+    elseif all(modelType == [1 0 1])
         param_pos = param(1:numPos);
         param_view = param(numPos+1:numPos+numView);
+    elseif all(modelType == [0 1 1])
+        param_hd = param(1:numHD);
+        param_view = param(numHD+1:numHD+numView);
+    elseif all(modelType == [1 1 1])
+        param_pos = param(1:numPos);
+        param_hd = param(numPos+1:numPos+numHD);
+        param_view = param(numPos+numHD+1:numPos+numHD+numView);
     end
 
 end
