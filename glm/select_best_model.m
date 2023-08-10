@@ -21,22 +21,25 @@ function selected_model = select_best_model(hc_results, p_sig)
     if ~exist('p_sig', 'var')
         p_sig = 0.05;
     end
-
+    
+    model_names = {'phv', 'ph', 'pv', 'hv', ...
+        'place', 'headdirection', 'spatialview', 'unclassified'};
     LLH_values = hc_results.testing_fits;
+    mean_LLH_values = nanmean(LLH_values);
 
     % find the best single model
     singleModels = 5:7;
-    [~,top1] = max(nanmean(LLH_values(:,singleModels))); top1 = top1 + singleModels(1)-1;
+    [~,top1] = max(mean_LLH_values(singleModels)); top1 = top1 + singleModels(1)-1;
 
     % find the best double model that includes the single model
     if top1 == 5 % P -> PH, PV
-        [~,top2] = max(nanmean(LLH_values(:,[2 3])));
+        [~,top2] = max(mean_LLH_values([2 3]));
         vec = [2 3]; top2 = vec(top2);
     elseif top1 == 6 % H -> PH, HV
-        [~,top2] = max(nanmean(LLH_values(:,[2 4])));
+        [~,top2] = max(mean_LLH_values([2 4]));
         vec = [2 4]; top2 = vec(top2);
     else % V -> PV, HV
-        [~,top2] = max(nanmean(LLH_values(:,[3 4])));
+        [~,top2] = max(mean_LLH_values([3 4]));
         vec = [3 4]; top2 = vec(top2);
     end
 
@@ -63,8 +66,6 @@ function selected_model = select_best_model(hc_results, p_sig)
         selected_model = 8; % unclassified
     end
     
-    model_names = {'phv', 'ph', 'pv', 'hv',
-        'place', 'headdirection', 'spatialview', 'unclassified'};
     selected_model = model_names{selected_model};
     
 end

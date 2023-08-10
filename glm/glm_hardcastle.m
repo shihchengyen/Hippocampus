@@ -160,10 +160,11 @@ hc_results.smoothing_beta{2} = beta_hd;
 hc_results.smoothing_beta{3} = beta_view;
 
 hc_results.tbin_size = tbin_size;
+hc_results.num_folds = fc;
 %hc_results.ThresVel = glm_vmpvData.ThresVel;
 %hc_results.UseMinObs = glm_vmpvData.UseMinObs;
 
-save(['glm_hardcastle_results_' num2str(tbin_size) '.mat'],'hc_results','-v7.3');
+save('glm_hardcastle_results.mat','hc_results','-v7.3');
 
 end
 

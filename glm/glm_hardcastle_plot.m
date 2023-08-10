@@ -5,7 +5,7 @@ function glm_hardcastle_plot(hc_results, model)
 
 %	PARAMETERS:
 %	hc_results - struct output of glm_hardcastle
-%	model - 'place' / 'headdirection' / 'view' / 
+%	model - 'place' / 'headdirection' / 'spatialview' / 
 %           'ph' / 'pv' / 'hv' / 'phv'
 
 % Code adapted from plotgridmap.m
@@ -77,7 +77,7 @@ switch model
         place_params = cell2mat(params(:, 5)')';
     case 'headdirection'
         hd_params = cell2mat(params(:, 6)')';
-    case 'view'
+    case 'spatialview'
         view_params = cell2mat(params(:, 7)')';
 end
 
@@ -117,7 +117,7 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
     saveas(fh, 'hd_plot.fig');
 end
 
-if strcmp(model, 'view') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
+if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
     fv = figure('Name','View plot');
     for fc = 1:num_folds
         ratemap = nan(5122,1);

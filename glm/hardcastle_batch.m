@@ -20,19 +20,36 @@ function hardcastle_batch(tbin_size, fc)
        cd(cell_list{i});
        disp(['Running classfication for ', pwd]);
 
-       % Generate data from vmpv object, run LNP model fitting and forward
-       % selection
-       vmpv_data = glm_vmpvData(tbin_size);
-       hc_results = glm_hardcastle(vmpv_data, fc);
+       if exist('glm_hardcastle_results.mat', 'file')
+           % Load pre-generated data file
+           load('glm_hardcastle_results.mat', 'hc_results');
+           if (hc_results.tbin_size ~= tbin_size) || (hc_results.num_folds ~= fc)
+               % Regenerate data from vmpv object and run LNP model fitting
+               vmpv_data = glm_vmpvData(tbin_size);
+               hc_results = glm_hardcastle(vmpv_data, fc);
+           end
+       else
+           % Generate data from vmpv object and run LNP model fitting
+           vmpv_data = glm_vmpvData(tbin_size);
+           hc_results = glm_hardcastle(vmpv_data, fc);
+       end
+       % Run model forward selection
        selected_model = select_best_model(hc_results);
        
        % Cell classification and significance testing, saved as a txt file
        % in the cell directory
+       if exist('hardcastle_class.txt', 'file')
+           % Overwrite old text file
+           delete('hardcastle_class.txt')
+       end
        diary('hardcastle_class.txt')
-       disp(['Cell classification: ', selected_model]);
+       disp(['Cell classification: ' selected_model]);
        disp(' ');
        hardcastle_testing(hc_results);
        diary off
+       
+       % Generate response plots for classified variables
+       glm_hardcastle_plot(hc_results, selected_model);
        
     end
     
