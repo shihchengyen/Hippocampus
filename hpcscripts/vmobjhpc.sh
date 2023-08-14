@@ -7,33 +7,24 @@ do
     sessdir=~/hpctmp/Data${celldir%%/array*}
     mkdir -p $sessdir
     echo hpc session directory: $sessdir
-    if [ ! -f $sessdir/1vmpv.mat ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:${line%%/array*}/vmpv.mat $sessdir/1vmpv.mat
-    fi
-	if [ ! -f $sessdir/rplparallel.mat ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:${line%%/array*}/rplparallel.mat $sessdir/rplparallel.mat
-    fi
-	if [ ! -f $sessdir/unityfile.mat ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:${line%%/array*}/unityfile.mat $sessdir/unityfile.mat
-    fi
-	if [ ! -f $sessdir/umaze.mat ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:${line%%/array*}/umaze.mat $sessdir/umaze.mat
-    fi
+	for file in 1vmpv.mat rplparallel.mat unityfile.mat umaze.mat
+	do
+        if [ ! -f $sessdir/$file ]; then
+            scp hippocampus@cortex.nus.edu.sg:${line%%/array*}/$file $sessdir/$file
+        fi
+	done
 	dirpath=~/hpctmp/Data$celldir
     mkdir -p $dirpath
 	echo hpc cell directory: $dirpath
-    if [ ! -f $dirpath/spiketrain.mat ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/spiketrain.mat $dirpath
+	if [ ! -f $dirpath/spiketrain.mat ]; then
+        scp hippocampus@cortex.nus.edu.sg:$line/spiketrain.mat $dirpath
     fi
-	if [ ! -f $dirpath/rplparallel.mat ]; then
-		ln -s $sessdir/rplparallel.mat $dirpath/rplparallel.mat
-	fi
-	if [ ! -f $dirpath/unityfile.mat ]; then
-		ln -s $sessdir/unityfile.mat $dirpath/unityfile.mat
-	fi
-	if [ ! -f $dirpath/umaze.mat ]; then
-		ln -s $sessdir/umaze.mat $dirpath/umaze.mat
-	fi
+	for file in rplparallel.mat unityfile.mat umaze.mat
+	do
+		if [ ! -f $dirpath/$file ]; then
+			ln -s $sessdir/$file $dirpath/$file
+		fi
+	done
 	curr=$(pwd)
     cd $dirpath
         pcjob=$(qsub $curr/vmpsubmit.pbs)

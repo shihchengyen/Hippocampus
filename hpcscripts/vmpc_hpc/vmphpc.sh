@@ -8,7 +8,7 @@ do
 	echo hpc cell directory: ~/hpctmp/Data$celldir
     spiketrainFILE=~/hpctmp/Data"$celldir"/spiketrain.mat
     if [ ! -f $spiketrainFILE ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/spiketrain.mat ~/hpctmp/Data$celldir
+        scp hippocampus@cortex.nus.edu.sg:$line/spiketrain.mat ~/hpctmp/Data$celldir
     fi
     
     sessdir=${celldir%%/array*}
@@ -18,7 +18,7 @@ do
     echo hpc session directory: ~/hpctmp/Data$sessdir
     vmpvFILE=~/hpctmp/Data"$sessdir"/vmpv.mat
     if [ ! -f $vmpvFILE ]; then
-        scp -P 8398 hippocampus@cortex.nus.edu.sg:$hippsessdir/vmpv.mat ~/hpctmp/Data$sessdir/vmpv.mat
+        scp hippocampus@cortex.nus.edu.sg:$hippsessdir/vmpv.mat ~/hpctmp/Data$sessdir/vmpv.mat
     fi
     
 	curr=$(pwd)

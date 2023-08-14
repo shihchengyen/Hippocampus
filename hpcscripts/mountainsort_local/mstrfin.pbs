@@ -12,5 +12,5 @@ cat channels.txt | while read line
 do
 	dirpath=~/hpctmp/Data${line##*Data}
 	mkdir -p $dirpath
-	scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/rplhighpass.mat $dirpath
+	scp hippocampus@cortex.nus.edu.sg:$line/rplhighpass.mat $dirpath
 done

@@ -9,4 +9,4 @@
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
 target=/volume1/Hippocampus/Data${PWD##*Data}
-scp -P 8398 -r mountains hippocampus@cortex.nus.edu.sg:$target
+scp -r mountains hippocampus@cortex.nus.edu.sg:$target

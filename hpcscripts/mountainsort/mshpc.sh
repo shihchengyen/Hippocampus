@@ -7,8 +7,8 @@ do
 	dirpath=~/hpctmp/Data$temp
 	mkdir -p $dirpath
 	echo hpc session directory: $dirpath
-	ssh -p 8398 hippocampus@cortex.nus.edu.sg /volume1/Hippocampus/Data/picasso-misc/find_channels.sh $line
-	scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/channels.txt $dirpath
+	ssh hippocampus@cortex.nus.edu.sg /volume1/Hippocampus/Data/picasso-misc/find_channels.sh $line
+	scp hippocampus@cortex.nus.edu.sg:$line/channels.txt $dirpath
 	curr=$(pwd)
 	cd $dirpath
 		trfjob=$(qsub $curr/mstrfin.pbs)
@@ -16,5 +16,5 @@ do
 		qsub -W depend=afterok:$msjob $curr/mstrfout.pbs
 	echo Changing back to working dir: $curr
 	cd $curr
-	ssh -p 8398 hippocampus@cortex.nus.edu.sg rm $line/channels.txt
+	ssh hippocampus@cortex.nus.edu.sg rm $line/channels.txt
 done

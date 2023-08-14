@@ -9,4 +9,4 @@
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
 dest=/volume1/Hippocampus/Data${dir##*Data}
-scp -P 8398 $dir/vmpc.mat $dir/vmsv.mat $dir/vmhd.mat hippocampus@cortex.nus.edu.sg:$dest
+scp $dir/vmpc.mat $dir/vmsv.mat $dir/vmhd.mat hippocampus@cortex.nus.edu.sg:$dest

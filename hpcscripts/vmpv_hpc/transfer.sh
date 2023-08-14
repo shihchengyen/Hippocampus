@@ -7,7 +7,7 @@ do
 	temp=${line##*Data}
 	echo Transferring files from: ~/hpctmp/Data$temp
 	cd ~/hpctmp/Data$temp
-	scp -P 8398 vmpv.mat hippocampus@cortex.nus.edu.sg:$line/${rad}vmpv.mat 
+	scp vmpv.mat hippocampus@cortex.nus.edu.sg:$line/${rad}vmpv.mat 
 done
 cd $curr
 

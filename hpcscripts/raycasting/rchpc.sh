@@ -9,12 +9,12 @@ do
 	dirpath=~/hpctmp/Data$temp
 	mkdir -p $dirpath
 	echo hpc session directory: $dirpath
-	if [ ! -f $dirpath/unityfile.mat ]; then
-		scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/unityfile.mat $dirpath 
-	fi
-	if [ ! -f $dirpath/eyelink.mat ]; then
-		scp -P 8398 hippocampus@cortex.nus.edu.sg:$line/eyelink.mat $dirpath
-	fi
+	for file in unityfile.mat eyelink.mat
+	do
+		if [ ! -f $dirpath/$file ]; then
+			scp hippocampus@cortex.nus.edu.sg:$line/$file $dirpath 
+		fi
+	done
 	curr=$(pwd)
 	cd $dirpath
 	echo $dirpath > batch.txt
