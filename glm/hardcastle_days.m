@@ -12,14 +12,14 @@ function hardcastle_days(tbin_size, fc, day_list)
     curr_dir = pwd;
     
     for i = 1:length(day_list)
-        
+        % Convert day directory to string if it is not already
         day_dir = day_list(i);
         if ~isa(day_dir, 'char')
             day_dir = num2str(day_dir);
         end
-        
-        cd(day_dir);
-        
+        % Enter day directory
+        cd([curr_dir, '/', day_dir]);
+        % Process all cells in the session
         hardcastle_session(tbin_size, fc);
         
     end
