@@ -30,7 +30,10 @@ function hardcastle_cell(tbin_size, fc)
    if ~exist(save_dir, 'dir')
        mkdir(save_dir);
    end
-   movefile('glm_hardcastle_results.mat', save_dir);
+   if exist('glm_hardcastle_results.mat', 'file')
+       movefile('glm_hardcastle_results.mat', save_dir);
+   end
+   cd(save_dir);
 
    % Cell classification and significance testing, saved as a txt file
    % in the labelled directory
