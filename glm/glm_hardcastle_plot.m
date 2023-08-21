@@ -8,12 +8,12 @@ function glm_hardcastle_plot(hc_results, model)
 %	model - 'place' / 'headdirection' / 'spatialview' / 
 %           'ph' / 'pv' / 'hv' / 'phv'
 
-% Code adapted from plotgridmap.m
 params = hc_results.params_consol;
 tbin_size = hc_results.tbin_size;
 num_folds = size(params, 1);
 [subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 
+% Code adapted from plotgridmap.m
 floor_x = repmat(0:40, 41, 1);
 floor_y = flipud(repmat([0:40]', 1, 41));
 floor_z = zeros(41,41);
@@ -83,24 +83,35 @@ end
 
 if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcmp(model, 'phv')
     fp = figure('Name','Place plot');
+    axLims = zeros(num_folds, 2);
+    
     for fc = 1:num_folds
         ratemap = nan(1600,1);
         for k = 1:size(ratemap,1)
             ratemap(k) = exp(place_params(fc, k))/tbin_size;
         end
-        
+
         subplot(subplot_rows, subplot_cols, fc);
         surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(1:1600), 40, 40)'));
         alpha 1; shading flat;
         view(-35,20);
         colormap jet;
         colorbar;
+        axLims(fc, :) = caxis;
+    end
+    
+    caxRange = [0, max(axLims(:,2))];
+    for fc = 1:num_folds
+        subplot(subplot_rows, subplot_cols, fc);
+        caxis(caxRange);
     end
     saveas(fp, 'place_plot.fig');
 end
 
 if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') || strcmp(model, 'phv')
     fh = figure('Name','Head direction plot');
+    axLims = zeros(num_folds, 2);
+    
     for fc = 1:num_folds
         ratemap = nan(60,1);
         for k = 1:size(ratemap,1)
@@ -113,18 +124,27 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
         pax.ThetaZeroLocation = 'top';
         pax.ThetaDir = 'clockwise';
         set(ax, 'Visible', 'off');
+        axLims(fc, :) = caxis;
+    end
+    
+    caxRange = [0, max(axLims(:,2))];
+    for fc = 1:num_folds
+        subplot(subplot_rows, subplot_cols, fc);
+        caxis(caxRange);
     end
     saveas(fh, 'hd_plot.fig');
 end
 
 if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
     fv = figure('Name','View plot');
+    axLims = zeros(num_folds, 2);
+    
     for fc = 1:num_folds
         ratemap = nan(5122,1);
         for k = 1:size(ratemap,1)
             ratemap(k) = exp(view_params(fc, k))/tbin_size;
         end
-
+        
         subplot(subplot_rows, subplot_cols, fc);
         
         % Plot floor
@@ -150,6 +170,14 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         view(-35,20);
         colormap jet;
         colorbar;
+        hold off;
+        axLims(fc, :) = caxis;
+    end
+    
+    caxRange = [0, max(axLims(:,2))];
+    for fc = 1:num_folds
+        subplot(subplot_rows, subplot_cols, fc);
+        caxis(caxRange);
     end
     saveas(fv, 'view_plot.fig');
 end
