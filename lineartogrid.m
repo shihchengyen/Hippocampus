@@ -9,10 +9,10 @@ function [gridmap] = lineartogrid(linmap,var,gridSize)
 %  - Grid 3: Floor 40 x 40
 %  - Grid 4: Ceiling 40 x 40 (top down view) 
 %  - Grid 5: Walls 8 x 160, starting from bottom left corner
-%  - Grid 6: Pillar 1 bottom right 8 x 32, starting from bottom left corner
-%  - Grid 7: Pillar 2 bottom left 8 x 32
-%  - Grid 8: Pillar 3 top right 8 x 32
-%  - Grid 9: Pillar 4 top left 8 x 32
+%  - Grid 6: Pillar 1 bottom right 5 x 32, starting from bottom left corner
+%  - Grid 7: Pillar 2 bottom left 5 x 32
+%  - Grid 8: Pillar 3 top right 5 x 32
+%  - Grid 9: Pillar 4 top left 5 x 32
 
 % Inputs:
 % linmap: 1D linear map, must be 1600 x nshuff or 5122 x nshuff or 60 x nshuff
