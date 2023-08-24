@@ -1,4 +1,4 @@
-function hc_results = glm_hardcastle(glm_data, fc, smooth_params)
+function hc_results = glm_hardcastle_aic(glm_data, fc)
 %
 %   Reference: Hardcastle et al., 2017. A Multiplexed, Heterogeneous, and Adaptive Code for Navigation in Medial Entorhinal Cortex
 %   Some code adapted from github.com/GiocomoLab/ln-model-of-mec-neurons
@@ -10,31 +10,21 @@ function hc_results = glm_hardcastle(glm_data, fc, smooth_params)
 %   glm_data - uses either glm_vmpvData or glm_genData.
 %   e.g. glm_hardcastle(glm_vmpvData(0.020), 10)
 %
-%   fc - number of folds used for cross-validation.
+%   fc - refers to the number of folds used for cross-validation
 %
-%   smooth_params - 1x3 array of beta values for smoothing parameters,
-%   in the order of [ place, headdirection, view ]. Optional argument,
-%   defaults to [ 3, 3, 3 ] if not provided.
+
 
 bin_stc = glm_data.bin_stc;
 tbin_size = glm_data.tbin_size;
-place_good_bins = glm_data.place_good_bins;
-view_good_bins = glm_data.view_good_bins;
 
 first_feature_bins = 1600;
 second_feature_bins = 60;
 third_feature_bins = 5122;
 
 % Beta values for smoothing parameters
-if exist('smooth_params', 'var')
-    beta_place = smooth_params(1);
-    beta_hd = smooth_params(2);
-    beta_view = smooth_params(3);
-else
-    beta_place = 3e0;
-    beta_hd = 3e0;
-    beta_view = 3e0;
-end
+beta_place = 3e0;
+beta_hd = 3e0;
+beta_view = 3e0;
 
 % Start to fill in x and y matrices
 samples_total = size(bin_stc,1);
@@ -46,12 +36,6 @@ for k = 1:samples_total
     x(k,first_feature_bins+bin_stc(k,3)) = 1;
     x(k,first_feature_bins+second_feature_bins+bin_stc(k,4)) = 1;
 end
-
-% Filters for unoccupied place and view bins
-place_filter = zeros(first_feature_bins,1);
-view_filter = zeros(third_feature_bins,1);
-place_filter(place_good_bins) = 1;
-view_filter(view_good_bins) = 1;
 
 %%% inputs done %%%
 
@@ -79,28 +63,15 @@ paramsAll = cell(folds, num_models);
 
 for model_type = 1:num_models % test different models on this dataset
 
-    % Set bins that have no occurences to a value of 0 during
-    % initialization of params
-    bin_filter = [];
-    if (modelType(model_type,1))
-        bin_filter = [bin_filter; place_filter];
-    end
-    if (modelType(model_type,2))
-        bin_filter = [bin_filter; ones(second_feature_bins,1)];
-    end
-    if (modelType(model_type,3))
-        bin_filter = [bin_filter; view_filter];
-    end
-    
+    param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
     disp(['Fitting model ', modelName{model_type}])
 
     for k = 1:folds
-        fprintf('Fold #%d\n',k)
-%       disp('selectivity, params used, fold');
-%       disp([cell_type model_type k]);
+%                 disp('selectivity, params used, fold');
+        param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % reset across folds
+%                 disp([cell_type model_type k]);
 
-        param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
-        param = param .* bin_filter;
+        fprintf('Fold #%d\n',k)
 
         test_ind  = [edges(k):edges(k+1)-1 edges(k+folds):edges(k+folds+1)-1 ...
             edges(k+2*folds):edges(k+2*folds+1)-1 edges(k+3*folds):edges(k+3*folds+1)-1 ...
@@ -152,9 +123,12 @@ for model_type = 1:num_models % test different models on this dataset
         log_llh_test_mean = nansum(meanFR_test-n.*log(meanFR_test)+log(factorial(n)))/sum(n);
         log_llh_test = (-log_llh_test_model + log_llh_test_mean);
         log_llh_test = log(2)*log_llh_test;
+        
+        aic_test = 2*sum(modelType(model_type))-2*log_llh_test;
+        aic_test_model = 2*sum(modelType(model_type))-2*log(2)*(-log_llh_test_model);
 
-        testFit(k, model_type) = log_llh_test;
-        testFit_pure(k, model_type) = log(2)*(-log_llh_test_model);
+        testFit(k, model_type) = aic_test;
+        testFit_pure(k, model_type) = aic_test_model;
 
         % train fit
 
@@ -167,8 +141,11 @@ for model_type = 1:num_models % test different models on this dataset
         log_llh_train = (-log_llh_train_model + log_llh_train_mean);
         log_llh_train = log(2)*log_llh_train;
 
-        trainFit(k, model_type) = log_llh_train;
-        trainFit_pure(k, model_type) = log(2)*(-log_llh_train_model);
+        aic_train = 2*sum(modelType(model_type))-2*log_llh_train;
+        aic_train_model = 2*sum(modelType(model_type))-2*log(2)*(-log_llh_train_model);
+        
+        trainFit(k, model_type) = aic_train;
+        trainFit_pure(k, model_type) = aic_train_model;
 
         paramsAll{k, model_type} = param;
 
