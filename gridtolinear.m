@@ -19,7 +19,11 @@ switch var
 end
 linmap = nan(sum(gridSize(:,1).*gridSize(:,2)),size(gridmap{1},3));
 for ii = 1:size(gridmap,1)
-    temp = reshape(rot90(gridmap{ii},-1),size(gridmap{ii},1)*size(gridmap{ii},2),size(gridmap{1},3));
+    if strcmp(var,'place') | strcmp(var,'view') % matrix and plor coords are opposite for place and view, but not hd
+        temp = reshape(rot90(gridmap{ii},-1),size(gridmap{ii},1)*size(gridmap{ii},2),size(gridmap{1},3));
+    else
+        temp = reshape(gridmap{ii},size(gridmap{ii},1)*size(gridmap{ii},2),size(gridmap{1},3));
+    end
     lin_inds = sum(gridSize(1:ii-1,1).*gridSize(1:ii-1,2))+1:sum(gridSize(1:ii,1).*gridSize(1:ii,2));
 %     linmap(lin_inds,:) = reshape(temp,1,gridSize(ii,1)*gridSize(ii,2),size(gridmap{1},3));
     linmap(lin_inds,:) = temp;

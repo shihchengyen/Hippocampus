@@ -68,6 +68,9 @@ else
         r.data.maps_sm2 = [p.data.maps_sm2; q.data.maps_sm2];
         r.data.crit_sm2 = [p.data.crit_sm2;q.data.crit_sm2];
 
+        r.data.intracorr = [p.data.intracorr; q.data.intracorr];
+        r.data.intracorrz = [p.data.intracorrz; q.data.intracorrz];
+
 		% object specific fields
 % 		r.data.dlist = [p.data.dlist; q.data.dlist];
 % 		r.data.setIndex = [p.data.setIndex; (p.data.setIndex(end) ...

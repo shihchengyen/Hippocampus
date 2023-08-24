@@ -14,7 +14,7 @@ function [obj, varargout] = vmsv(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'pix',100,...
+				'GridSteps',40, 'pix',1,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 0, 'SmoothType', 'Adaptive', 'SelectiveCriteria','SIC',...
@@ -77,7 +77,8 @@ if(~isempty(dir(Args.RequiredFile)))
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
     pv = load([num2str(Args.pix) 'vmpv.mat']);
-    % pv = load('vmpv_YY_1px.mat');
+    % pv = load('vmpv_Fixed1.mat');
+    % pv = load('vmpv.mat');
     pv = pv.pv;
     %%%%%%%%%%
     %
@@ -196,10 +197,12 @@ if(~isempty(dir(Args.RequiredFile)))
         spike_count_full = consol_arr;
 
         % back-filling spikes for view bins that occupy the same time bin
+        fillindex = false(size(stc,1),1);
         stc(stc(:,6)==0,6) = nan;
         stc(:,7) = stc(:,5)~=0;
         stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
         stc(:,7) = [];
+        fillindex(isnan(stc(1:end-1,6)),1) = true;
         stc(:,6) = fillmissing(stc(:,6), 'next');
         stc(isnan(stc(:,6)),6) = 0;
         % back-filling duration for view bins that occupy the same time bin
@@ -219,32 +222,32 @@ if(~isempty(dir(Args.RequiredFile)))
         gpdur1_full = accumarray(stc_ss(:,1),stc_ss(:,2))';
         
         % Remove low obs bins from rest of analysis
-        gpdur1 = zeros(size(gpdur1_full));
-        gpdur1(bins_sieved) = gpdur1_full(bins_sieved);
-        spike_count = zeros(size(spike_count_full));
-        spike_count(bins_sieved,:) = spike_count_full(bins_sieved,:);
+        dur_raw = zeros(size(gpdur1_full));
+        dur_raw(bins_sieved) = gpdur1_full(bins_sieved);
+        durs_raw = repmat(dur_raw', 1, Args.NumShuffles + 1);
+        spks_raw = zeros(size(spike_count_full));
+        spks_raw(bins_sieved,:) = spike_count_full(bins_sieved,:);
         
         % Store raw map output
-        lin_o_i_Gaze = repmat(gpdur1', 1, Args.NumShuffles + 1);
-        lin_spikeLoc_Gaze = spike_count;
-        maps_raw = lin_spikeLoc_Gaze./lin_o_i_Gaze;
-        maps_raw_out = maps_raw(:,1);
+        maps_raw = spks_raw./durs_raw;
+        map_raw = maps_raw(:,1);
 
         if repeat == 1
             data.sessionTimeC = stc; % Full unfiltered 
-            data.stcfilt = stc_filt; % Filtered for conditions and leaving only place and view
-            data.maps_raw = maps_raw_out';
-            data.dur_raw = gpdur1;
-            data.spk_raw = spike_count(:,1)';
+            data.stcfilt = stc_filt; % Filtered for conditions, must have place, view and hd data
+            data.maps_raw = map_raw';
+            data.dur_raw = dur_raw;
+            data.spk_raw = spks_raw(:,1)';
             data.filtspknum = sum(consol_arr_p(:,1));
+            data.fillindex = fillindex;
         elseif repeat == 2
-            data.maps_raw1 = maps_raw_out';
-            data.dur_raw1 = gpdur1;
-            data.spk_raw1 = spike_count(:,1)';
+            data.maps_raw1 = map_raw';
+            data.dur_raw1 = dur_raw;
+            data.spk_raw1 = spks_raw(:,1)';
         else
-            data.maps_raw2 = maps_raw_out';
-            data.dur_raw2 = gpdur1;
-            data.spk_raw2 = spike_count(:,1)';
+            data.maps_raw2 = map_raw';
+            data.dur_raw2 = dur_raw;
+            data.spk_raw2 = spks_raw(:,1)';
         end
         
         if repeat == 1
@@ -264,77 +267,72 @@ if(~isempty(dir(Args.RequiredFile)))
                 5 32];
                 
             % Assign linear bin to grid
-%             unvis = ~(lin_o_i_Gaze>0);
-            [grid_o_i_Gaze] = lineartogrid(lin_o_i_Gaze,'view',binDepths);
-            [grid_spikeBin_Gaze] = lineartogrid(lin_spikeLoc_Gaze,'view',binDepths);
-            [grid_rate_Gaze] = lineartogrid(maps_raw,'view',binDepths);
-%             [grid_unvis] = lineartogrid(unvis,'view',binDepths);
-            emptyfloorref = grid_o_i_Gaze;
+            [durs_raw_grid] = lineartogrid(durs_raw,'view',binDepths);
+            [spks_raw_grid] = lineartogrid(spks_raw,'view',binDepths);
+            [maps_raw_grid] = lineartogrid(maps_raw,'view',binDepths);
+            % emptyfloorref = durs_raw_grid;
             
             % Pad grids with << 5 >> extra rows of adjoining grids
             n = 5;
             padpillar = false;
-            [emptyfloorref_pad,~] = padsvmap(n,grid_o_i_Gaze,gazeSections,padpillar);
+            [emptyfloorref_pad,~] = padsvmap(n,durs_raw_grid,gazeSections,padpillar);
             padpillar = true;
-            [grid_o_i_Gaze,retrievemap] = padsvmap(n,grid_o_i_Gaze,gazeSections,padpillar);
-            [grid_spikeBin_Gaze,~] = padsvmap(n,grid_spikeBin_Gaze,gazeSections,padpillar);
-            [grid_rate_Gaze,~] = padsvmap(n,grid_rate_Gaze,gazeSections,padpillar);
-            
-            
-%             [grid_unvis,~] = padsvmap(n,grid_unvis,gazeSections);
+            [durs_raw_grid,retrievemap] = padsvmap(n,durs_raw_grid,gazeSections,padpillar);
+            [spks_raw_grid,~] = padsvmap(n,spks_raw_grid,gazeSections,padpillar);
+            [maps_raw_grid,~] = padsvmap(n,maps_raw_grid,gazeSections,padpillar);
             
             % Boxcar and disk smoothing of padded grids
-            grid_bcsm_rate = cell(size(binDepths,1),1);
-            grid_bcsm_rate{1} = grid_rate_Gaze{1}; % No need to smooth cue
-            grid_bcsm_rate{2} = grid_rate_Gaze{2}; % No need to smooth hint
-            grid_bcsm_pos = cell(size(binDepths,1),1);
-            grid_bcsm_pos{1} = grid_o_i_Gaze{1};
-            grid_bcsm_pos{2} = grid_o_i_Gaze{2};
-            grid_dksm_rate = cell(size(binDepths,1),1);
-            grid_dksm_rate{1} = grid_rate_Gaze{1}; % No need to smooth cue
-            grid_dksm_rate{2} = grid_rate_Gaze{2}; % No need to smooth hint
-            grid_dksm_pos = cell(size(binDepths,1),1);
-            grid_dksm_pos{1} = grid_o_i_Gaze{1};
-            grid_dksm_pos{2} = grid_o_i_Gaze{2};
+            maps_bcsm_grid = cell(size(binDepths,1),1);
+            maps_bcsm_grid{1} = maps_raw_grid{1}; % No need to smooth cue
+            maps_bcsm_grid{2} = maps_raw_grid{2}; % No need to smooth hint
+            durs_bcsm_grid = cell(size(binDepths,1),1);
+            durs_bcsm_grid{1} = durs_raw_grid{1};
+            durs_bcsm_grid{2} = durs_raw_grid{2};
+            maps_dksm_grid = cell(size(binDepths,1),1);
+            maps_dksm_grid{1} = maps_raw_grid{1}; % No need to smooth cue
+            maps_dksm_grid{2} = maps_raw_grid{2}; % No need to smooth hint
+            durs_dksm_grid = cell(size(binDepths,1),1);
+            durs_dksm_grid{1} = durs_raw_grid{1};
+            durs_dksm_grid{2} = durs_raw_grid{2};
             for jj = 3:size(binDepths,1)
-                unvis = ~(emptyfloorref_pad{jj}>0) | isnan(grid_rate_Gaze{jj});
+                unvis = ~(emptyfloorref_pad{jj}>0) | isnan(maps_raw_grid{jj});
                 % Boxcar smooth
-                grid_bcsm_rate{jj} = smooth(grid_rate_Gaze{jj},5,unvis,'boxcar');
-                grid_bcsm_pos{jj} = smooth(grid_o_i_Gaze{jj},5,unvis,'boxcar');
+                maps_bcsm_grid{jj} = smooth(maps_raw_grid{jj},5,unvis,'boxcar');
+                durs_bcsm_grid{jj} = smooth(durs_raw_grid{jj},5,unvis,'boxcar');
                 % Disk smooth
-                grid_dksm_rate{jj} = smooth(grid_rate_Gaze{jj},5,unvis,'disk');
-                grid_dksm_pos{jj} = smooth(grid_o_i_Gaze{jj},5,unvis,'disk');
+                maps_dksm_grid{jj} = smooth(maps_raw_grid{jj},5,unvis,'disk');
+                durs_dksm_grid{jj} = smooth(durs_raw_grid{jj},5,unvis,'disk');
             end
 
             % Adaptive smoothing of padded grids
             % tic;
             alpha = Args.Alpha;
-            grid_smoothed_Gaze = cell(size(binDepths,1),1);
-            grid_smoothed_Gaze{1} = grid_spikeBin_Gaze{1}./grid_o_i_Gaze{1}; % No need to smooth cue
-            grid_smoothed_Gaze{2} = grid_spikeBin_Gaze{2}./grid_o_i_Gaze{2}; % No need to smooth hint
-            grid_smoothed_dur = cell(size(grid_o_i_Gaze,1),1);
-            grid_smoothed_dur{1} = grid_o_i_Gaze{1};
-            grid_smoothed_dur{2} = grid_o_i_Gaze{2};
-            grid_ad_size = cell(size(grid_o_i_Gaze,1),1);
-            grid_ad_size{1} = nan(size(grid_o_i_Gaze{1}));
-            grid_ad_size{2} = nan(size(grid_o_i_Gaze{1}));
-            for jj = 3:size(grid_o_i_Gaze,1) % for each grid, floor onwards
+            maps_adsm_grid = cell(size(binDepths,1),1);
+            maps_adsm_grid{1} = spks_raw_grid{1}./durs_raw_grid{1}; % No need to smooth cue
+            maps_adsm_grid{2} = spks_raw_grid{2}./durs_raw_grid{2}; % No need to smooth hint
+            durs_adsm_grid = cell(size(durs_raw_grid,1),1);
+            durs_adsm_grid{1} = durs_raw_grid{1};
+            durs_adsm_grid{2} = durs_raw_grid{2};
+            rad_adsm_grid = cell(size(durs_raw_grid,1),1);
+            rad_adsm_grid{1} = nan(size(durs_raw_grid{1}));
+            rad_adsm_grid{2} = nan(size(durs_raw_grid{1}));
+            for jj = 3:size(durs_raw_grid,1) % for each grid, floor onwards
                 
 %                 disp(['    ...Smoothing grid ' num2str(jj)]);
                 wip = ones(Args.NumShuffles+1,1);
-                gpdur1 = grid_o_i_Gaze{jj};
-                preset_to_zeros = gpdur1(:,:,1);
+                dur = durs_raw_grid{jj};
+                preset_to_zeros = dur(:,:,1);
                 preset_to_zeros(find(preset_to_zeros>0)) = 1;
                 preset_to_zeros(find(preset_to_zeros~=1)) = 0;
                 preset_to_zeros = ~preset_to_zeros;
-                preset_to_zeros = repmat(preset_to_zeros, [1,1,size(gpdur1,3)]);
+                preset_to_zeros = repmat(preset_to_zeros, [1,1,size(dur,3)]);
                 
-                firing_counts_full1 = grid_spikeBin_Gaze{jj};
-                gpdur1(isnan(gpdur1)) = 0;
+                firing_counts_full1 = spks_raw_grid{jj};
+                dur(isnan(dur)) = 0;
                 firing_counts_full1(isnan(firing_counts_full1)) = 0;
                 
 %                 to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
-                to_compute = 1:0.5:(max(size(grid_o_i_Gaze{jj}(:,:,1))))/2;
+                to_compute = 1:0.5:(max(size(durs_raw_grid{jj}(:,:,1))))/2;
                 
                 possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
                 to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
@@ -350,7 +348,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     f(f>=(max(max(f))/3))=1;
                     f(f~=1)=0;
                     
-                    possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);
+                    possible(1,:,:,:) = repmat(imfilter(dur(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);
                     possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv');
                     
                     logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
@@ -380,38 +378,38 @@ if(~isempty(dir(Args.RequiredFile)))
                 
                 to_fill(preset_to_zeros) = nan;
                 to_fill_size(preset_to_zeros) = nan;
-                grid_smoothed_Gaze{jj} = to_fill;
-                grid_smoothed_dur{jj} = to_fill_smoothed_duration;
-                grid_ad_size{jj} = to_fill_size;
+                maps_adsm_grid{jj} = to_fill;
+                durs_adsm_grid{jj} = to_fill_smoothed_duration;
+                rad_adsm_grid{jj} = to_fill_size;
                 
             end
             % disp(['Adaptive smoothing took ' num2str(toc) 's']);
             
             % Unpad smoothed maps
-            grid_smoothed_Gaze = unpadsvmap(grid_smoothed_Gaze,retrievemap,emptyfloorref);
-            grid_smoothed_dur = unpadsvmap(grid_smoothed_dur,retrievemap,emptyfloorref);
-            grid_ad_size = unpadsvmap(grid_ad_size,retrievemap,emptyfloorref);
-            grid_bcsm_rate = unpadsvmap(grid_bcsm_rate,retrievemap,emptyfloorref);
-            grid_bcsm_pos = unpadsvmap(grid_bcsm_pos,retrievemap,emptyfloorref);
-            grid_dksm_rate = unpadsvmap(grid_dksm_rate,retrievemap,emptyfloorref);
-            grid_dksm_pos = unpadsvmap(grid_dksm_pos,retrievemap,emptyfloorref);
+            maps_adsm_grid = unpadsvmap(maps_adsm_grid,retrievemap);
+            durs_adsm_grid = unpadsvmap(durs_adsm_grid,retrievemap);
+            rad_adsm_grid = unpadsvmap(rad_adsm_grid,retrievemap);
+            maps_bcsm_grid = unpadsvmap(maps_bcsm_grid,retrievemap);
+            durs_bcsm_grid = unpadsvmap(durs_bcsm_grid,retrievemap);
+            maps_dksm_grid = unpadsvmap(maps_dksm_grid,retrievemap);
+            durs_dksm_grid = unpadsvmap(durs_dksm_grid,retrievemap);
             
             % Convert from grid maps back to linear maps
-            gpdur1 = gridtolinear(grid_smoothed_dur,'view',binDepths);
-            gpdur1(isnan(gpdur1)) = 0;
-            gpdur1 = gpdur1';
-            lambda_i = gridtolinear(grid_smoothed_Gaze,'view',binDepths);
+            durs_adsm = gridtolinear(durs_adsm_grid,'view',binDepths);
+            durs_adsm(isnan(durs_adsm)) = 0;
+            durs_adsm = durs_adsm';
+            lambda_i = gridtolinear(maps_adsm_grid,'view',binDepths);
             lambda_i = lambda_i';
-            radii = gridtolinear(grid_ad_size,'view',binDepths);
+            radii = gridtolinear(rad_adsm_grid,'view',binDepths);
             radii = radii';
-            maps_bcsm = gridtolinear(grid_bcsm_rate,'view',binDepths);
+            maps_bcsm = gridtolinear(maps_bcsm_grid,'view',binDepths);
             maps_bcsm = maps_bcsm';
-            pos_bcsm = gridtolinear(grid_bcsm_pos,'view',binDepths);
+            pos_bcsm = gridtolinear(durs_bcsm_grid,'view',binDepths);
             pos_bcsm(isnan(pos_bcsm)) = 0;
             pos_bcsm = pos_bcsm';
-            maps_dksm = gridtolinear(grid_dksm_rate,'view',binDepths);
+            maps_dksm = gridtolinear(maps_dksm_grid,'view',binDepths);
             maps_dksm = maps_dksm';
-            pos_dksm = gridtolinear(grid_dksm_pos,'view',binDepths);
+            pos_dksm = gridtolinear(durs_dksm_grid,'view',binDepths);
             pos_dksm(isnan(pos_dksm)) = 0;
             pos_dksm = pos_dksm';
             
@@ -423,7 +421,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 case 'Disk'
                     maps_sm = maps_dksm;
             end
-            
+
             if repeat == 1
                 if data.filtspknum < 100 
                     data.discard = true;
@@ -439,8 +437,8 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.maps_adsmsh = lambda_i(2:end,:);
                 data.radii = radii(1,:);
                 data.radiish = radii(2:end,:);
-                data.dur_adsm = gpdur1(1,:);
-                data.dur_adsmsh = gpdur1(2:end,:);
+                data.dur_adsm = durs_adsm(1,:);
+                data.dur_adsmsh = durs_adsm(2:end,:);
                 data.maps_bcsm = maps_bcsm(1,:);
                 data.maps_bcsmsh = maps_bcsm(2:end,:);
                 data.maps_dksm = maps_dksm(1,:);
@@ -450,7 +448,7 @@ if(~isempty(dir(Args.RequiredFile)))
             elseif repeat == 2
                 data.maps_adsm1 = lambda_i(1,:);
                 data.radii1 = radii(1,:);
-                data.dur_adsm1 = gpdur1(1,:);
+                data.dur_adsm1 = durs_adsm(1,:);
                 data.maps_bcsm1 = maps_bcsm(1,:);
                 data.maps_dksm1 = maps_dksm(1,:);
                 data.maps_sm1 = maps_sm(1,:);
@@ -458,7 +456,7 @@ if(~isempty(dir(Args.RequiredFile)))
             elseif repeat == 3
                 data.maps_adsm2 = lambda_i(1,:);
                 data.radii2 = radii(1,:);
-                data.dur_adsm2 = gpdur1(1,:);
+                data.dur_adsm2 = durs_adsm(1,:);
                 data.maps_bcsm2 = maps_bcsm(1,:);
                 data.maps_dksm2 = maps_dksm(1,:);
                 data.maps_sm2 = maps_sm(1,:);
@@ -466,9 +464,9 @@ if(~isempty(dir(Args.RequiredFile)))
             end            
             
         else
-            
-            gpdur1 = repmat(gpdur1, Args.NumShuffles + 1, 1);
-            lambda_i = spike_count'./ gpdur1;
+            %%%% CHECK AND FIX ????
+            dur_raw = repmat(dur_raw, Args.NumShuffles + 1, 1);
+            lambda_i = spks_raw'./ dur_raw;
             
         end
 
@@ -479,7 +477,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 disp('    Calculating SIC...');
             end
             % Adaptive smoothing SIC
-            sic_adsm = skaggs_sic(lambda_i',gpdur1');
+            sic_adsm = skaggs_sic(lambda_i',durs_adsm');
             sic_adsm = sic_adsm';
             
             % Boxcar smoothing SIC
@@ -591,7 +589,18 @@ if(~isempty(dir(Args.RequiredFile)))
 %                 case 'ISE'
 %                     crit_sm = ise_out;
             end
-            
+
+            % Calculate sparsity 
+            sparsity = spatial_sparsity(dur_raw,map_raw);
+    
+            % Calculate selectivity (signal-to-noise)
+            sig2noise = spatial_sig2noise(map_raw);
+    
+            % Calculate coherence using raw map
+    
+            coherence = spatial_coherence('view',binDepths,map_raw,1); % raw
+            coherence_sm = spatial_coherence('view',binDepths,lambda_i(1,:),1); % adsm, cheat
+
             if repeat == 1
 %                 data.flattened = squeeze(canvas(:,:,1));
                 data.SIC_adsm = sic_adsm(1);
@@ -605,21 +614,47 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.crit_sm = crit_sm(1);
                 data.critsh_sm = crit_sm(2:end,1);
                 data.critthrcell = prctile(crit_sm(2:end,1),95);
+                data.sparsity = sparsity;
+                data.sig2noise = sig2noise;
+                data.coherence = coherence;
+                data.coherence_sm = coherence_sm;
             elseif repeat == 2
                 data.SIC_adsm1 = sic_adsm;
 %                 data.ISE_adsm1 = ise_out;
                 data.SIC_bcsm1 = sic_bcsm;
                 data.SIC_dksm1 = sic_dksm;
                 data.crit_sm1 = crit_sm;
+                data.sparsity1 = sparsity;
+                data.sig2noise1 = sig2noise;
+                data.coherence1 = coherence;
+                data.coherence_sm1 = coherence_sm;
             elseif repeat == 3
                 data.SIC_adsm2 = sic_adsm;
 %                 data.ISE_adsm2 = ise_out;
                 data.SIC_bcsm2 = sic_bcsm;
                 data.SIC_dksm2 = sic_dksm;
                 data.crit_sm2 = crit_sm;
+                data.sparsity2 = sparsity;
+                data.sig2noise = sig2noise;
+                data.coherence2 = coherence;
+                data.coherence_sm2 = coherence_sm;
             end            
             
     end
+
+    % Calculate intra-session stability
+    map1 = data.maps_bcsm1;
+    map2 = data.maps_bcsm2;
+    vis1 = ~isnan(map1);
+    vis2 = ~isnan(map2);
+    vis = vis1 & vis2; % Correlate only visited bins;
+    intracorr = corr2(map1(vis), map2(vis));
+    map1z = zscore(map1(vis));
+    map2z = zscore(map2(vis));
+    intracorrz = corr2(map1z, map2z);
+    % Store stability data
+    data.intracorr = intracorr;
+    data.intracorrz = intracorrz;
     
     % create nptdata so we can inherit from it 
     Args.NumShuffles = NumShuffles_saved;

@@ -73,7 +73,6 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd}; 
 %     pv = vmpv('auto', varargin{:});
 
-
     %%%% PATCH
     cd ..; cd ..; cd ..;
     pv = load([num2str(Args.pix) 'vmpv.mat']);
@@ -84,16 +83,10 @@ if(~isempty(dir(Args.RequiredFile)))
     cd(ori);
     spiketrain = load(Args.RequiredFile);
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%     nTrials = size(pv.trial_intervals,1);
-% %     midTrial = ceil(nTrials/2);
-%     midTrial = pv.last_trial_first_half(1);
-%     sessionTimeInds = find(um.data.sessionTime(:,2) == 0); % Look for trial end markers
-%     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
     
     NumShuffles_saved = Args.NumShuffles;
+
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
         if repeat == 1
@@ -215,52 +208,58 @@ if(~isempty(dir(Args.RequiredFile)))
     
             gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
 
-        %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
-
-            % back-filling spikes for view bins that occupy the same time bin
-            stc(stc(:,6)==0,6) = nan;
-            stc(:,7) = stc(:,5)~=0;
-            stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
-            stc(:,7) = [];
-            stc(:,6) = fillmissing(stc(:,6), 'next');
-            stc(isnan(stc(:,6)),6) = 0;
-            % back-filling duration for view bins that occupy the same time bin
-            stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
-            stc(stc(:,5)==0,5) = nan;
-            stc(end,5) = stc_lasttime;
-            stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
-
-            % Remove non-place and non-view rows for duration
-            stc_filt = stc(find(conditions==1),:); 
-            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
-            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
-            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+        % %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
+        % 
+        %     fillindex = false(size(stc,1),1);
+        %     % back-filling spikes for view bins that occupy the same time bin
+        %     stcfill = stc;
+        %     stcfill(stcfill(:,6)==0,6) = nan;
+        %     stcfill(:,7) = stcfill(:,5)~=0;
+        %     stcfill(isnan(stcfill(:,6)) & stcfill(:,7), 6) = 0;
+        %     stcfill(:,7) = [];
+        %     fillindex(isnan(stcfill(1:end-1,6)),1) = true;
+        %     stcfill(:,6) = fillmissing(stcfill(:,6), 'next');
+        %     stcfill(isnan(stcfill(:,6)),6) = 0;
+        %     % back-filling duration for view bins that occupy the same time bin
+        %     stc_lasttime = stcfill(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
+        %     stcfill(stcfill(:,5)==0,5) = nan;
+        %     stcfill(end,5) = stc_lasttime;
+        %     % fillindex(isnan(stcfill(1:end-1,5)),2) = true;
+        %     stcfill(:,5) = fillmissing(stcfill(:,5), 'next'); % [timestamp place hd view dur spk]
+        % 
+        %     % Remove non-place and non-view rows for duration
+        %     stcfill_filt = stcfill(find(conditions==1),:); 
+        %     stcfill_filt(~(stcfill_filt(:,2) > 0),:) = []; % remove place bin = 0
+        %     stcfill_filt(isnan(stcfill_filt(:,4)),:) = []; % remove NaN view bins
+        %     stcfill_filt(~(stcfill_filt(:,3) > 0),:) = []; % remove hd bin = 0
         
         % Remove low observation bins
-        spike_count = zeros(Args.NumShuffles+1,Args.GridSteps*Args.GridSteps);
-        gpdur = zeros(1,Args.GridSteps*Args.GridSteps);
-        spike_count(:,bins_sieved) = spike_count_full(:,bins_sieved);
-        gpdur(1,bins_sieved) = gpdurfull(1,bins_sieved);
+        spikes_count = zeros(Args.NumShuffles+1,Args.GridSteps*Args.GridSteps);
+        dur_raw = zeros(1,Args.GridSteps*Args.GridSteps);
+        spikes_count(:,bins_sieved) = spike_count_full(:,bins_sieved);
+        dur_raw(1,bins_sieved) = gpdurfull(1,bins_sieved);
         
-        maps_raw = spike_count./repmat(gpdur,size(spike_count,1),1);
+        maps_raw = spikes_count./repmat(dur_raw,size(spikes_count,1),1);
         
         % Save raw maps
-        to_save = maps_raw(1,:);
-        dur_raw = gpdur;
-        spk_raw = spike_count(1,:);
+        map_raw = maps_raw(1,:);
+        spk_raw = spikes_count(1,:);
         if repeat == 1
-            data.sessionTimeC = stc; % Full unfiltered, with all place, view, hd data
-            data.stcfilt = stc_filt; % Filtered for conditions and having all place, view, hd data
-            data.maps_raw = to_save;
+            data.sessionTimeC = stc; % Full unfiltered
+            % data.sessionTimeCfill = stcfill; % Full unfiltered, backfilled for view
+            data.stcfilt = stc_filt; % Filtered for conditions, must have place, view, and hd data
+            % data.stcfillfilt = stcfill_filt; % Filtered for conditions, must have place, view, and hd data, backfilled for view
+            data.maps_raw = map_raw;
             data.dur_raw = dur_raw;
             data.spk_raw = spk_raw;
             data.filtspknum = sum(spk_raw);
+            % data.fillindex = fillindex; % rows that were backfilled
         elseif repeat == 2
-            data.maps_raw1 = to_save;
+            data.maps_raw1 = map_raw;
             data.dur_raw1 = dur_raw;
             data.spk_raw1 = spk_raw;
         elseif repeat == 3
-            data.maps_raw2 = to_save;
+            data.maps_raw2 = map_raw;
             data.dur_raw2 = dur_raw;
             data.spk_raw2 = spk_raw;
         end
@@ -270,7 +269,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 if repeat == 1
                     disp('Adaptive smoothing...');
                 end
-                nan_track = isnan(to_save);
+                nan_track = isnan(map_raw);
 
                 alpha = Args.Alpha;
 
@@ -289,32 +288,32 @@ if(~isempty(dir(Args.RequiredFile)))
                 % but will be reverted back to usual linear representation by the
                 % end of the smoothing chunk
                 
-                gpdur1 = repmat(gpdur',1,Args.NumShuffles+1);
-                preset_to_zeros = gpdur1 == 0; 
+                durs_raw = repmat(dur_raw',1,Args.NumShuffles+1);
+                preset_to_zeros = durs_raw == 0; 
                 
                 % Switch from linear maps to grid maps
-                gpdur1 = cell2mat(lineartogrid(gpdur1,'place',[Args.GridSteps Args.GridSteps]));
-                firing_counts_full1 = cell2mat(lineartogrid(spike_count','place',[Args.GridSteps Args.GridSteps]));
-                preset_to_zeros = logical(cell2mat(lineartogrid(preset_to_zeros,'place',[Args.GridSteps Args.GridSteps])));
-                firing_rates_full_raw1 = cell2mat(lineartogrid(maps_raw','place',[Args.GridSteps Args.GridSteps]));
+                durs_raw_grid = cell2mat(lineartogrid(durs_raw,'place',[Args.GridSteps Args.GridSteps]));
+                spkies_count_grid = cell2mat(lineartogrid(spikes_count','place',[Args.GridSteps Args.GridSteps]));
+                preset_to_zeros_grid = logical(cell2mat(lineartogrid(preset_to_zeros,'place',[Args.GridSteps Args.GridSteps])));
+                maps_raw_grid = cell2mat(lineartogrid(maps_raw','place',[Args.GridSteps Args.GridSteps]));
                 
-                unvis = ~(gpdur1>0);
+                unvis = ~(durs_raw_grid>0);
                 % Boxcar smoothing
-                maps_bcsm_grid = smooth(firing_rates_full_raw1,5,unvis,'boxcar');
-                pos_bcsm_grid = smooth(gpdur1,5,unvis,'boxcar');
+                maps_bcsm_grid = smooth(maps_raw_grid,5,unvis,'boxcar');
+                durs_bcsm_grid = smooth(durs_raw_grid,5,unvis,'boxcar');
                 % Disk smoothing
-                maps_dksm_grid = smooth(firing_rates_full_raw1,5,unvis,'disk');
-                pos_dksm_grid = smooth(gpdur1,5,unvis,'disk');
+                maps_dksm_grid = smooth(maps_raw_grid,5,unvis,'disk');
+                durs_dksm_grid = smooth(durs_raw_grid,5,unvis,'disk');
 
                 % Set up adaptive smoothing parameters and output vars
                 to_compute = 1:0.5:Args.GridSteps/2;
                 possible = NaN(length(to_compute),2,Args.GridSteps,Args.GridSteps,Args.NumShuffles + 1);
-                to_fill = NaN(size(possible,3), size(possible,4), size(possible,5));
-                to_fill(preset_to_zeros) = 0;
-                to_fill_time = NaN(size(possible,3), size(possible,4), size(possible,5));
-                to_fill_time(preset_to_zeros) = 0; 
-                to_fill_radius = NaN(size(possible,3), size(possible,4), size(possible,5));
-                to_fill_radius(preset_to_zeros) = 0;
+                maps_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
+                maps_adsm_grid(preset_to_zeros_grid) = 0;
+                durs_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
+                durs_adsm_grid(preset_to_zeros_grid) = 0; 
+                rad_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
+                rad_adsm_grid(preset_to_zeros_grid) = 0;
                 
                 wip = ones(Args.NumShuffles+1,1);
                 % Adaptive smoothing
@@ -324,54 +323,53 @@ if(~isempty(dir(Args.RequiredFile)))
                     f(f>=(max(max(f))/3))=1;
                     f(f~=1)=0;
 
-                    possible(idx,1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);   %./scaler;
-                    possible(idx,2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv');   %./scaler;
+                    possible(idx,1,:,:,:) = repmat(imfilter(durs_raw_grid(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);   %./scaler;
+                    possible(idx,2,:,:,find(wip)) = imfilter(spkies_count_grid(:,:,find(wip)), f, 'conv');   %./scaler;
 
                     logic1 = squeeze(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
                     slice1 = squeeze(possible(idx,1,:,:,:));
                     slice2 = squeeze(possible(idx,2,:,:,:));
 
-                    to_fill(logic1 & isnan(to_fill)) = slice2(logic1 & isnan(to_fill))./slice1(logic1 & isnan(to_fill));
-                    to_fill_time(logic1 & isnan(to_fill_time)) = slice1(logic1 & isnan(to_fill_time));
-                    to_fill_radius(logic1 & isnan(to_fill_radius)) = to_compute(idx);
+                    maps_adsm_grid(logic1 & isnan(maps_adsm_grid)) = slice2(logic1 & isnan(maps_adsm_grid))./slice1(logic1 & isnan(maps_adsm_grid));
+                    durs_adsm_grid(logic1 & isnan(durs_adsm_grid)) = slice1(logic1 & isnan(durs_adsm_grid));
+                    rad_adsm_grid(logic1 & isnan(rad_adsm_grid)) = to_compute(idx);
 
 %                     disp('smoothed with kernel size:');
 %                     disp(to_compute(idx));
 %                     disp('grids left');
 %                     disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
 
-                    check = squeeze(sum(sum(isnan(to_fill),2),1));
+                    check = squeeze(sum(sum(isnan(maps_adsm_grid),2),1));
                     wip(check==0) = 0;
 
                 end
                 
                 % Reshape from grid to linear maps
-                to_fill(preset_to_zeros) = nan; % unvisited bins should be nan
-                to_fill = gridtolinear({to_fill},'place',[Args.GridSteps Args.GridSteps]);
-                to_fill = to_fill';
-                to_fill_time(isnan(to_fill_time) | preset_to_zeros) = 0;
-                to_fill_time = gridtolinear({to_fill_time},'place',[Args.GridSteps Args.GridSteps]);
-                to_fill_time = to_fill_time';
-                to_fill_radius(preset_to_zeros) = nan;
-                to_fill_radius = gridtolinear({to_fill_radius},'place',[Args.GridSteps Args.GridSteps]);
-                to_fill_radius = to_fill_radius';
+                maps_adsm_grid(preset_to_zeros_grid) = nan; % unvisited bins should be nan
+                maps_adsm = gridtolinear({maps_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                maps_adsm = maps_adsm';
+                durs_adsm_grid(isnan(durs_adsm_grid) | preset_to_zeros_grid) = 0;
+                durs_adsm = gridtolinear({durs_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                durs_adsm = durs_adsm';
+                rad_adsm_grid(preset_to_zeros_grid) = nan;
+                rad_adsm = gridtolinear({rad_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                rad_adsm = rad_adsm';
                 maps_bcsm = gridtolinear({maps_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
                 maps_bcsm = maps_bcsm';
                 maps_dksm = gridtolinear({maps_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
                 maps_dksm = maps_dksm';
-                pos_bcsm_grid(isnan(pos_bcsm_grid) | preset_to_zeros) = 0;
-                pos_bcsm = gridtolinear({pos_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                pos_bcsm = pos_bcsm';
-                pos_dksm_grid(isnan(pos_dksm_grid) | preset_to_zeros) = 0;
-                pos_dksm = gridtolinear({pos_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                pos_dksm = pos_dksm';
-                
-                firing_rates_full = to_fill;
+                durs_bcsm_grid(isnan(durs_bcsm_grid) | preset_to_zeros_grid) = 0;
+                durs_bcsm = gridtolinear({durs_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                durs_bcsm = durs_bcsm';
+                durs_dksm_grid(isnan(durs_dksm_grid) | preset_to_zeros_grid) = 0;
+                durs_dksm = gridtolinear({durs_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
+                durs_dksm = durs_dksm';
+               
 
                 % smoothing part ends
                 switch Args.SmoothType
                     case 'Adaptive'
-                        maps_sm = firing_rates_full;
+                        maps_sm = maps_adsm;
                     case 'Boxcar'
                         maps_sm = maps_bcsm;
                     case 'Disk'
@@ -389,12 +387,12 @@ if(~isempty(dir(Args.RequiredFile)))
                     else
                         data.rateok = true;
                     end
-                    data.maps_adsm = firing_rates_full(1,:);
-                    data.maps_adsmsh = firing_rates_full(2:end,:);
-                    data.dur_adsm = to_fill_time(1,:);
-                    data.dur_adsmsh = to_fill_time(2:end,:);
-                    data.radii = to_fill_radius(1,:);
-                    data.radiish = to_fill_radius(2:end,:);
+                    data.maps_adsm = maps_adsm(1,:);
+                    data.maps_adsmsh = maps_adsm(2:end,:);
+                    data.dur_adsm = durs_adsm_grid(1,:);
+                    data.dur_adsmsh = durs_adsm_grid(2:end,:);
+                    data.radii = rad_adsm_grid(1,:);
+                    data.radiish = rad_adsm_grid(2:end,:);
                     data.maps_bcsm = maps_bcsm(1,:);
                     data.maps_bcsmsh = maps_bcsm(2:end,:);
                     data.maps_dksm = maps_dksm(1,:);
@@ -402,17 +400,17 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_sm = maps_sm(1,:);
                     data.maps_smsh = maps_sm(2:end,:);
                 elseif repeat == 2
-                    data.maps_adsm1 = firing_rates_full(1,:);
-                    data.dur_adsm1 = to_fill_time(1,:); 
-                    data.radii1 = to_fill_radius(1,:);
+                    data.maps_adsm1 = maps_adsm(1,:);
+                    data.dur_adsm1 = durs_adsm_grid(1,:); 
+                    data.radii1 = rad_adsm_grid(1,:);
                     data.maps_bcsm1 = maps_bcsm(1,:);
                     data.maps_dksm1 = maps_dksm(1,:);
                     data.maps_sm1 = maps_sm(1,:);
                     data.maps_smsh1 = maps_sm(2:end,:);
                 elseif repeat == 3
-                    data.maps_adsm2 = firing_rates_full(1,:);
-                    data.dur_adsm2 = to_fill_time(1,:);
-                    data.radii2 = to_fill_radius(1,:);
+                    data.maps_adsm2 = maps_adsm(1,:);
+                    data.dur_adsm2 = durs_adsm_grid(1,:);
+                    data.radii2 = rad_adsm_grid(1,:);
                     data.maps_bcsm2 = maps_bcsm(1,:);
                     data.maps_dksm2 = maps_dksm(1,:);
                     data.maps_sm2 = maps_sm(1,:);
@@ -420,22 +418,22 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
 
             else
-                firing_rates_full = maps_raw;
-                to_fill_time = repmat(gpdur,Args.NumShuffles+1,1); % HM added
+                maps_adsm = maps_raw;
+                durs_adsm_grid = repmat(dur_raw,Args.NumShuffles+1,1); % HM added
 
             end
 
             % Calculating SIC for adaptive smoothing
             disp('Calculating SIC...');
-            sic_adsm = skaggs_sic(firing_rates_full',to_fill_time');
+            sic_adsm = skaggs_sic(maps_adsm',durs_adsm');
             sic_adsm = sic_adsm';
             
             % Calculating SIC for boxcar smoothing
-            sic_bcsm = skaggs_sic(maps_bcsm',pos_bcsm');
+            sic_bcsm = skaggs_sic(maps_bcsm',durs_bcsm');
             sic_bcsm = sic_bcsm';
             
             % Calculating SIC for disk smoothing
-            sic_dksm = skaggs_sic(maps_dksm',pos_dksm');
+            sic_dksm = skaggs_sic(maps_dksm',durs_dksm');
             sic_dksm = sic_dksm';
 
 %             % ISE part
@@ -468,6 +466,17 @@ if(~isempty(dir(Args.RequiredFile)))
             case 'ISE'
                 
         end
+
+        % Calculate sparsity 
+        sparsity = spatial_sparsity(dur_raw,map_raw);
+
+        % Calculate selectivity (signal-to-noise)
+        sig2noise = spatial_sig2noise(map_raw);
+
+        % Calculate coherence using raw map
+
+        coherence = spatial_coherence('place',[Args.GridSteps Args.GridSteps],map_raw,1); % raw
+        coherence_sm = spatial_coherence('place',[Args.GridSteps Args.GridSteps],maps_adsm(1,:),1); % adsm, cheat
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -482,6 +491,10 @@ if(~isempty(dir(Args.RequiredFile)))
             data.crit_sm = crit_sm(1);
             data.critsh_sm = crit_sm(2:end,1);
             data.critthrcell = prctile(crit_sm(2:end,1),95);
+            data.sparsity = sparsity;
+            data.sig2noise = sig2noise;
+            data.coherence = coherence;
+            data.coherence_sm = coherence_sm;
         %     data.median_occ_firings = median_stats';
         %     data.variance_occ_firings = var_stats';
         %     data.perc_occ_firings = perc_stats';
@@ -491,11 +504,19 @@ if(~isempty(dir(Args.RequiredFile)))
             data.SIC_bcsm1 = sic_bcsm;
             data.SIC_dksm1 = sic_dksm;
             data.crit_sm1 = crit_sm;
+            data.sparsity1 = sparsity;
+            data.sig2noise1 = sig2noise;
+            data.coherence1 = coherence;
+            data.coherence_sm1 = coherence_sm;
         elseif repeat == 3
             data.SIC_adsm2 = sic_adsm;
             data.SIC_bcsm2 = sic_bcsm;
             data.SIC_dksm2 = sic_dksm;
             data.crit_sm2 = crit_sm;
+            data.sparsity2 = sparsity;
+            data.sig2noise = sig2noise;
+            data.coherence2 = coherence;
+            data.coherence_sm2 = coherence_sm;
         end
 
         %     data.median_occ_firings = median_stats';
@@ -506,6 +527,20 @@ if(~isempty(dir(Args.RequiredFile)))
 
             
     end
+
+    % Calculate intra-session stability
+    map1 = data.maps_bcsm1;
+    map2 = data.maps_bcsm2;
+    vis1 = ~isnan(map1);
+    vis2 = ~isnan(map2);
+    vis = vis1 & vis2; % Correlate only visited bins;
+    intracorr = corr2(map1(vis), map2(vis));
+    map1z = zscore(map1(vis));
+    map2z = zscore(map2(vis));
+    intracorrz = corr2(map1z, map2z);
+    % Store stability data
+    data.intracorr = intracorr;
+    data.intracorrz = intracorrz;
     
     % create nptdata so we can inherit from it    
     data.gridSteps = Args.GridSteps;

@@ -31,7 +31,7 @@ function [selcell_orig] = plotratemaps(objtype,criteria,save,maptype,varargin)
 sortcrit = 0;
 video = 0;
 filttype = 'FiltVel';
-pix = 100;
+pix = 1;
 
 cwd = '/Volumes/Hippocampus/Data/picasso-misc/AnalysisHM/Current Analysis';
 % Saving figure directory
@@ -75,7 +75,7 @@ else % If plotting a batch of cells
     end
     % Load cell list
     cd(cwd);
-    fid = fopen([cwd '/cell_list_11.txt'],'rt');
+    fid = fopen([cwd '/cell_list_singlecell.txt'],'rt');
     cellList = textscan(fid,'%s','Delimiter','\n');
     cellList = cellList{1};
     % Make sure no empty cells
@@ -1142,7 +1142,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
     %%% Select which plots you want to see (no limit to number selected)
     %%% summary, vmms_rawvsmooth, basemap, pixelmap, checkfilter, predmap,
     %%% linearizeddiff, lnlmixsel, fields
-    whattoplot = {'fields'}; 
+    whattoplot = {'fields','pixelmap'}; 
     
     % Basic settings
     colorset = setcolor('coolwarm64');
@@ -1987,6 +1987,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                         % Plot
                         for kk = 1:size(msvar,2)
                             basedata = objMain.data.(msvar_short)(cell_indMain).(msvar{kk});
+                            secdata = objMain.data.(msvar_short)(cell_indMain).(msvar{2-kk+1});
                             map = basedata.basemapLsm;
                             maxC = max(map,[],'omitnan');
                             % Plot smoothed maps
@@ -2024,7 +2025,12 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                                 [x,y,z] = converttosurf(plotgrid,basedata.fieldcoord{ff}(pp,1),basedata.fieldcoord{ff}(pp,2));
                                                 patch(x,y,z,[1 1 1 1],'EdgeColor',color{ff},'FaceColor','none','LineWidth',1,'EdgeAlpha',1);
                                             end
-                                            fieldbintext = text(ax,1,1-(ff-1)*0.1,1,num2str(pp),'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','right');
+                                            linked = basedata.condbase_linkedfield{ff};
+                                            if ~isempty(linked)
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px-linked' num2str(linked')],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            else
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px'],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            end
                                         end
                                     else % For head direction, mark start and end of field
                                         for ff = 1:basedata.sigfields
@@ -2032,7 +2038,12 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                             section = nan(size(map));
                                             section(basedata.fieldlinbin{ff}) = 1.1*maxC;
                                             plotmap(section,msvar{kk},msvar{kk},color{ff});
-                                            fieldbintext = text(ax,1,1-(ff-1)*0.1,1,num2str(pp),'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','right');
+                                            linked = basedata.condbase_linkedfield{ff};
+                                            if ~isempty(linked)
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px-linked' num2str(linked')],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            else
+                                                fieldbintext = text(ax,1,1-(ff-1)*0.1,1,[num2str(pp) 'px'],'Color',color{ff}, 'Units','Normalized','FontSize',20,'HorizontalAlignment','center');
+                                            end
                                         end
                                     end
                                 end
@@ -2430,7 +2441,7 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                     pseudoSIthr = prctile(basedata.(['pseudosecSIC_adsm' ]){ff},95); 
                                     ax.Title.String = {horzcat('SI: ',num2str(basedata.(['condbase_SIC_sm' ])(ff),2),'/',num2str(pseudoSIthr,2)); ...
                                         horzcat('Smoothpx = ',num2str(sum(~isnan(temp1)))); ...
-                                        horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_adsm{ff}),2)),2))};
+                                        horzcat('Pseudosmoothpx = ', num2str(mean(sum(~isnan(basedata.pseudosecmaps_sm{ff}),2)),2))};
                                     ax.Title.FontSize = 16;
                                     if basedata.(['condbase_SIC_sm' ])(ff)>pseudoSIthr && maxC >= 0.7 
                                         ax.Title.Color = 'r';
@@ -2628,10 +2639,10 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
                                     % Save 
                                     figtitle = figname;
                                     if save
-                                        savefigure(h,figtitle,figdir2);
-                                        print([figdir2 '/' figtitle],'-depsc');
+                                        savefigure(save,h,figtitle,figdir2);
+                                        % print([figdir2 '/' figtitle],'-depsc');
                                     end
-                                    close(h);
+                                    % close(h);
                                     fig = fig + 1;
     
         %                             % Plot a selection of the pseudopopulation of smoothed conditioned maps
@@ -2678,10 +2689,10 @@ elseif strcmp(objtype,'mixsel0') || strcmp(objtype,'mixsel1')
         %                                 patchenvbounds('view');
         %                                 % Plot smoothed map
         %                                 ax = subplot(2,5,hh+5);
-        %                                 plotmap(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+        %                                 plotmap(basedata.pseudosecmaps_sm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
         %                                 colormap(ax,cool);
         %                                 % If firing rate or spike count = 0, set to black
-        %                                 settoblack(basedata.pseudosecmaps_adsm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
+        %                                 settoblack(basedata.pseudosecmaps_sm{ff}(inds_pseudoplot,:),msobj{2-oo+1});
         %                                 ax.Title.String = {'Smoothed map';...
         %                                     ['SI = ' num2str(basedata.pseudosecSIC_adsm{ff}(inds_pseudoplot,1),2) '/' num2str(pseudoSIthr,2)]};
         %                                 ax.Title.FontSize = 16;
@@ -4254,7 +4265,8 @@ elseif strcmp(objtype,'trajectory')
             spktime = spktime.timestamps/1000;
             cd ..; cd ..; cd ..;
             % Load behavioral data
-            pv = load([num2str(pix) 'vmpv.mat']);
+            % pv = load([num2str(pix) 'vmpv.mat']);
+            pv = load('vmpv_Fixed1.mat');
             pv = pv.pv.data;
             pvdata = pv.sessionTimeC;
             % Load trial structure and markers
@@ -4450,14 +4462,17 @@ elseif strcmp(objtype,'trajectory')
             viewz = nan(size(pvdata,1),4);
             tic;
             disp('extracting coords');
-            for pp = 1:size(pvdata,1)
-                % Leave as NaNs the times when view is on cue, hint or nan
-                if pvdata(pp,viewcol) < 3 || isnan(pvdata(pp,viewcol))
-                    continue;
-                end
-                [whichgrid,binx,biny] = findgrid(pvdata(pp,viewcol),'view');
-                [viewx(pp,:) viewy(pp,:) viewz(pp,:)] = converttosurf(whichgrid,binx,biny);
-            end
+            % for pp = 1:size(pvdata,1)
+            %     % Leave as NaNs the times when view is on cue, hint or nan
+            %     if pvdata(pp,viewcol) < 3 || isnan(pvdata(pp,viewcol))
+            %         continue;
+            %     end
+            %     [whichgrid,binx,biny] = findgrid(pvdata(pp,viewcol),'view');
+            %     [viewx(pp,:) viewy(pp,:) viewz(pp,:)] = converttosurf(whichgrid,binx,biny);
+            % end
+            [whichgrid,binx,biny] = findgrid(pvdata(:,viewcol),'view');
+            [viewx viewy viewz] = converttosurf(whichgrid,binx,biny);
+
             if ~usingbinnedplacedata
                 viewx = (viewx/40)*25-12.5;
                 viewy = (viewy/40)*25-12.5;
@@ -4835,6 +4850,7 @@ elseif strcmp(objtype,'trajectory')
             end
             if video
                 writeVideo(v,mov);
+                close all;
             end
         end
         
@@ -5007,47 +5023,48 @@ switch objtype
         patch([7.5 7.5 7.5 7.5],[-7.5 -7.5 -2.5 -2.5],[16 21 21 16],[1 1 1 1],'FaceColor','none','EdgeColor','g','Tag','Rabbit','LineWidth',2);
 end
 
-function smoothviewmap = emptyinsidepillar(smoothviewmap)
-
-% Temporary relief only!!!
-% Removes the data from the inside of pillars where there should be no data
-% at all
-
-pillarcoords = [331:338,... % Bottom left
-                371:378,...
-                411:418,...
-                451:458,...
-                491:498,...
-                531:538,...
-                571:578,...
-                611:618,...
-                347:354,... % Bottom right
-                387:394,...
-                427:434,...
-                467:474,...
-                507:514,...
-                547:554,...
-                587:594,...
-                627:634,...
-                971:978,... % Top left
-                1011:1018,...
-                1051:1058,...
-                1091:1098,...
-                1131:1138,...
-                1171:1178,...
-                1211:1218,...
-                1251:1258,...
-                987:994,... % Top right
-                1027:1034,...
-                1067:1074,...
-                1107:1114,...
-                1147:1154,...
-                1187:1194,...
-                1227:1234,...
-                1267:1274
-                ];
-
-smoothviewmap(pillarcoords) = nan;
+% function smoothviewmap = emptyinsidepillar(smoothviewmap) % moved to
+% standalone function
+% 
+% % Temporary relief only!!!
+% % Removes the data from the inside of pillars where there should be no data
+% % at all
+% 
+% pillarcoords = [331:338,... % Bottom left
+%                 371:378,...
+%                 411:418,...
+%                 451:458,...
+%                 491:498,...
+%                 531:538,...
+%                 571:578,...
+%                 611:618,...
+%                 347:354,... % Bottom right
+%                 387:394,...
+%                 427:434,...
+%                 467:474,...
+%                 507:514,...
+%                 547:554,...
+%                 587:594,...
+%                 627:634,...
+%                 971:978,... % Top left
+%                 1011:1018,...
+%                 1051:1058,...
+%                 1091:1098,...
+%                 1131:1138,...
+%                 1171:1178,...
+%                 1211:1218,...
+%                 1251:1258,...
+%                 987:994,... % Top right
+%                 1027:1034,...
+%                 1067:1074,...
+%                 1107:1114,...
+%                 1147:1154,...
+%                 1187:1194,...
+%                 1227:1234,...
+%                 1267:1274
+%                 ];
+% 
+% smoothviewmap(pillarcoords) = nan;
 
 function [] = savefigure(saveoption,h,figtitle,figdir)
 cwd = pwd;
@@ -5062,188 +5079,188 @@ cd(cwd);
 close(figure(h));
 
 
-function [x,y,z] = converttosurf(gridnum,bx,by)
+% function [x,y,z] = converttosurf(gridnum,bx,by)
+% 
+% switch gridnum
+% 
+%     case 3 % Floor
+% 
+%         x = [bx-1 bx-1 bx bx];
+%         y = [by-1 by by by-1];
+%         z = [0 0 0 0];
+% 
+%     case 4 % Ceiling
+% 
+%         x = [bx-1 bx-1 bx bx];
+%         y = [by-1 by by by-1];
+%         z = [40 40 40 40];
+% 
+%     case 5 % Walls
+% 
+%         face = ceil(bx/40);
+%         startx = mod(bx,40);
+%         if startx == 0
+%             startx = 40;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [0 0 0 0];
+%                 y = [0+startx-1 0+startx-1 0+startx 0+startx];
+%             case 2 % Top
+%                 x = [0+startx-1 0+startx-1 0+startx 0+startx];
+%                 y = [40 40 40 40];
+%             case 3 % Right
+%                 x = [40 40 40 40];
+%                 y = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+%             case 4 % Bottom
+%                 x = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
+%                 y = [0 0 0 0];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 6 % Pillar 1 bottom right
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [24 24 24 24];
+%                 y = [8+startx-1 8+startx-1 8+startx 8+startx];
+%             case 2 % Top
+%                 x = [24+startx-1 24+startx-1 24+startx 24+startx];
+%                 y = [16 16 16 16];
+%             case 3 % Right
+%                 x = [32 32 32 32];
+%                 y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%             case 4 % Bottom
+%                 x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%                 y = [8 8 8 8];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 7 % Pillar 2 bottom left
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [8 8 8 8];
+%                 y = [8+startx-1 8+startx-1 8+startx 8+startx];
+%             case 2 % Top
+%                 x = [8+startx-1 8+startx-1 8+startx 8+startx];
+%                 y = [16 16 16 16];
+%             case 3 % Right
+%                 x = [16 16 16 16];
+%                 y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%             case 4 % Bottom
+%                 x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%                 y = [8 8 8 8];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 8 % Pillar 3 top right
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [24 24 24 24];
+%                 y = [24+startx-1 24+startx-1 24+startx 24+startx];
+%             case 2 % Top
+%                 x = [24+startx-1 24+startx-1 24+startx 24+startx];
+%                 y = [32 32 32 32];
+%             case 3 % Right
+%                 x = [32 32 32 32];
+%                 y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%             case 4 % Bottom
+%                 x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%                 y = [24 24 24 24];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+%     case 9 % Pillar 4 top left
+% 
+%         face = ceil(bx/8);
+%         startx = mod(bx,8);
+%         if startx == 0
+%             startx = 8;
+%         end
+% 
+%         switch face
+%             case 1 % Left
+%                 x = [8 8 8 8];
+%                 y = [24+startx-1 24+startx-1 24+startx 24+startx];
+%             case 2 % Top
+%                 x = [8+startx-1 8+startx-1 8+startx 8+startx];
+%                 y = [32 32 32 32];
+%             case 3 % Right
+%                 x = [16 16 16 16];
+%                 y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
+%             case 4 % Bottom
+%                 x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
+%                 y = [24 24 24 24];
+%         end
+%         z = [16+by-1 16+by 16+by 16+by-1];
+% 
+% end
 
-switch gridnum
-
-    case 3 % Floor
-        
-        x = [bx-1 bx-1 bx bx];
-        y = [by-1 by by by-1];
-        z = [0 0 0 0];
-
-    case 4 % Ceiling
-        
-        x = [bx-1 bx-1 bx bx];
-        y = [by-1 by by by-1];
-        z = [40 40 40 40];
-
-    case 5 % Walls
-        
-        face = ceil(bx/40);
-        startx = mod(bx,40);
-        if startx == 0
-            startx = 40;
-        end
-
-        switch face
-            case 1 % Left
-                x = [0 0 0 0];
-                y = [0+startx-1 0+startx-1 0+startx 0+startx];
-            case 2 % Top
-                x = [0+startx-1 0+startx-1 0+startx 0+startx];
-                y = [40 40 40 40];
-            case 3 % Right
-                x = [40 40 40 40];
-                y = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
-            case 4 % Bottom
-                x = [0+(40-startx+1) 0+(40-startx+1) 0+(40-startx) 0+(40-startx)];
-                y = [0 0 0 0];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 6 % Pillar 1 bottom right
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-
-        switch face
-            case 1 % Left
-                x = [24 24 24 24];
-                y = [8+startx-1 8+startx-1 8+startx 8+startx];
-            case 2 % Top
-                x = [24+startx-1 24+startx-1 24+startx 24+startx];
-                y = [16 16 16 16];
-            case 3 % Right
-                x = [32 32 32 32];
-                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-            case 4 % Bottom
-                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-                y = [8 8 8 8];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 7 % Pillar 2 bottom left
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-    
-        switch face
-            case 1 % Left
-                x = [8 8 8 8];
-                y = [8+startx-1 8+startx-1 8+startx 8+startx];
-            case 2 % Top
-                x = [8+startx-1 8+startx-1 8+startx 8+startx];
-                y = [16 16 16 16];
-            case 3 % Right
-                x = [16 16 16 16];
-                y = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-            case 4 % Bottom
-                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-                y = [8 8 8 8];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 8 % Pillar 3 top right
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-        
-        switch face
-            case 1 % Left
-                x = [24 24 24 24];
-                y = [24+startx-1 24+startx-1 24+startx 24+startx];
-            case 2 % Top
-                x = [24+startx-1 24+startx-1 24+startx 24+startx];
-                y = [32 32 32 32];
-            case 3 % Right
-                x = [32 32 32 32];
-                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-            case 4 % Bottom
-                x = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-                y = [24 24 24 24];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-    case 9 % Pillar 4 top left
-        
-        face = ceil(bx/8);
-        startx = mod(bx,8);
-        if startx == 0
-            startx = 8;
-        end
-        
-        switch face
-            case 1 % Left
-                x = [8 8 8 8];
-                y = [24+startx-1 24+startx-1 24+startx 24+startx];
-            case 2 % Top
-                x = [8+startx-1 8+startx-1 8+startx 8+startx];
-                y = [32 32 32 32];
-            case 3 % Right
-                x = [16 16 16 16];
-                y = [24+(8-startx+1) 24+(8-startx+1) 24+(8-startx) 24+(8-startx)];
-            case 4 % Bottom
-                x = [8+(8-startx+1) 8+(8-startx+1) 8+(8-startx) 8+(8-startx)];
-                y = [24 24 24 24];
-        end
-        z = [16+by-1 16+by 16+by 16+by-1];
-
-end
-
-function [gridnum,x,y] = findgrid(px,objtype)
-% returns grid number and plot coords (x goes left to right, y goes bottom
-% to top)
-
-switch objtype
-    case 'place'
-        mapLdummy = 1:1600;
-        gridnum = 3;
-        temp = flipud(reshape(mapLdummy, 40, 40)');
-    case 'view'
-        mapLdummy = 1:5122;
-        if px == 1 % Cue
-            gridnum = 1;
-            x = 1;
-            y = 1;
-        elseif px == 2 % Hint
-            gridnum = 2;
-            x = 1; 
-            y = 1;
-        elseif px >= 3 && px <= 1602 % Floor
-            gridnum = 3;
-            temp = flipud(reshape(mapLdummy(3:3+1600-1), 40, 40)');
-        elseif px >= 1603 && px <= 3202 % Ceiling
-            gridnum = 4;
-            temp = flipud(reshape(mapLdummy(1603:1603+1600-1), 40, 40)');
-        elseif px >= 3203 && px <= 4482 % Walls
-            gridnum = 5;
-            temp = flipud(reshape(mapLdummy(3203:3203+1280-1), 40*4, 8)');
-        elseif px >= 4483 && px <= 4642 % Pillar 1
-            gridnum = 6;
-            temp = flipud(reshape(mapLdummy(4483:4483+160-1), 8*4, 5)');
-        elseif px >= 4643 && px <= 4802 % Pillar 2
-            gridnum = 7;
-            temp = flipud(reshape(mapLdummy(4643:4643+160-1), 8*4, 5)');
-        elseif px >= 4803 && px <= 4962 % Pillar 3
-            gridnum = 8;
-            temp = flipud(reshape(mapLdummy(4803:4803+160-1), 8*4, 5)');
-        elseif px >= 4963 && px <= 5122 % Pillar 4
-            gridnum = 9;
-            temp = flipud(reshape(mapLdummy(4963:4963+160-1), 8*4, 5)');
-        end
-end
-[y,x] = find(temp == px);
-y = size(temp,1)-y+1;
+% function [gridnum,x,y] = findgrid(px,objtype)
+% % returns grid number and plot coords (x goes left to right, y goes bottom
+% % to top)
+% 
+% switch objtype
+%     case 'place'
+%         mapLdummy = 1:1600;
+%         gridnum = 3;
+%         temp = flipud(reshape(mapLdummy, 40, 40)');
+%     case 'view'
+%         mapLdummy = 1:5122;
+%         if px == 1 % Cue
+%             gridnum = 1;
+%             x = 1;
+%             y = 1;
+%         elseif px == 2 % Hint
+%             gridnum = 2;
+%             x = 1; 
+%             y = 1;
+%         elseif px >= 3 && px <= 1602 % Floor
+%             gridnum = 3;
+%             temp = flipud(reshape(mapLdummy(3:3+1600-1), 40, 40)');
+%         elseif px >= 1603 && px <= 3202 % Ceiling
+%             gridnum = 4;
+%             temp = flipud(reshape(mapLdummy(1603:1603+1600-1), 40, 40)');
+%         elseif px >= 3203 && px <= 4482 % Walls
+%             gridnum = 5;
+%             temp = flipud(reshape(mapLdummy(3203:3203+1280-1), 40*4, 8)');
+%         elseif px >= 4483 && px <= 4642 % Pillar 1
+%             gridnum = 6;
+%             temp = flipud(reshape(mapLdummy(4483:4483+160-1), 8*4, 5)');
+%         elseif px >= 4643 && px <= 4802 % Pillar 2
+%             gridnum = 7;
+%             temp = flipud(reshape(mapLdummy(4643:4643+160-1), 8*4, 5)');
+%         elseif px >= 4803 && px <= 4962 % Pillar 3
+%             gridnum = 8;
+%             temp = flipud(reshape(mapLdummy(4803:4803+160-1), 8*4, 5)');
+%         elseif px >= 4963 && px <= 5122 % Pillar 4
+%             gridnum = 9;
+%             temp = flipud(reshape(mapLdummy(4963:4963+160-1), 8*4, 5)');
+%         end
+% end
+% [y,x] = find(temp == px);
+% y = size(temp,1)-y+1;
 
 % Set zero firing rate (occupied) pixels to black to differentiate from other low
 % firing pixels

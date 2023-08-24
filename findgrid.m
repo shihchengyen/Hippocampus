@@ -1,6 +1,6 @@
 % For plotting: Find grid in 3D frame for pixel, get plotting coords
 % instead of binning coords
-function [gridnum,plotx,ploty,matx,maty] = findgrid(px,objtype)
+function [gridnum_all,plotx_all,ploty_all,matx_all,maty_all] = findgrid(px_all,objtype)
 % Inputs
 % 1. px: bin number in linearised map
 % 2. object type of linearised map: 'place','view','headdirection'
@@ -12,7 +12,10 @@ function [gridnum,plotx,ploty,matx,maty] = findgrid(px,objtype)
 % 4 and 5. coords in matrix convention (x goes top to bottom, y goes left
 % to right).
 
-px = reshape(px,length(px),1);
+px_all = reshape(px_all,length(px_all),1);
+nanpx = find(isnan(px_all));
+validpx = find(~isnan(px_all));
+px = px_all(validpx);
 % Set up predefined lookup table
 switch objtype
     case 'place'
@@ -111,6 +114,18 @@ plotx= plotxdummy(px);
 ploty = plotydummy(px);
 matx = matxdummy(px);
 maty = matydummy(px);
+
+plotx_all = nan(size(px_all));
+ploty_all = nan(size(px_all));
+matx_all = nan(size(px_all));
+maty_all = nan(size(px_all));
+gridnum_all = nan(size(px_all));
+
+plotx_all(validpx) = plotx;
+ploty_all(validpx) = ploty;
+matx_all(validpx) = matx;
+maty_all(validpx) = maty;
+gridnum_all(validpx) = gridnum;
 
 
 
