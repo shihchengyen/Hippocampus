@@ -41,11 +41,11 @@ function hardcastle_cell(tbin_size, fc)
        % Overwrite old text file
        delete('hardcastle_class.txt')
    end
-   diary('hardcastle_class.txt')
+   diary('hardcastle_class.txt');
    disp(['Cell classification: ' selected_model]);
    disp(' ');
    hardcastle_testing(hc_results);
-   diary off
+   diary off;
 
    % Generate response plots for classified variables
    glm_hardcastle_plot(hc_results, selected_model);
