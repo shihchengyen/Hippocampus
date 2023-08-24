@@ -275,9 +275,18 @@ if(dnum>0)
         if sumCost(a,3) <= 0 && sumCost(a,5) == 30 % least distance taken without timeout
             sumCost(a,6) = 1; % mark out trials completed via shortest route
         elseif sumCost(a,3) > 0 && sumCost(a,5) == 30 % not least distance but still complete trial (no timeout) 
+            
+            % correct cases where he reached target but somehow stepped out one more grid
+            if actualRoute(end) ~= idealRoute(end) && actualRoute(end-1) == idealRoute(end)
+                sumCost(a,6) = 1;
+                continue;
+            end
             pathdiff = diff(actualRoute); % check if there's a one grid change of mind. If so, enable user to inspect trajectory 
             % find instances of one grid change
             change = find(pathdiff(1:end-1) == pathdiff(2:end)*(-1));
+            if isempty(change)
+                change = reshape(change,0,1);
+            end
             valid_detour = false(size(change,1),1);
             for c = 1:size(change,1)
                 timeingrid = size(find(mpath == actualRoute(change(c)+1)),1);
