@@ -14,7 +14,7 @@ function [obj, varargout] = vmhd(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'DirSteps',60,'pix',100,...
+				'GridSteps',40, 'DirSteps',60,'pix',1,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Boxcar', 'SelectiveCriteria','RV', ...
@@ -71,9 +71,9 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
 
     data.origin = {pwd};
-	uma = umaze('auto',varargin{:});
-    ufile = unityfile('auto',varargin{:});
-	rp = rplparallel('auto',varargin{:});
+	% uma = umaze('auto',varargin{:});
+    % ufile = unityfile('auto',varargin{:});
+	% rp = rplparallel('auto',varargin{:});
     
     %%%% PATCH
     cd ..; cd ..; cd ..;
@@ -210,57 +210,60 @@ if(~isempty(dir(Args.RequiredFile)))
             stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
             stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
             stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
-            stc_ss = stc_filt(:,[2 5]); % [place dur];
-            stc_ss = [stc_ss; [1600 0]];
+            stc_ss = stc_filt(:,[3 5]); % [hd dur];
+            stc_ss = [stc_ss; [60 0]];
     
             gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
 
-        %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
-
-            % back-filling spikes for view bins that occupy the same time bin
-            stc(stc(:,6)==0,6) = nan;
-            stc(:,7) = stc(:,5)~=0;
-            stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
-            stc(:,7) = [];
-            stc(:,6) = fillmissing(stc(:,6), 'next');
-            stc(isnan(stc(:,6)),6) = 0;
-            % back-filling duration for view bins that occupy the same time bin
-            stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
-            stc(stc(:,5)==0,5) = nan;
-            stc(end,5) = stc_lasttime;
-            stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
-
-            % Remove non-place and non-view rows for duration
-            stc_filt = stc(find(conditions==1),:); 
-            stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
-            stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
-            stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+        % %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
+        % 
+        %     % back-filling spikes for view bins that occupy the same time bin
+        %     stcfill = stc;
+        %     stcfill(stcfill(:,6)==0,6) = nan;
+        %     stcfill(:,7) = stcfill(:,5)~=0;
+        %     stcfill(isnan(stcfill(:,6)) & stcfill(:,7), 6) = 0;
+        %     stcfill(:,7) = [];
+        %     stcfill(:,6) = fillmissing(stcfill(:,6), 'next');
+        %     stcfill(isnan(stcfill(:,6)),6) = 0;
+        %     % back-filling duration for view bins that occupy the same time bin
+        %     stc_lasttime = stcfill(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
+        %     stcfill(stcfill(:,5)==0,5) = nan;
+        %     stcfill(end,5) = stc_lasttime;
+        %     sstcfilltc(:,5) = fillmissing(stcfill(:,5), 'next'); % [timestamp place hd view dur spk]
+        % 
+        %     % Remove non-place and non-view rows for duration
+        %     stcfill_filt = stcfill(find(conditions==1),:); 
+        %     stcfill_filt(~(stcfill_filt(:,2) > 0),:) = []; % remove place bin = 0
+        %     stcfill_filt(isnan(stcfill_filt(:,4)),:) = []; % remove NaN view bins
+        %     stcfill_filt(~(stcfill_filt(:,3) > 0),:) = []; % remove hd bin = 0
         
         % Remove low observation bins
-        spike_count = zeros(Args.NumShuffles+1,Args.DirSteps);
-        gpdur = zeros(1,Args.DirSteps);
-        spike_count(:,bins_sieved) = spike_count_full(:,bins_sieved);
-        gpdur(1,bins_sieved) = gpdurfull(1,bins_sieved);
+        spikes_count = zeros(Args.NumShuffles+1,Args.DirSteps);
+        dur_raw = zeros(1,Args.DirSteps);
+        spikes_count(:,bins_sieved) = spike_count_full(:,bins_sieved);
+        dur_raw(1,bins_sieved) = gpdurfull(1,bins_sieved);
         
-        maps_raw = spike_count./repmat(gpdur,size(spike_count,1),1);
+        maps_raw = spikes_count./repmat(dur_raw,size(spikes_count,1),1);
 
         % Save raw maps
-        to_save = maps_raw(1,:);
-        dur_raw = gpdur;
-        spk_raw = spike_count(1,:);
+        map_raw = maps_raw(1,:);
+        spk_raw = spikes_count(1,:);
         if repeat == 1
-            data.sessionTimeC = stc; % Full unfiltered, with all place, view, hd data
-            data.stcfilt = stc_filt; % Filtered for conditions and leaving only place and view
-            data.maps_raw = to_save;
+            data.sessionTimeC = stc; % Full unfiltered
+            % data.sessionTimeCfill = stcfill; % Full unfiltered, backfilled for view
+            data.stcfilt = stc_filt; % Filtered for conditions, must have place, view, and hd data
+            % data.stcfillfilt = stcfill_filt; % Filtered for conditions, must have place, view, and hd data, backfilled for view
+            data.maps_raw = map_raw;
             data.dur_raw = dur_raw;
             data.spk_raw = spk_raw;
             data.filtspknum = sum(consol_arr_p(:,1));
+            % data.fillindex = fillindex; % rows that were backfilled
         elseif repeat == 2
-            data.maps_raw1 = to_save;
+            data.maps_raw1 = map_raw;
             data.dur_raw1 = dur_raw;
             data.spk_raw1 = spk_raw;
         elseif repeat == 3
-            data.maps_raw2 = to_save;
+            data.maps_raw2 = map_raw;
             data.dur_raw2 = dur_raw;
             data.spk_raw2 = spk_raw;
         end
@@ -273,11 +276,9 @@ if(~isempty(dir(Args.RequiredFile)))
 %                 nan_track = isnan(to_save);
                 
                 % Reshape shuffled maps
-                to_smooth = maps_raw;
                 % Smooth with moving window average of n bins
                 n = 5;
-%                 [firing_rates_full]=smoothDirMap(to_smooth,n,Args.DirSteps); % legacy
-                [maps_sm]=smoothdir(to_smooth,n,Args.DirSteps);
+                [maps_sm]=smoothdir(maps_raw,n,Args.DirSteps);
                 % smoothing part ends
                 
                 if repeat == 1
@@ -320,6 +321,17 @@ if(~isempty(dir(Args.RequiredFile)))
             R=sqrt(S.^2+C.^2);
             meanR=R./sum(binWeights,2);
 
+            % Calculate sparsity 
+            sparsity = spatial_sparsity(dur_raw,map_raw);
+    
+            % Calculate selectivity (signal-to-noise)
+            sig2noise = spatial_sig2noise(map_raw);
+    
+            % Calculate coherence using raw map
+    
+            coherence = spatial_coherence('headdirection',[Args.DirSteps 1],map_raw,1); % raw
+            coherence_sm = spatial_coherence('headdirection',[Args.DirSteps 1],maps_sm(1,:),1); % adsm, cheat
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
 
@@ -339,6 +351,10 @@ if(~isempty(dir(Args.RequiredFile)))
             data.crit_sm = meanR(1,1);
             data.critsh_sm = meanR(2:end,1);
             data.critthrcell = prctile(meanR(2:end,1),95);
+            data.sparsity = sparsity;
+            data.sig2noise = sig2noise;
+            data.coherence = coherence;
+            data.coherence_sm = coherence_sm;
 %             data.SIC_dksm = sic_dksm(1);
 %             data.SICsh_dksm = sic_dksm(2:end,1);
         %     data.median_occ_firings = median_stats';
@@ -348,10 +364,18 @@ if(~isempty(dir(Args.RequiredFile)))
         elseif repeat == 2
 %             data.SIC_adsm1 = sic_adsm;
             data.crit_sm1 = meanR;
+            data.sparsity1 = sparsity;
+            data.sig2noise1 = sig2noise;
+            data.coherence1 = coherence;
+            data.coherence_sm1 = coherence_sm;
 %             data.SIC_dksm1 = sic_dksm;
         elseif repeat == 3
 %             data.SIC_adsm2 = sic_adsm;
             data.crit_sm2 = meanR;
+            data.sparsity2 = sparsity;
+            data.sig2noise = sig2noise;
+            data.coherence2 = coherence;
+            data.coherence_sm2 = coherence_sm;
 %             data.SIC_dksm2 = sic_dksm;
         end
             
@@ -361,15 +385,28 @@ if(~isempty(dir(Args.RequiredFile)))
     
     end
 
-            % create nptdata so we can inherit from it   
-            Args.NumShuffles = NumShufflesSaved;
-            data.DirBins = Args.DirSteps;
-            data.numSets = 1;
-            data.Args = Args;
-            n = nptdata(1,0,pwd);
-            d.data = data;
-            obj = class(d,Args.classname,n);
-            saveObject(obj,'ArgsC',Args);
+    % Calculate intra-session stability
+    map1 = data.maps_sm1;
+    map2 = data.maps_sm2;
+    vis1 = ~isnan(map1);
+    vis2 = ~isnan(map2);
+    vis = vis1 & vis2; % Correlate only visited bins;
+    intracorr = corr2(map1(vis), map2(vis));
+    map1z = zscore(map1(vis));
+    map2z = zscore(map2(vis));
+    intracorrz = corr2(map1z, map2z);
+    % Store stability data
+    data.intracorr = intracorr;
+
+    % create nptdata so we can inherit from it   
+    Args.NumShuffles = NumShufflesSaved;
+    data.DirBins = Args.DirSteps;
+    data.numSets = 1;
+    data.Args = Args;
+    n = nptdata(1,0,pwd);
+    d.data = data;
+    obj = class(d,Args.classname,n);
+    saveObject(obj,'ArgsC',Args);
     
 else
 	% create empty object

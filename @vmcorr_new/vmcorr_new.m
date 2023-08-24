@@ -1,6 +1,6 @@
-function [obj, varargout] = vmcorr(varargin)
+function [obj, varargout] = vmcorr_new(varargin)
 
-%%%% Method 1
+%%%% Method 2
 
 
 %@vmcorr Constructor function for vmcorr class
@@ -115,39 +115,283 @@ if(~isempty(dir(Args.RequiredFile)))
     stc(:,5) = [diff(stc(:,1)); 0]; % column 5 as duration
     binned = histcounts(spiketimes, stc(:,1))'; % Method 1 of 2 for binning spikes
     stc(:,6) = [binned; 0];
+    
+    % % Assigning spikes %%% For Method 2 only
+    % spiketimes = spiketrain.timestamps/1000; % now in seconds
+    % maxTime = pv.data.rplmaxtime;
+    % spiketimes(spiketimes>maxTime) = [];
+    % full_arr = spiketimes;
+    % flat_spiketimes = full_arr';
+    % flat_spiketimes = sortrows(flat_spiketimes);
+    % flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];
 
-    % For view only, backfill time and spikes
-    stc_view = stc;
-    % back-filling spikes for view bins that occupy the same time bin
-    stc_view(stc_view(:,6)==0,6) = nan;
-    stc_view(:,7) = stc_view(:,5)~=0;
-    stc_view(isnan(stc_view(:,6)) & stc_view(:,7), 6) = 0;
-    stc_view(:,7) = [];
-    stc_view(:,6) = fillmissing(stc_view(:,6), 'next');
-    stc_view(isnan(stc_view(:,6)),6) = 0;
-    % back-filling duration for view bins that occupy the same time bin
-    stc_lasttime = stc_view(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
-    stc_view(stc_view(:,5)==0,5) = nan;
-    stc_view(end,5) = stc_lasttime;
-    stc_view(:,5) = fillmissing(stc_view(:,5), 'next'); % [timestamp place hd view dur spk]
-
-    % Run for full session and each half
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
 
         if repeat == 1
             disp('Full session:');
+            % stc(:,5) = [diff(stc(:,1)); 0];
+            % stc(:,6) = zeros(size(stc,1),1); % For spike binning
         elseif repeat == 2
             disp('1st half:');
         elseif repeat == 3
             disp('2nd half:');
         end
         
-        for combi = 1:size(spatialvarpairs,2) % For each pair of spatial vars
+        stccheckarr1 = {};
+        stccheckarr2 = {};
+        for combi = 3:size(spatialvarpairs,2) % For each pair of spatial vars
 
+            
+            
             Var1 = spatialvarpairs{combi}{1};
             Var2 = spatialvarpairs{combi}{2};
             combiname = [lower(Var1(1)) lower(Var2(1))];
             disp([' ' combiname ' - ']);
+
+
+
+
+
+
+
+
+
+
+            % 
+            % 
+            % conditions = ones(size(stc,1),1);
+            % 
+            % if repeat == 2
+            %     conditions = conditions & (pv.data.halving_markers==1);
+            % elseif repeat == 3
+            %     conditions = conditions & (pv.data.halving_markers==2);
+            % end
+            % 
+            % if Args.UseAllTrials == 0
+            %     conditions = conditions & pv.data.good_trial_markers;
+            % end
+            % 
+            % if Args.ThresVel > 0
+            %     conditions = conditions & get(pv,'SpeedLimit',Args.ThresVel);
+            % end
+            % 
+            % if Args.UseMinObs %%%% FIX
+            %     switch Var1
+            %         case 'place'
+            %             bins_sieved_var1 = pv.data.place_good_bins;
+            %             bins_removed_var1 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var1);
+            %         case 'view'
+            %             bins_sieved_var1 = pv.data.view_good_bins;
+            %             bins_removed_var1 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var1);
+            %         case 'headdirection' %%% FIX
+            %             bins_sieved = 1:Args.DirSteps; % Currently don't have a threshold for min number of obs for head dir bins
+            % %             bins_sieved = pv.data.place_good_bins; 
+            %             conditions = conditions & (pv.data.pv_good_rows); % Make sure minobs take into account both place and view
+            %     end
+            %     switch Var2
+            %         case 'place'
+            %             bins_sieved_var2 = pv.data.place_good_bins;
+            %             bins_removed_var2 = setdiff(1:size(pv.data.place_intervals_count,1),bins_sieved_var2);
+            %         case 'view'
+            %             bins_sieved_var2 = pv.data.view_good_bins;
+            %             bins_removed_var2 = setdiff(1:size(pv.data.view_intervals_count,1),bins_sieved_var2);
+            %         case 'headdirection' %%FIX
+            %             bins_sieved = 1:Args.DirSteps; % Currently don't have a threshold for min number of obs for head dir bins
+            % %             bins_sieved = pv.data.place_good_bins; 
+            %             conditions = conditions & (pv.data.pv_good_rows); % Make sure minobs take into account both place and view
+            %     end
+            %         conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
+            % else
+            %     bins_sieved_var1 = 1:pv.data.([Var1 'bins']);
+            %     bins_sieved_var2 = 1:pv.data.([Var2 'bins']);
+            %     bins_removed_var1 = [];
+            %     bins_removed_var2 = [];
+            % end
+            % 
+            % if repeat == 1 
+            %     % Group into intervals those consecutive rows where same bin is occupied
+            %     dstc = diff(stc(:,1));
+            %     stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+            %     stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+            %     stc_changing_ind = stc_changing_ind(1:end-1,:);
+            % end
+            % 
+            % % Bin spikes for each variable in the pair
+            % disp(['    Assigning '  num2str(size(flat_spiketimes,1)) ' spikes to bins...']);
+            % consol_spk_p = zeros(pv.data.placebins,1);
+            % consol_spk_v = zeros(pv.data.viewbins,1);
+            % consol_spk_h = zeros(pv.data.headdirectionbins,1);
+            % consol_spk_pv = zeros(pv.data.placebins,pv.data.viewbins);
+            % consol_spk_ph = zeros(pv.data.placebins,pv.data.headdirectionbins);
+            % consol_spk_hv = zeros(pv.data.headdirectionbins,pv.data.viewbins);
+            % interval = 1;
+            % for sp = 1:size(flat_spiketimes,1)
+            % 
+            %     while interval < size(stc_changing_ind,1)
+            %         if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && ... % > start timestamp of this interval but < start timestamp of next
+            %                 flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+            %             break;
+            %         end
+            %         interval = interval + 1; % didn't fall in this interval, search in the next interval
+            %     end   
+            % 
+            %     % Bin all spikes into stc, unfiltered. If > 1 row for same time sample (i.e. large view cone), add spike to last row, backfill later
+            %     % if flat_spiketimes(sp,2) == 1
+            %     %     stc(stc_changing_ind(interval,2),6) = stc(stc_changing_ind(interval,2),6) + 1;
+            %     % end
+            %     % Keep only bins that meet filter criteria and have all of place, view, and hd data
+            %     bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]); % find the relevant place, hd and view bin
+            %     bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+            %     bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            %     bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
+            %     bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
+            % 
+            %     if ~isempty(bins_hit) && size(bins_hit,1) > 1
+            %         disp('test');
+            %     end
+            %     consol_spk_p(bins_hit(:,1),1) = consol_spk_p(bins_hit(:,1),1) + 1; % place spikes
+            %     consol_spk_v(bins_hit(:,3),1) = consol_spk_v(bins_hit(:,3),1) + 1; % view spikes
+            %     consol_spk_h(bins_hit(:,2),1) = consol_spk_h(bins_hit(:,2),1) + 1; % hd spikes
+            %     consol_spk_pv(bins_hit(:,1),bins_hit(:,3)) = consol_spk_pv(bins_hit(:,1),bins_hit(:,3)) + 1;
+            %     consol_spk_ph(bins_hit(:,1),bins_hit(:,2)) = consol_spk_ph(bins_hit(:,1),bins_hit(:,2)) + 1;
+            %     consol_spk_hv(bins_hit(:,2),bins_hit(:,3)) = consol_spk_hv(bins_hit(:,2),bins_hit(:,3)) + 1;
+            % end     
+            % % var1_spikes1 = (eval(['consol_arr_' Var1(1)]))';
+            % % var2_spikes1 = (eval(['consol_arr_' Var2(1)]))';
+            % 
+            % % Bin durations for each variable in the pair
+            % disp(['    Assigning '  num2str(size(stc,1)) ' durations to bins...']);
+            % consol_dur_p = zeros(pv.data.placebins,1);
+            % consol_dur_v = zeros(pv.data.viewbins,1);
+            % consol_dur_h = zeros(pv.data.headdirectionbins,1);
+            % consol_dur_pv = zeros(pv.data.placebins,pv.data.viewbins);
+            % consol_dur_ph = zeros(pv.data.placebins,pv.data.headdirectionbins);
+            % consol_dur_hv = zeros(pv.data.headdirectionbins,pv.data.viewbins);
+            % interval = 1;
+            % for sp = 1:size(stc,1)
+            % 
+            %     while interval < size(stc_changing_ind,1)
+            %         if flat_spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && ... % > start timestamp of this interval but < start timestamp of next
+            %                 flat_spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+            %             break;
+            %         end
+            %         interval = interval + 1; % didn't fall in this interval, search in the next interval
+            %     end   
+            % 
+            %     % Bin all spikes into stc, unfiltered. If > 1 row for same time sample (i.e. large view cone), add spike to last row, backfill later
+            %     % if flat_spiketimes(sp,2) == 1
+            %     %     stc(stc_changing_ind(interval,2),6) = stc(stc_changing_ind(interval,2),6) + 1;
+            %     % end
+            %     % Keep only bins that meet filter criteria and have all of place, view, and hd data
+            %     bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]); % find the relevant place, hd and view bin
+            %     bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
+            %     bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            %     bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
+            %     bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
+            % 
+            %     if ~isempty(bins_hit) && size(bins_hit,1) > 1
+            %         disp('test');
+            %     end
+            %     consol_spk_p(bins_hit(:,1),1) = consol_spk_p(bins_hit(:,1),1) + 1; % place spikes
+            %     consol_spk_v(bins_hit(:,3),1) = consol_spk_v(bins_hit(:,3),1) + 1; % view spikes
+            %     consol_spk_h(bins_hit(:,2),1) = consol_spk_h(bins_hit(:,2),1) + 1; % hd spikes
+            %     consol_spk_pv(bins_hit(:,1),bins_hit(:,3)) = consol_spk_pv(bins_hit(:,1),bins_hit(:,3)) + 1;
+            %     consol_spk_ph(bins_hit(:,1),bins_hit(:,2)) = consol_spk_ph(bins_hit(:,1),bins_hit(:,2)) + 1;
+            %     consol_spk_hv(bins_hit(:,2),bins_hit(:,3)) = consol_spk_hv(bins_hit(:,2),bins_hit(:,3)) + 1;
+            % end  
+            % 
+            % 
+            % 
+            % 
+            % 
+            % % Get occupancy durations
+            % for var = 1:2
+            %     if strcmp(eval(['Var' num2str(var)]),'place') || strcmp(eval(['Var' num2str(var)]),'headdirection')
+            %         % Remove non-place and non-view rows for duration
+            %         stc_filt = stc(find(conditions==1),:); 
+            %         reject = ~(stc_filt(:,2) > 0) | isnan(stc_filt(:,4)) | ~(stc_filt(:,3) > 0);
+            %         if strcmp(eval(['Var' num2str(var)]),'headdirection')
+            %             stccheckind = find(conditions==1);
+            %             stccheckind(reject,:) = []; 
+            %             stccheck = false(size(conditions,1),1);
+            %             stccheck(stccheckind) = true;
+            %             stccheckarr2{combi} = stccheck;
+            %         end
+            %         stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            %         stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            %         stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+            % 
+            %         % stc_colnames = {'time','place','headdirection','view','dur','spk'};
+            %         % keepcol = find(strcmp(stc_colnames,eval(['Var' num2str(var)])));
+            %         % stc_ss = stc_filt(:,[keepcol 5]); % [hd dur];
+            %         % stc_ss = [stc_ss; [pv.data.([eval(['Var' num2str(var)]) 'bins']) 0]];
+            %         % gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+            %     else
+            %         % back-filling spikes for view bins that occupy the same time bin
+            %         stc(stc(:,6)==0,6) = nan;
+            %         stc(:,7) = stc(:,5)~=0;
+            %         stc(isnan(stc(:,6)) & stc(:,7), 6) = 0;
+            %         stc(:,7) = [];
+            %         stc(:,6) = fillmissing(stc(:,6), 'next');
+            %         stc(isnan(stc(:,6)),6) = 0;
+            %         % back-filling duration for view bins that occupy the same time bin
+            %         stc_lasttime = stc(end,5); % Make sure if last duration sample is zero, it remains zero, not nan
+            %         stc(stc(:,5)==0,5) = nan;
+            %         stc(end,5) = stc_lasttime;
+            %         stc(:,5) = fillmissing(stc(:,5), 'next'); % [timestamp place hd view dur spk]
+            % 
+            %         % Remove non-place and non-view rows for duration
+            %         stc_filt = stc(find(conditions==1),:); 
+            %         stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
+            %         stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
+            %         stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
+            %     end
+            %     stc_colnames = {'time','place','headdirection','view','dur','spk'};
+            %     keepcol = find(strcmp(stc_colnames,eval(['Var' num2str(var)])));
+            %     stc_ss = stc_filt(:,[keepcol 5]); % [hd dur];
+            %     stc_ss = [stc_ss; [pv.data.([eval(['Var' num2str(var)]) 'bins']) 0]];
+            % 
+            %     % gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
+            %     % if var == 1
+            %     %     var1_durations1 = gpdurfull;
+            %     % elseif var ==2 
+            %     %     var2_durations1 = gpdurfull;
+            %     % end
+            % end
+            % 
+            % % Remove low observation bins
+            % var1_spikes1(1,bins_removed_var1) = 0;
+            % var2_spikes1(1,bins_removed_var2) = 0;
+            % var1_durations1(1,bins_removed_var1) = 0;
+            % var2_durations1(1,bins_removed_var2) = 0;
+            % 
+            % % Get rate maps
+            % var1_array_orig = var1_spikes1./var1_durations1;
+            % var2_array_orig = var2_spikes1./var2_durations1;
+            % 
+            % 
+            % 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             % filtering rows from sessionTimeC
             disp('    Filtering ...');
@@ -197,17 +441,84 @@ if(~isempty(dir(Args.RequiredFile)))
             end
             
             % remove filtered rows
-            stc_filt = stc(conditions == 1,:);
-            stc_view_filt = stc_view(conditions == 1,:);
+            stc_ssv = stc(conditions == 1,:);
             % Consider only samples where all spatial variables are
             % sample (in line with the way vmpc/sv/hd are filtered)
             % (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
-            reject = ~(stc_filt(:,2)>0) | ~(stc_filt(:,3)>0) | isnan(stc_filt(:,4));
-            stc_filt(reject,:) = [];
-            % checkind = find(conditions == 1);
-            % checkind(reject) = [];
-            reject_view = ~(stc_view_filt(:,2)>0) | ~(stc_view_filt(:,3)>0) | isnan(stc_view_filt(:,4));
-            stc_view_filt(reject_view,:) = [];
+            reject = ~(stc_ssv(:,2)>0) | ~(stc_ssv(:,3)>0) | isnan(stc_ssv(:,4));
+            stc_ssv(reject,:) = [];
+            checkind = find(conditions == 1);
+            checkind(reject) = [];
+            %%
+    %         if repeat == 1 % Full session
+
+    %         % Method 2 of 2 for binning spikes - 
+    %         % Used for checking for consistency against the main Method 1 which follows from vmpc/sv
+    %         dstc = diff(stc(:,1));
+    %         stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
+    %         stc_changing_ind(:,2) = [stc_changing_ind(2:end)-1; nan];
+    %         stc_changing_ind = stc_changing_ind(1:end-1,:);
+    % 
+    %         full_spikes2 = zeros(size(pv.data.view_intervals_count,1),Args.GridSteps * Args.GridSteps);
+    %         place_spikes2 = zeros(1,Args.GridSteps * Args.GridSteps);
+    %         view_spikes2 = zeros(1,size(pv.data.view_intervals_count,1));
+    %         interval = 1;
+    %         for sp = 1:size(spiketimes,1)
+    % 
+    %             while interval < size(stc_changing_ind,1)
+    %                 if spiketimes(sp,1) >= stc(stc_changing_ind(interval,1),1) && spiketimes(sp,1) < stc(stc_changing_ind(interval+1,1),1)
+    %                     break;
+    %                 end
+    %                 interval = interval + 1;
+    %             end   
+    % 
+    %             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3]);
+    %             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:);
+    %             bins_hit(~(bins_hit(:,1)>0),:) = [];
+    %             bins_hit(~(bins_hit(:,2)>0),:) = [];
+    % 
+    %             place_spikes2(1,bins_hit(:,1)) = place_spikes2(1,bins_hit(:,1)) + 1;
+    %             view_spikes2(1,bins_hit(:,2)) = view_spikes2(1,bins_hit(:,2)) + 1;
+    %             full_spikes2(bins_hit(:,2),bins_hit(:,1)) = full_spikes2(bins_hit(:,2),bins_hit(:,1)) + 1;
+    % 
+    %         end        
+    % 
+    %         % Backfill duration for view bins that occupy the same time bin
+    %         stc_v = stc; 
+    %         stc_v(stc_v(:,4)==0,4) = nan;
+    %         stc_v(:,4) = fillmissing(stc_v(:,4), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+    % 
+    %         % Remove non-place and non-view rows for duration
+    %         stc_p = stc;
+    %         stc_p = stc_p(find(conditions==1),[2 3 4 5]); % [place view dur spk]
+    %         stc_p(~(stc_p(:,1)>0),:) = []; % remove place bin = 0
+    %         stc_p(~(stc_p(:,2)>0),:) = []; % remove NaN view bins
+    %         stc_p = [stc_p; [size(pv.data.place_intervals_count,1) size(pv.data.view_intervals_count,1) 0 0]];
+    %         stc_v = stc_v(find(conditions==1),[2 3 4 5]); % [place view dur spk]
+    %         stc_v(~(stc_v(:,1)>0),:) = []; % remove place bin = 0
+    %         stc_v(~(stc_v(:,2)>0),:) = []; % remove NaN view bins
+    %         stc_v = [stc_v; [size(pv.data.place_intervals_count,1) size(pv.data.view_intervals_count,1) 0 0]];
+    %         gpdurplace = accumarray(stc_p(:,1),stc_p(:,3))';
+    %         gpdurview = accumarray(stc_v(:,2),stc_v(:,3))';
+    % 
+    %         % Remove low observation bins
+    %         place_spikes_full = zeros(1,Args.GridSteps*Args.GridSteps);
+    %         gpdurp = zeros(1,Args.GridSteps*Args.GridSteps);
+    %         place_spikes_full(:,bins_sieved_p) = place_spikes2(:,bins_sieved_p);
+    %         gpdurp(1,bins_sieved_p) = gpdurplace(1,bins_sieved_p);
+    %         view_spikes_full = zeros(1,size(pv.data.view_intervals_count,1));
+    %         gpdursv = zeros(1,size(pv.data.view_intervals_count,1));
+    %         view_spikes_full(:,bins_sieved_sv) = view_spikes2(:,bins_sieved_sv);
+    %         gpdursv(1,bins_sieved_sv) = gpdurview(1,bins_sieved_sv);
+    % 
+    %         rates_place = place_spikes_full./gpdurp;
+    %         rates_view = view_spikes_full./gpdursv;
+    %         end
+
+            % Method 1 of 2 for binning spikes - 
+            % Uses a more efficient method than that used in vmpc/sv
+            % Since it's different from previous objects, I've included Method
+            % 2 for checking consistency with vmpc/sv objects 
 
             %% Consolidate pv array into view by place bin array
 
@@ -217,26 +528,84 @@ if(~isempty(dir(Args.RequiredFile)))
 
             % Initialise variables
             disp('    Binning ...');
+            var1_durations1 = nan(1,pv.data.([Var1 'bins']));
+            var1_spikes1 = zeros(1,pv.data.([Var1 'bins']));
+            full_durations1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+            full_spikes1 = zeros(pv.data.([Var2 'bins']),pv.data.([Var1 'bins']));
+            stccheck = false(size(stc,1),1);
+            for ii = 1:pv.data.([Var1 'bins'])
 
-            % Pad last row so that accumarray can work
-            stc_filt_append = [stc_filt;[0 1600 60 5122 0 0]];
-            stc_view_filt_append = [stc_view_filt;[0 1600 60 5122 0 0]];
+                inds = stc_ssv(:,keepcol(1))==ii;
+                subsample = stc_ssv(inds,:);
+                % Consider only samples where all spatial variables are
+                % sample (in line with the way vmpc/sv/hd are filtered)
+                % (nan for nonsampled view, 0 for nonsampled place, 0 for nonsampled hd)
+                % subsample( ~(subsample(:,ismember(stc_colnames,'place'))>0) |...
+                %             isnan(subsample(:,ismember(stc_colnames,'view'))) |...
+                %             ~(subsample(:,ismember(stc_colnames,'headdirection'))>0),:) = [];
+                
+                if ~isempty(subsample) 
 
-            % Consolidate durations and spikes
-            var1_durations1 = accumarray(stc_filt_append(:,keepcol(1)),stc_filt_append(:,5),[],[],0);
-            var1_spikes1 = accumarray(stc_filt_append(:,keepcol(1)),stc_filt_append(:,6),[],[],0);
-            var1_durations1 = reshape(var1_durations1,1,length(var1_durations1));
-            var1_spikes1 = reshape(var1_spikes1,1,length(var1_spikes1));
-            var2_durations1 = accumarray(stc_filt_append(:,keepcol(2)),stc_filt_append(:,5),[],[],0);
-            var2_spikes1 = accumarray(stc_filt_append(:,keepcol(2)),stc_filt_append(:,6),[],[],0);
-            var2_durations1 = reshape(var2_durations1,length(var2_durations1),1);
-            var2_spikes1 = reshape(var2_spikes1,length(var2_spikes1),1);
-            if strcmp(Var2,'view')
-                full_durations1 = accumarray(stc_view_filt_append(:,[keepcol(2) keepcol(1)]), stc_view_filt_append(:,5), [],[],0);
-                full_spikes1 = accumarray(stc_view_filt_append(:,[keepcol(2) keepcol(1)]), stc_view_filt_append(:,6), [],[],0);
-            else
-                full_durations1 = accumarray(stc_filt_append(:,[keepcol(2) keepcol(1)]), stc_filt_append(:,5), [],[],0);
-                full_spikes1 = accumarray(stc_filt_append(:,[keepcol(2) keepcol(1)]), stc_filt_append(:,6), [],[],0);
+                    % Keep a record of head direction bins sampled from stc
+                    if strcmp(Var1,'headdirection') || strcmp(Var2,'headdirection')
+                        stcind = checkind(inds);
+                        stcind( ~(subsample(:,ismember(stc_colnames,'place'))>0) |...
+                                    isnan(subsample(:,ismember(stc_colnames,'view'))) |...
+                                    ~(subsample(:,ismember(stc_colnames,'headdirection'))>0),:) = [];
+                        stccheck(stcind,1) = true;
+                        if any(stcind == 2)
+                            disp('debug')
+                        end
+                    end
+                    % Get spikes and duration for place/hd only (can assume
+                    % this because pairs are pv, ph, hv, view is never 1st
+                    var1_durations1(1,ii) = sum(subsample(:,5));
+                    var1_spikes1(1,ii) = sum(subsample(:,6));
+                    % back-filling spikes for Var2 if view
+                    if strcmp(Var2,'view')
+                        subsample(subsample(:,6)==0,6) = nan;
+        %                 subsample(:,7) = circshift(subsample(:,5)~=0 ,-1); % Use only if spike is recorded in first bin of view set and time in last bin (like how it was before)
+                        subsample(:,7) = subsample(:,5)~=0;
+                        subsample(isnan(subsample(:,6)) & subsample(:,7), 6) = 0;
+                        subsample(:,7) = [];
+                        subsample(:,6) = fillmissing(subsample(:,6), 'next'); % In current version of pv, time and spikes are recorded in last repeat bin
+                        subsample(isnan(subsample(:,6)),6) = 0;
+                        % back-filling time for Var2
+                        subsample(subsample(:,5)==0,5) = nan;
+                        subsample(:,5) = fillmissing(subsample(:,5), 'next'); % If > 1 view bin for 1 place bin, time is recorded with the last view bin
+                        subsample(isnan(subsample(:,5)),5) = 0;
+                    end
+
+                    % DEBUG
+                    segment1 = [0 0 0 0 0 0];
+                    segment1(1,keepcol) = [pv.data.([Var1 'bins']) subsample(end,keepcol(2))];
+                    subsample1 = [subsample; segment1];
+                    if accumarray(subsample1(:,keepcol(1)), subsample1(:,5),[],[],0) ~= sum(subsample(:,5))
+                        disp('debug')
+                    end
+                    if any(subsample(:,3)==6)
+                        disp('debug')
+                    end
+
+                    % padding with max Var2 bin
+                    if subsample(end,keepcol(2)) ~= pv.data.([Var2 'bins'])
+    %                     subsample = [subsample; [NaN 5122 NaN]]; % Used to work, but now is value is nan, sum also becomes nan.
+                        segment = [0 0 0 0 0 0];
+                        segment(1,keepcol) = [ii pv.data.([Var2 'bins'])];
+                        subsample = [subsample; segment];
+                    end
+                    
+                    % sum durations
+    %                 full_durations1(:,ii) = accumarray(subsample(:,2), subsample(:,3),[],[],NaN);
+                    
+                    full_durations1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,5),[],[],0);
+                    
+                    % sum spikes % Method 1 of 2 to bin spikes (counter check Method 2
+                    full_spikes1(:,ii) = accumarray(subsample(:,keepcol(2)), subsample(:,6),[],[],0);
+                end
+            end
+            if strcmp(Var1,'headdirection') || strcmp(Var2,'headdirection')
+                stccheckarr1{combi} = stccheck;
             end
 
             % Filter out low-sampled bins
@@ -251,133 +620,135 @@ if(~isempty(dir(Args.RequiredFile)))
             full_spikes1(:,bins_removed_var1) = 0;
 
             var1_array_orig = var1_spikes1./var1_durations1;
-            if strcmp(Var2,'view')
-                var2_array_orig = sum(full_spikes1,2)./sum(full_durations1,2);
-            else
-                var2_array_orig = var2_spikes1./var2_durations1;
-            end
+            var2_array_orig = sum(full_spikes1,2)./sum(full_durations1,2);
+
+    %         % Consistency check between Methods 1 and 2 for binning spikes
+    %         temp_p = rates_place - p_array_orig;
+    %         temp_p(isnan(temp_p)) = 0;
+    %         temp_v = rates_view - sv_array_orig';
+    %         temp_v(1,1:2) = 0;
+    %         temp_v(isnan(temp_v)) = 0;
+    %         if repeat == 1 && (sum(temp_p)~=0 || sum(temp_v)~=0)
+    %             disp(sum(temp_p));
+    %             disp(sum(temp_v));
+    %         end
 
             % Debug
-            if repeat == 1
-                cd(['FiltVel/' num2str(Args.pix) 'px']);
-                switch Var1
-                    case 'place'
-                        Var1obj = load('vmpc.mat');
-                        Var1obj = Var1obj.vmp;
-                    case 'view'
-                        Var1obj = load('vmsv.mat');
-                        Var1obj = Var1obj.vms;
-                    case 'headdirection'
-                        Var1obj = load('vmhd.mat');
-                        Var1obj = Var1obj.vmd;
-                        % cd(ori);
-                        % Var1obj = vmhd('auto','redo','NumShuffles',2);
-                        % % Var1obj = Var1obj.data;
-                end
-                switch Var2
-                    case 'place'
-                        Var2obj = load('vmpc.mat');
-                        Var2obj = Var2obj.vmp;
-                    case 'view'
-                        Var2obj = load('vmsv.mat');
-                        Var2obj = Var2obj.vms;
-                    case 'headdirection'
-                        Var2obj = load('vmhd.mat');
-                        Var2obj = Var2obj.vmd;
-                        % cd(ori);
-                        % Var2obj = vmhd('auto','redo','NumShuffles',2);
-                        % Var2obj = Var2obj.data;
-                end
-                cd(ori);
-                diffs1 = reshape(var1_array_orig,length(var1_array_orig),1) - reshape(Var1obj.data.maps_raw,length(Var1obj.data.maps_raw),1);
-                diffs2 = reshape(var2_array_orig,length(var2_array_orig),1) - reshape(Var2obj.data.maps_raw,length(Var2obj.data.maps_raw),1);
-                errorcode = {};
-                if (sum(diffs1,[],'omitnan') ~= 0 || sum(diffs2,[],'omitnan') ~= 0) 
-                    disp('error in binning spikes');
-                    if sum(diffs1,[],'omitnan') ~= 0
-                        Var1spk = var1_spikes1';
-                        Var1spk(:,2) = Var1obj.data.spk_raw;
-                        Var1spk(:,3) = Var1spk(:,1) - Var1spk(:,2);
-                        Var1dur = var1_durations1';
-                        Var1dur(:,2) = Var1obj.data.dur_raw;
-                        Var1dur(:,3) = Var1dur(:,1) - Var1dur(:,2);
-                        if sum(abs(Var1spk(:,3))) > 0
-                            disp('Var1 spk error = '); 
-                            disp(Var1spk(Var1spk(:,3)~=0,3));
-                            errorcode{end+1,1} = ['Var1spk ' num2str(sum(Var1spk(:,3)~=0)) 'pt ' num2str(sum(abs(Var1spk(:,3))))];
-                        end
-                        if sum(abs(Var1dur(:,3))) > 0
-                            disp('Var1 dur error = ')
-                            disp(Var1dur(Var1dur(:,3)~=0,3));
-                            errorcode{end+1,1} = ['Var1dur ' num2str(sum(Var1dur(:,3)~=0)) 'pt ' num2str(sum(abs(Var1dur(:,3))))];
-                        end
+            cd(['FiltVel/' num2str(Args.pix) 'px']);
+            switch Var1
+                case 'place'
+                    Var1obj = load('vmpc.mat');
+                    Var1obj = Var1obj.vmp;
+                case 'view'
+                    Var1obj = load('vmsv.mat');
+                    Var1obj = Var1obj.vms;
+                case 'headdirection'
+                    Var1obj = load('vmhd.mat');
+                    Var1obj = Var1obj.vmd;
+                    % cd(ori);
+                    % Var1obj = vmhd('auto','redo','NumShuffles',2);
+                    % % Var1obj = Var1obj.data;
+            end
+            switch Var2
+                case 'place'
+                    Var2obj = load('vmpc.mat');
+                    Var2obj = Var2obj.vmp;
+                case 'view'
+                    Var2obj = load('vmsv.mat');
+                    Var2obj = Var2obj.vms;
+                case 'headdirection'
+                    % Var2obj = load('vmhd.mat');
+                    % Var2obj = Var2obj.vmd;
+                    cd(ori);
+                    Var2obj = vmhd('auto','redo','NumShuffles',2);
+                    % Var2obj = Var2obj.data;
+            end
+            cd(ori);
+            diffs1 = reshape(var1_array_orig,length(var1_array_orig),1) - reshape(Var1obj.data.maps_raw,length(Var1obj.data.maps_raw),1);
+            diffs2 = reshape(var2_array_orig,length(var2_array_orig),1) - reshape(Var2obj.data.maps_raw,length(Var2obj.data.maps_raw),1);
+            if (sum(diffs1,[],'omitnan') ~= 0 || sum(diffs2,[],'omitnan') ~= 0) && repeat == 1
+                disp('error in binning spikes');
+                if sum(diffs1,[],'omitnan') ~= 0
+                    Var1spk = var1_spikes1';
+                    Var1spk(:,2) = Var1obj.data.spk_raw;
+                    Var1spk(:,3) = Var1spk(:,1) - Var1spk(:,2);
+                    Var1dur = var1_durations1';
+                    Var1dur(:,2) = Var1obj.data.dur_raw;
+                    Var1dur(:,3) = Var1dur(:,1) - Var1dur(:,2);
+                    if sum(Var1spk(:,3)~=0) > 0
+                        disp('Var1 spk error = '); 
+                        disp(Var1spk(Var1spk(:,3)~=0,3));
                     end
-                    if sum(diffs2,[],'omitnan') ~= 0
-                        if strcmp(Var2,'view)')
-                            Var2spk = sum(full_spikes1,2);
-                            Var2dur = sum(full_durations1,2);
-                        else 
-                            Var2spk = var2_spikes1;
-                            Var2dur = var2_durations1;
-                        end
-                        Var2spk(:,2) = Var2obj.data.spk_raw;
-                        Var2spk(:,3) = Var2spk(:,1) - Var2spk(:,2);
-                        Var2dur(:,2) = Var2obj.data.dur_raw;
-                        Var2dur(:,3) = Var2dur(:,1) - Var2dur(:,2);
-                        if sum(abs(Var2spk(:,3))) > 0
-                            disp('Var2 spk error = '); 
-                            % disp(Var2spk(Var2spk(:,3)~=0,3));
-                            errorcode{end+1,1} = ['Var2spk ' num2str(sum(Var2spk(:,3)~=0)) 'pt ' num2str(sum(abs(Var2spk(:,3))))];
-                        end
-                        if sum(abs(Var2dur(:,3))) > 0
-                            disp('Var2 dur error = ')
-                            % disp(Var2dur(Var2dur(:,3)~=0,3));
-                            errorcode{end+1,1} = ['Var2dur ' num2str(sum(Var2dur(:,3)~=0)) 'pt ' num2str(sum(abs(Var2dur(:,3))))];
-                        end
+                    if sum(Var1dur(:,3)~=0) > 0
+                        disp('Var1 dur error = ')
+                        disp(Var1dur(Var1dur(:,3)~=0,3));
                     end
                 end
-                % % debug stc
-                % % Are there any instances of 
-                % stc_test = stc;
-                % stc_test(:,7) = false; % mark change of place/hd bin
-                % stc_test(:,8) = false; % mark suspicious rows
-                % for tt = 2:size(stc_test,1)
-                %     % Mark rows where there is a change of place/hd bin
-                %     if stc_test(tt,2) ~= stc_test(tt-1,2) || stc_test(tt,3) ~= stc_test(tt-1,3)
-                %         stc_test(tt,7) = true;
-                %         if stc_test(tt,5) == 0
-                %             % find next time stamp
-                %             count = tt;
-                %             if count < size(stc_test,1)
-                %                 while stc_test(count+1,1) == stc_test(count,1) && count < size(stc_test,1)
-                %                     count = count + 1;
-                %                 end
-                %             end
-                %             % mark rows where there is no duration allocated to
-                %             % this pair of place/hd bin
-                %             if stc_test(count,5) == 0
-                %                 stc_test(tt,8) = true;
-                %             end
-                %         end
-                %     end
-                % end
+                if sum(diffs2,[],'omitnan') ~= 0
+                    Var2spk = sum(full_spikes1,2);
+                    Var2spk(:,2) = Var2obj.data.spk_raw;
+                    Var2spk(:,3) = Var2spk(:,1) - Var2spk(:,2);
+                    Var2dur = sum(full_durations1,2);
+                    Var2dur(:,2) = Var2obj.data.dur_raw;
+                    Var2dur(:,3) = Var2dur(:,1) - Var2dur(:,2);
+                    if sum(Var2spk(:,3)~=0) > 0
+                        disp('Var2 spk error = '); 
+                        % disp(Var2spk(Var2spk(:,3)~=0,3));
+                    end
+                    if sum(Var2dur(:,3)~=0) > 0
+                        disp('Var2 dur error = ')
+                        % disp(Var2dur(Var2dur(:,3)~=0,3));
+                    end
+                end
+            end
+            % debug stc
+            % Are there any instances of 
+            stc_test = stc;
+            stc_test(:,7) = false; % mark change of place/hd bin
+            stc_test(:,8) = false; % mark suspicious rows
+            for tt = 2:size(stc_test,1)
+                % Mark rows where there is a change of place/hd bin
+                if stc_test(tt,2) ~= stc_test(tt-1,2) || stc_test(tt,3) ~= stc_test(tt-1,3)
+                    stc_test(tt,7) = true;
+                    if stc_test(tt,5) == 0
+                        % find next time stamp
+                        count = tt;
+                        if count < size(stc_test,1)
+                            while stc_test(count+1,1) == stc_test(count,1) && count < size(stc_test,1)
+                                count = count + 1;
+                            end
+                        end
+                        % mark rows where there is no duration allocated to
+                        % this pair of place/hd bin
+                        if stc_test(count,5) == 0
+                            stc_test(tt,8) = true;
+                        end
+                    end
+                end
             end
             
+            % Mark rows where there is change of place/hd bin AND no
+            % duration attached
+            
+
+
             %% Compute covariance matrix
-            if repeat == 1
-                disp('    Computing covariance matrix ...');
-                var2mappervar1bin = nan(size(full_durations1));
-                for ii = 1:size(var1_durations1,2)
-                    var2mappervar1bin(:,ii) = full_spikes1(:,ii)./full_durations1(:,ii);
+            if 1
+                if repeat == 1
+                    disp('    Computing covariance matrix ...');
+                    var2mappervar1bin = nan(size(full_durations1));
+                    for ii = 1:size(var1_durations1,2)
+                        var2mappervar1bin(:,ii) = full_spikes1(:,ii)./full_durations1(:,ii);
+                    end
+                    covmat = cov(var2mappervar1bin,'partialrows');
+                    covmat_norm = covmat./nanmax(nanmax(abs(covmat)));
+                    % Replace NaNs with zeros in covariance matrix for norm calculations
+                    covmat_nonan = covmat;
+                    covmat_nonan(isnan(covmat_nonan)) = 0;
+                    % Calculate norms
+                    l1norm = norm(covmat_nonan,1); % maximum of column sum
+                    l2norm = norm(covmat_nonan,2); % maximum single value
                 end
-                covmat = cov(var2mappervar1bin,'partialrows');
-                covmat_norm = covmat./nanmax(nanmax(abs(covmat)));
-                % Replace NaNs with zeros in covariance matrix for norm calculations
-                covmat_nonan = covmat;
-                covmat_nonan(isnan(covmat_nonan)) = 0;
-                % Calculate norms
-                l1norm = norm(covmat_nonan,1); % maximum of column sum
-                l2norm = norm(covmat_nonan,2); % maximum single value
             end
 
             %% Distributive hypothesis testing
@@ -563,10 +934,10 @@ if(~isempty(dir(Args.RequiredFile)))
                     pick = 2;
                     if max(max(var2_spikes_temp)) > 170
                         picklabel = ['spikecount' num2str(max(max(var2_spikes_temp)))];
-                        disp(['        llh inf from start: spike count ' num2str(max(max(var2_spikes_temp)))]);
+                        disp(['llh inf from start: spike count ' num2str(max(max(var2_spikes_temp)))]);
                     else
                         picklabel = 'inf1';
-                        disp('        llh inf from start: other reasons');
+                        disp('llh inf from start: other reasons');
                     end
                     % end iterations
                     mlm = false;
@@ -635,7 +1006,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
                             % Find max of last and next-to-last sets
                             maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
-                            disp(['        iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
+                            disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
 
                             if size(llh_vec,1) >= 201 
                                 maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
@@ -644,7 +1015,7 @@ if(~isempty(dir(Args.RequiredFile)))
                                     % Switch to using flat view array to start iterating
                                     initialwith = Var1;
                                     reinitialise = true;
-                                    disp(['        LLH did not converge with initial ' Var2 ' array. Try initialising with ' ...
+                                    disp(['LLH did not converge with initial ' Var2 ' array. Try initialising with ' ...
                                         Var1 ' array.']);
                                     break;
                                 end
@@ -660,13 +1031,13 @@ if(~isempty(dir(Args.RequiredFile)))
                                         % Skip on to using differnt initial array
                                         initialwith = Var1;
                                         reinitialise = true;
-                                        disp(['        Failed to converge to non-infinite values with initial ' Var2  ...
+                                        disp(['Failed to converge to non-infinite values with initial ' Var2  ...
                                             'array. Try initialising with ' Var1 ' array']);
                                         break;
                                     else
                                         picklabel = num2str(pick);
                                         % display results
-                                        disp(['        Converged with initial view array, pick = ' num2str(pick)]);
+                                        disp(['Converged with initial view array, pick = ' num2str(pick)]);
                                         % break out of loop
                                         mlm = false;
                                         break;
@@ -679,7 +1050,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
                         % Report every set of 100 iterations
                         if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
-                            disp([        'Iter ' num2str(size(llh_vec,1))]);
+                            disp(['Iter ' num2str(size(llh_vec,1))]);
                         end
                         % Check for convergence
                         if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
@@ -693,13 +1064,13 @@ if(~isempty(dir(Args.RequiredFile)))
                                 % Skip to using different initial array
                                 initialwith = Var1;
                                 reinitialise = true;
-                                disp(['        Failed to converge to non-infinite values with initial ' ...
+                                disp(['Failed to converge to non-infinite values with initial ' ...
                                     Var2 'array. Try initialising with ' Var1 ' array']);
                                 break;
                             else
                                 picklabel = num2str(pick);
                                 % display results
-                                disp(['        Converged with initial ' Var2 ' array, pick = ' ...
+                                disp(['Converged with initial ' Var2 ' array, pick = ' ...
                                     num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
                                 % break out of loop
                                 mlm = false;
@@ -709,14 +1080,14 @@ if(~isempty(dir(Args.RequiredFile)))
                             % Skip to using different initial array
                             initialwith = Var1;
                             reinitialise = true;
-                            disp(['        Failed to converge to non-infinite values with initial ' ...
+                            disp(['Failed to converge to non-infinite values with initial ' ...
                                 Var2 ' array. Try initialising with ' Var1 ' array']);
                             break;
                         elseif size(llh_vec,1) > Args.LLHIterLim
                             % No convergence. Switch to using flat view array to start iterating
                             initialwith = Var1;
                             reinitialise = true;
-                            disp(['        LLH did not converge with initial ' ...
+                            disp(['LLH did not converge with initial ' ...
                                 Var2 ' array. Try initialising with ' Var1 ' array.']);
                             break;
                         end
@@ -786,7 +1157,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
                             % Find max of last and next-to-last sets
                             maxlast = max(llh_vec(size(llh_vec,1)-100+1:end));
-                            disp(['        iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
+                            disp(['iter ' num2str(size(llh_vec,1)) ' : currlocalmaxllh = ' num2str(maxlast)]);
 
                             if size(llh_vec,1) >= 201
                                 maxnextlast = max(llh_vec(size(llh_vec,1)-200+1:size(llh_vec,1)-100));
@@ -794,7 +1165,7 @@ if(~isempty(dir(Args.RequiredFile)))
                                 if size(llh_vec,1) > Args.LLHIterLim
                                     pick = size(llh_vec,1);
                                     picklabel = 'nonconverged';
-                                    disp('        LLH did not converge with either initial arrays. Abandon.');
+                                    disp('LLH did not converge with either initial arrays. Abandon.');
                                     mlm = false;
                                     break;
                                 end
@@ -808,11 +1179,11 @@ if(~isempty(dir(Args.RequiredFile)))
                                         picklabel = ['undiff'];
                                     elseif isinf(pick)
                                         picklabel = 'inf';
-                                        disp('        Failed to converge to non-infinite values with either initial arrays. Abandon');
+                                        disp('Failed to converge to non-infinite values with either initial arrays. Abandon');
                                     else
                                         picklabel = num2str(pick);
                                         % display results
-                                        disp(['        Converged with initial ' Var1 ' array, pick = ' num2str(pick)]);
+                                        disp(['Converged with initial ' Var1 ' array, pick = ' num2str(pick)]);
                                     end
                                     % break out of loop
                                     mlm = false;
@@ -825,7 +1196,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
                         % Report every set of 100 iterations
                         if size(llh_vec,1) >= 101 && rem(size(llh_vec,1),100) == 1
-                            disp(['        Iter ' num2str(size(llh_vec,1))]);
+                            disp(['Iter ' num2str(size(llh_vec,1))]);
                         end
                         % Check for convergence
                         if abs((llh-llh_vec(end-1))/(llh_vec(2)-llh_vec(3))) < Args.ConvergeLim && size(llh_vec,1) < Args.LLHIterLim % Converged
@@ -838,12 +1209,12 @@ if(~isempty(dir(Args.RequiredFile)))
                             elseif isinf(pick)
                                 % Terminate
                                 picklabel = 'inf';
-                                disp('        Failed to converge to non-infinite values with either array. Terminate');
+                                disp('Failed to converge to non-infinite values with either array. Terminate');
                                 mlm = false;
                             else
                                 picklabel = num2str(pick);
                                 % display results
-                                disp(['        Converged with initial ' ...
+                                disp(['Converged with initial ' ...
                                     Var1 ' array, pick = ' num2str(pick) ' out of ' num2str(size(llh_vec,1))]);
                                 % break out of loop
                                 mlm = false;
@@ -852,12 +1223,12 @@ if(~isempty(dir(Args.RequiredFile)))
                             % Terminate
                             pick = size(llh_vec,1);
                             picklabel = 'inf';
-                            disp('        Failed to converge to non-infinite values with either array. Terminate');
+                            disp('Failed to converge to non-infinite values with either array. Terminate');
                             mlm = false;
                         elseif size(llh_vec,1) > Args.LLHIterLim % No convergence
                             pick = size(llh_vec,1);
                             picklabel = 'nonconverged';
-                            disp('        LLH did not converge with either initial arrays. Terminate.');
+                            disp('LLH did not converge with either initial arrays. Terminate.');
                             mlm = false;
                         end
                     end
@@ -1127,7 +1498,6 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.(combiname).([lower(Var2) 'smooth']) = eval([lower(Var2) 'smooth']);
                 data.(combiname).([lower(Var1) 'binDepths']) = eval([Var1 'binDepths']);
                 data.(combiname).([lower(Var2) 'binDepths']) = eval([Var2 'binDepths']);
-                data.(combiname).errorcode = errorcode;
 
                 data.(combiname).(['maps_dist_' lower(Var1(1))]) = var1_array_pred;
                 data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm']) = var1_array_pred_adsm;
@@ -1221,6 +1591,7 @@ if(~isempty(dir(Args.RequiredFile)))
     data.spatialvars = spatialvars;
     data.spatialvarpairs = spatialvarpairs;
     data.gridSteps = Args.GridSteps;
+%     data.binDepths = viewbinDepths;
     data.placebins = pv.data.placebins;
     data.viewbins = pv.data.viewbins;
     data.headdirectionbins = pv.data.headdirectionbins;

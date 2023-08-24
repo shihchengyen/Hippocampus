@@ -105,6 +105,9 @@ else
         r.data.crit_sm1 = [p.data.crit_sm1; q.data.crit_sm1];
         r.data.crit_sm2 = [p.data.crit_sm2; q.data.crit_sm2];
 
+        r.data.intracorr = [p.data.intracorr; q.data.intracorr];
+        r.data.intracorrz = [p.data.intracorrz; q.data.intracorrz];
+
         r.data.origin = [p.data.origin; q.data.origin];
              
 		% add nptdata objects as well

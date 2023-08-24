@@ -14,7 +14,7 @@ function [obj, varargout] = vmpv(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','1binData.hdf', 'pix',100,...
+				'ObjectLevel','Session','RequiredFile','1binData.hdf', 'pix',1,...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -70,8 +70,9 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
-    viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
+    % viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
     % viewdata = h5read('1binData.hdf','/data');
+    viewdata = h5read('binData_Fixed1.hdf','/data');
     size(viewdata)
     cd(ori);
 
@@ -295,6 +296,35 @@ if(~isempty(dir(Args.RequiredFile)))
     
     data.sessionTimeC = cst_full;
     stc = cst_full;
+
+    % Debug
+    mat_nav = zeros(max(uma.data.unityTriggers(:,3)-uma.data.unityTriggers(:,2))+1,size(uma.data.unityTriggers,1));
+    mat_cue = zeros(max(uma.data.unityTriggers(:,2)-uma.data.unityTriggers(:,1))+1,size(uma.data.unityTriggers,1));
+    wrongfulcue = false(size(uma.data.unityTriggers,1),1);
+    nocue = false(size(uma.data.unityTriggers,1),1);
+    nohint = false(size(uma.data.unityTriggers,1),1);
+    emptydata = false(size(uma.data.unityTriggers,1),1);
+    for tt = 1:size(uma.data.unityTriggers,1)
+        ind_nav = uma.data.unityTriggers(tt,2):uma.data.unityTriggers(tt,3);
+        ind_cue = uma.data.unityTriggers(tt,1):uma.data.unityTriggers(tt,2)-1;
+        navbins = cst_full(cst_full(:,1)>=uma.data.unityTime(ind_nav(1)) & cst_full(:,1) < uma.data.unityTime(ind_nav(end)),4);
+        cuebins = cst_full(cst_full(:,1)>=uma.data.unityTime(ind_cue(1)) & cst_full(:,1) < uma.data.unityTime(ind_cue(end)),4);
+        if isempty(navbins) || isempty(cuebins)
+            emptydata(tt) = true;
+            continue;
+        end
+        mat_nav(1:length(navbins),tt) = navbins;
+        mat_cue(1:length(cuebins),tt) = cuebins;
+        if any(navbins(2:end) == 1)
+            wrongfulcue(tt) = true;
+        end
+        if ~any(cuebins == 1 | navbins(1) == 1)
+            nocue(tt) = true;
+        end
+        if ~any(navbins(2:end) == 2)
+            nohint(tt) = true;
+        end
+    end
     
     % major section 2 - getting view intervals, accounting and not
     % accounting for speed thresholding
