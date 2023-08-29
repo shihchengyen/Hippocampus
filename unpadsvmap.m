@@ -7,8 +7,6 @@ function [unpadgrid_sm] = unpadsvmap(padgrid_sm,retrievecoords)
 %  - padgrid_sm: padded grid map that has been smoothed
 %  - retrievecoords: the x y limits of the original map within the padded
 %  frame
-%  - unpadgrid_raw: the unpadded raw grid map for reference of where the
-%  empty pillar pixels should be
 % 
 % Spatial view map output will be in 9 sections
 %  - Grid 1: Cue 1 x 1 x nshuff

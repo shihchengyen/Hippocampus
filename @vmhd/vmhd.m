@@ -397,6 +397,7 @@ if(~isempty(dir(Args.RequiredFile)))
     intracorrz = corr2(map1z, map2z);
     % Store stability data
     data.intracorr = intracorr;
+    data.intracorrz = intracorrz;
 
     % create nptdata so we can inherit from it   
     Args.NumShuffles = NumShufflesSaved;
