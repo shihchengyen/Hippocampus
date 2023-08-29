@@ -68,8 +68,14 @@ else
         r.data.maps_sm2 = [p.data.maps_sm2; q.data.maps_sm2];
         r.data.crit_sm2 = [p.data.crit_sm2;q.data.crit_sm2];
 
+        % Other spatial measures compiled for full session only for now
+        % session halves available
         r.data.intracorr = [p.data.intracorr; q.data.intracorr];
         r.data.intracorrz = [p.data.intracorrz; q.data.intracorrz];
+        r.data.sparsity = [p.data.sparsity; q.data.sparsity];
+        r.data.sig2noise = [p.data.sig2noise; q.data.sig2noise];
+        r.data.coherence = [p.data.coherence; q.data.coherence];
+        r.data.coherence_sm = [p.data.coherence_sm; q.data.coherence_sm];
 
 		% object specific fields
 % 		r.data.dlist = [p.data.dlist; q.data.dlist];

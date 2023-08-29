@@ -405,6 +405,9 @@ if(~isempty(dir(Args.RequiredFile)))
             % end
 
             % Predicted rate as a function of var2
+            % If predicted map of var2 based on behavior/sampling conforms 
+            % closely to observed map of var2, then observed var2
+            % selectivity is artefactual. 
             topterm = sum(var1_array_orig.*full_durations1_trun,2,'omitnan');
             bottomterm = sum(full_durations1_trun,2,'omitnan');
             var2_array_pred = topterm./bottomterm; % raw map
@@ -432,7 +435,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         end
                     end
                     % Unpad
-                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
+                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap);
                     % Linearise
                     var2_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
                 case 'headdirection'
@@ -494,7 +497,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         end
                     end
                     % Unpad
-                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap,bottomtermG);
+                    [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap);
                     % Linearise
                     var1_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
             end
@@ -1026,8 +1029,8 @@ if(~isempty(dir(Args.RequiredFile)))
                                     end
                                 end
                                 % Unpad smoothed map
-                                maps_adsmG = unpadsvmap(maps_adsmGpad,retrievemap,durG);
-                                dur_adsmG = unpadsvmap(dur_adsmGpad,retrievemap,durG);
+                                maps_adsmG = unpadsvmap(maps_adsmGpad,retrievemap);
+                                dur_adsmG = unpadsvmap(dur_adsmGpad,retrievemap);
                                 % Convert grid map back to linear sv map
                                 maps_sm(ii,:) = gridtolinear(maps_adsmG,'view',viewbinDepths);
                                 dur_sm(ii,:) = gridtolinear(dur_adsmG,'view',viewbinDepths);
@@ -1062,8 +1065,8 @@ if(~isempty(dir(Args.RequiredFile)))
 
                                 if strcmp(viewsmooth,'boxcar')
                                     % Unpad smoothed map
-                                    maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap,durG);
-                                    dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap,durG);
+                                    maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap);
+                                    dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap);
                                     % Convert grid map back to linear sv map
                                     maps_sm(ii,:) = gridtolinear(maps_bcsmG,'view',viewbinDepths);
                                     dur_sm(ii,:) = gridtolinear(dur_bcsmG,'view',viewbinDepths);
@@ -1072,8 +1075,8 @@ if(~isempty(dir(Args.RequiredFile)))
                                     crit_out = skaggs_sic(var2_maps_bcsm',dur_sm');
                                 elseif strcmp(viewsmooth,'disk')
                                     % Unpad smoothed map
-                                    maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap,durG);
-                                    dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap,durG);
+                                    maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap);
+                                    dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap);
                                     % Convert grid map back to linear sv map
                                     maps_sm(ii,:) = gridtolinear(maps_dksmG,'view',viewbinDepths);
                                     dur_sm(ii,:) = gridtolinear(dur_dksmG,'view',viewbinDepths);
