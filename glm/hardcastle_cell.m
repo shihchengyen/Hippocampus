@@ -48,6 +48,6 @@ function hardcastle_cell(tbin_size, fc)
    diary off;
 
    % Generate response plots for classified variables
-   glm_hardcastle_plot(hc_results, selected_model);
+   glm_hardcastle_plot(hc_results, selected_model, true);
 
 end

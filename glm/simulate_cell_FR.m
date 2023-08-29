@@ -11,12 +11,12 @@ function [lambda, cell_params] = simulate_cell_FR(behav_state)
     
     % Available cell types:
     % 'place', 'headdirection', 'spatialview', 'ph', 'pv', 'hv', 'phv' 
-    cell_type = 'place';
+    cell_type = 'spatialview';
     active_firing_rate = 5;
     background_firing_rate = 0.5;
     
     % place
-    place_center = 1468; % bin number
+    place_center = 820; % bin number
     place_width = 4; % in terms of number of bins
     place_contribution = 1; % contribution coefficient for mixed selective response
         
@@ -104,6 +104,12 @@ function lambda = place_firing_rate(bin_num, params)
     center_bin = params(3); % centre of place field (in bins)
     s = params(4); % gaussian width of place field (in bins)
     
+    % Return background firing rate if invalid bin number
+    if (isnan(bin_num) || bin_num < 1 || bin_num > 1600)
+        lambda = B;
+        return
+    end
+    
     % Convert bin numbers to x, y coords, and calculate distance from field
     % center
     [x, y] = place_bin_to_coords(bin_num);
@@ -130,6 +136,12 @@ function lambda = hd_firing_rate(bin_num, params)
     center_bin = params(3); % centre of hd field (in bins)
     s = params(4); % gaussian width of hd field (in bins)
     
+    % Return background firing rate if invalid bin number
+    if (isnan(bin_num) || bin_num < 1 || bin_num > 60)
+        lambda = B;
+        return
+    end
+    
     % Calculate distance (with wraparound) from field center
     r_abs = abs(bin_num - center_bin);
     r = min(r_abs, 60 - r_abs);
@@ -148,16 +160,16 @@ function lambda = view_firing_rate(bin_num, params)
     center_bin = params(3); % centre of view field (in bins)
     s = params(4); % gaussian width of view field (in bins)
     
+    % Return background firing rate if invalid bin number
+    if (isnan(bin_num) || bin_num < 3 || bin_num > 5122)
+        lambda = B;
+        return
+    end
+    
     % Convert bin numbers to x, y, z coords
     [x, y, z] = view_bin_to_coords(bin_num);
     [x0, y0, z0] = view_bin_to_coords(center_bin);
     s = s * 0.625; % using place field bin size
-    
-    % Return background firing rate if the location of gaze is not valid
-    if (isnan(x) || isnan(y)|| isnan(z))
-        lambda = B;
-        return
-    end
     
     % Calculate distance from field center
     % check if bin is on same surface or adjacent surface to field center

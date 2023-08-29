@@ -1,4 +1,4 @@
-function glm_hardcastle_plot(hc_results, model)
+function glm_hardcastle_plot(hc_results, model, save)
 %	Plots fitted params onto each variable space,
 %   analogous to the tuning curve of the cell.
 %   Plots all folds in a single figure for each model variable.
@@ -7,11 +7,15 @@ function glm_hardcastle_plot(hc_results, model)
 %	hc_results - struct output of glm_hardcastle
 %	model - 'place' / 'headdirection' / 'spatialview' / 
 %           'ph' / 'pv' / 'hv' / 'phv'
+%   save - true/1 or false/0, whether to save the figure as a .fig file
 
 params = hc_results.params_consol;
 tbin_size = hc_results.tbin_size;
 num_folds = size(params, 1);
 [subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
+if ~exist('save', 'var')
+    save = false;
+end
 
 % Code adapted from plotgridmap.m
 floor_x = repmat(0:40, 41, 1);
@@ -97,6 +101,11 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         view(-35,20);
         colormap jet;
         colorbar;
+        
+        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         axLims(fc, :) = caxis;
     end
     
@@ -105,7 +114,9 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
     end
-    saveas(fp, 'place_plot.fig');
+    if save
+        saveas(fp, 'place_plot.fig');
+    end
 end
 
 if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') || strcmp(model, 'phv')
@@ -132,7 +143,9 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
     end
-    saveas(fh, 'hd_plot.fig');
+    if save
+        saveas(fh, 'hd_plot.fig');
+    end
 end
 
 if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
@@ -170,6 +183,11 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         view(-35,20);
         colormap jet;
         colorbar;
+        
+        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         hold off;
         axLims(fc, :) = caxis;
     end
@@ -179,7 +197,9 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
     end
-    saveas(fv, 'view_plot.fig');
+    if save
+        saveas(fv, 'view_plot.fig');
+    end
 end
 
 end

@@ -1,11 +1,11 @@
-function plot_simulated_cell(model)
+function plot_simulated_cell()
     % Plots rate map of simulated cell from simulate_cell_FR.m
     % Specify desired parameters within simulate_cell_FR.m before calling
     % this function.
     
-    % Inputs:
-    % model - type of cell to be plotted. Available options:
-    % 'place', 'headdirection', 'spatialview', 'ph', 'pv', 'hv', 'phv'
+    % read type of cell simulated by simulate_cell_FR.m
+    [~, cell_params] = simulate_cell_FR([NaN, NaN, NaN]);
+    model = cell_params.cell_type;
     
     % Code adapted from plotgridmap.m
     floor_x = repmat(0:40, 41, 1);
@@ -57,16 +57,11 @@ function plot_simulated_cell(model)
     end
     
     % Generate plots for each spatial variable
-    if strcmp(model, 'ph') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
-       disp('Plotting only available for single variable models.'); 
-    end
-    
-    if strcmp(model, 'place')
+    if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcmp(model, 'phv')
         fp = figure('Name','Place plot');
-        ratemap = nan(1600,1);
-        for k = 1:size(ratemap,1)
-            ratemap(k) = simulate_cell_FR([k NaN NaN]);
-        end
+        num_bins = 1600;
+        place_bins = [(1:num_bins)', nan(num_bins,1), nan(num_bins,1)]; 
+        ratemap = simulate_cell_FR(place_bins);
         ratemap(under_pillars) = 0;
 
         surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(1:1600), 40, 40)'));
@@ -74,14 +69,18 @@ function plot_simulated_cell(model)
         view(-35,20);
         colormap jet;
         colorbar;
+        
+        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
     end
 
-    if strcmp(model, 'headdirection')
+    if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') || strcmp(model, 'phv')
         fh = figure('Name','Head direction plot');
-        ratemap = nan(60,1);
-        for k = 1:size(ratemap,1)
-            ratemap(k) = simulate_cell_FR([NaN k NaN]);
-        end
+        num_bins = 60;
+        hd_bins = [nan(num_bins,1), (1:num_bins)', nan(num_bins,1)]; 
+        ratemap = simulate_cell_FR(hd_bins);
 
         pax = polaraxes();
         polarplot(deg2rad((0:60)*360/60), [ratemap; ratemap(1)]);
@@ -89,12 +88,11 @@ function plot_simulated_cell(model)
         pax.ThetaDir = 'clockwise';
     end
 
-    if strcmp(model, 'spatialview')
+    if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') || strcmp(model, 'phv')
         fv = figure('Name','View plot');
-        ratemap = nan(5122,1);
-        for k = 3:size(ratemap,1)
-            ratemap(k) = simulate_cell_FR([NaN NaN k]);
-        end
+        num_bins = 5122;
+        view_bins = [nan(num_bins,1), nan(num_bins,1), (1:num_bins)']; 
+        ratemap = simulate_cell_FR(view_bins);
         ratemap(under_pillars+2) = 0;
 
         % Plot floor
@@ -120,6 +118,11 @@ function plot_simulated_cell(model)
         view(-35,20);
         colormap jet;
         colorbar;
+        
+        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
     end
 
 end
