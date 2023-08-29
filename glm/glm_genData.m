@@ -17,7 +17,7 @@ conditions = ones(size(stc,1),1);
 conditions = conditions & get(pv,'SpeedLimit',ThresVel);
 
 % don't touch for now
-UseMinObs = true;
+UseMinObs = false;
 if UseMinObs
     place_bins_sieved = pv.data.place_good_bins;
     view_bins_sieved = pv.data.view_good_bins;
