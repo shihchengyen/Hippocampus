@@ -92,15 +92,17 @@ for model_type = 1:num_models % test different models on this dataset
         bin_filter = [bin_filter; view_filter];
     end
     
+    % Random initialization of params for the first fold, then reuse
+    % optimized params from the previous fold for subsequent folds
+    param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
+    param = param .* bin_filter; % set all bins that have no observations to be 0
+    
     disp(['Fitting model ', modelName{model_type}])
 
     for k = 1:folds
-        fprintf('Fold #%d\n',k)
+        fprintf('Fold %d of %d \n', k, folds)
 %       disp('selectivity, params used, fold');
 %       disp([cell_type model_type k]);
-
-        param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
-        param = param .* bin_filter;
 
         test_ind  = [edges(k):edges(k+1)-1 edges(k+folds):edges(k+folds+1)-1 ...
             edges(k+2*folds):edges(k+2*folds+1)-1 edges(k+3*folds):edges(k+3*folds+1)-1 ...
