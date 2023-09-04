@@ -12,18 +12,16 @@
 % procedure is stopped and the model at that point is recorded as the
 % selected model.
 
-% the model indexing scheme:
-% phv, ph, pv, hv, p,  h,  v
-%  1   2   3   4   5   6   7
-
-function selected_model = select_best_model(hc_results, p_sig)
+function [selected_model, hc_results] = select_best_model(hc_results, p_sig)
+    % the model indexing scheme:
+    % phv, ph, pv, hv, p,  h,  v
+    %  1   2   3   4   5   6   7
+    model_names = {'phv', 'ph', 'pv', 'hv', 'place', 'headdirection', 'spatialview'};
 
     if ~exist('p_sig', 'var')
         p_sig = 0.05;
     end
     
-    model_names = {'phv', 'ph', 'pv', 'hv', ...
-        'place', 'headdirection', 'spatialview'};
     LLH_values = hc_results.testing_fits;
     mean_LLH_values = nanmean(LLH_values);
 
@@ -62,9 +60,13 @@ function selected_model = select_best_model(hc_results, p_sig)
     pval_baseline = signrank(LLH_values(:,selected_model),[],'tail','right');
 
     if pval_baseline > p_sig
+        hc_results.classification = NaN;
         selected_model = 'unclassified';
     else
+        hc_results.classification = selected_model;
         selected_model = model_names{selected_model};
     end
-        
+    
+    save('glm_hardcastle_results.mat','hc_results','-v7.3');
+    
 end

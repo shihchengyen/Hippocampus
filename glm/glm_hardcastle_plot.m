@@ -7,15 +7,21 @@ function glm_hardcastle_plot(hc_results, model, save)
 %	hc_results - struct output of glm_hardcastle
 %	model - 'place' / 'headdirection' / 'spatialview' / 
 %           'ph' / 'pv' / 'hv' / 'phv'
-%   save - true/1 or false/0, whether to save the figure as a .fig file
+%   save - true/1 or false/0, whether to save the figure(s) as a .fig file
 
-params = hc_results.params_consol;
-tbin_size = hc_results.tbin_size;
-num_folds = size(params, 1);
-[subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 if ~exist('save', 'var')
     save = false;
 end
+if ~exist('model', 'var')
+    model_names = {'phv', 'ph', 'pv', 'hv', 'place', 'headdirection', 'spatialview'};
+    model = model_names{hc_results.classification};
+end
+
+params = hc_results.params_consol;
+tbin_size = hc_results.tbin_size;
+num_folds = hc_results.num_folds;
+similarity_scores = hc_results.similarity_scores;
+[subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 
 % Code adapted from plotgridmap.m
 floor_x = repmat(0:40, 41, 1);
@@ -65,24 +71,50 @@ switch model
         place_params = params(:, 1:1600);
         hd_params = params(:, 1601:1600+60);
         view_params = params(:, 1601+60:1600+60+5122);
+        
+        similarity_scores = similarity_scores{1};
+        place_fit = similarity_scores(:,1);
+        hd_fit = similarity_scores(:,2);
+        view_fit = similarity_scores(:,3);
+        
     case 'ph'
         params = cell2mat(params(:, 2)')';
         place_params = params(:, 1:1600);
         hd_params = params(:, 1601:1600+60);
+        
+        similarity_scores = similarity_scores{2};
+        place_fit = similarity_scores(:,1);
+        hd_fit = similarity_scores(:,2);
+        
     case 'pv'
         params = cell2mat(params(:, 3)')';
         place_params = params(:, 1:1600);
         view_params = params(:, 1601:1600+5122);
+        
+        similarity_scores = similarity_scores{3};
+        place_fit = similarity_scores(:,1);
+        view_fit = similarity_scores(:,2);
+        
     case 'hv'
         params = cell2mat(params(:, 4)')';
         hd_params = params(:, 1:60);
         view_params = params(:, 61:60+5122);
+        
+        similarity_scores = similarity_scores{4};
+        hd_fit = similarity_scores(:,1);
+        view_fit = similarity_scores(:,2);
+        
     case 'place'
         place_params = cell2mat(params(:, 5)')';
+        place_fit = similarity_scores{5};
+        
     case 'headdirection'
         hd_params = cell2mat(params(:, 6)')';
+        hd_fit = similarity_scores{6};
+        
     case 'spatialview'
         view_params = cell2mat(params(:, 7)')';
+        view_fit = similarity_scores{7};
 end
 
 if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcmp(model, 'phv')
@@ -106,6 +138,9 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        
+        text('String', ['ratemap fit: ' num2str(place_fit(fc))], 'Position', [-2, -2, -1.3], ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);
         axLims(fc, :) = caxis;
     end
     
@@ -135,14 +170,14 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
         pax.ThetaZeroLocation = 'top';
         pax.ThetaDir = 'clockwise';
         set(ax, 'Visible', 'off');
-        axLims(fc, :) = caxis;
+        
+        axLims(fc, :) = rlim;
+        text('String', ['ratemap fit: ' num2str(hd_fit(fc))], 'Position', [pi, 1.4*axLims(fc,2)], ...
+            'HorizontalAlignment', 'center', 'FontSize', 11);
     end
     
     caxRange = [0, max(axLims(:,2))];
-    for fc = 1:num_folds
-        subplot(subplot_rows, subplot_cols, fc);
-        caxis(caxRange);
-    end
+    rlim(caxRange);
     if save
         saveas(fh, 'hd_plot.fig');
     end
@@ -188,6 +223,9 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
         rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        
+        text('String', ['ratemap fit: ' num2str(view_fit(fc))], 'Position', [-2, -2, -1.5], ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);
         hold off;
         axLims(fc, :) = caxis;
     end

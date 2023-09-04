@@ -23,8 +23,13 @@ function hardcastle_cell(tbin_size, fc)
        vmpv_data = glm_vmpvData(tbin_size);
        hc_results = glm_hardcastle(vmpv_data, fc);
    end
-   % Run model forward selection
-   selected_model = select_best_model(hc_results);
+   % Run model forward selection with significance level of 0.05
+   [selected_model, hc_results] = select_best_model(hc_results, 0.05);
+   
+   % Compare fitted model to ratemaps from actual data using cosine
+   % similarity score
+   cosine_similarity = @(arr1, arr2) nansum(arr1.*arr2)/(sqrt(nansum(arr1.^2))*sqrt(nansum(arr2.^2)));
+   [~, hc_results] = compare_ratemaps(hc_results, cosine_similarity);
    
    % Move results into a labelled directory
    if ~exist(save_dir, 'dir')
@@ -44,7 +49,7 @@ function hardcastle_cell(tbin_size, fc)
    diary('hardcastle_class.txt');
    disp(['Cell classification: ' selected_model]);
    disp(' ');
-   hardcastle_testing(hc_results);
+   hardcastle_testing_LLH(hc_results);
    diary off;
 
    % Generate response plots for classified variables

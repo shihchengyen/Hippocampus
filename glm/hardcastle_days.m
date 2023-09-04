@@ -1,7 +1,7 @@
-% Run this function with a list of days to classify all cells in the given
-% sessions. Outputs a txt file containing the classification of the given
-% cell, as well as the p-values of all significance tests run for different
-% models on the cell.
+% Run this function with a list of days, while in directory containing all
+% day folders, to classify all cells in the given days. Outputs a txt file 
+% containing the classification of the given cell, as well as the p-values 
+% of all significance tests run for different models on the cell.
 
 function hardcastle_days(tbin_size, fc, day_list)
     % PARAMETERS:
