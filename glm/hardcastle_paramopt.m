@@ -28,8 +28,12 @@ function hardcastle_paramopt(tbin_size, fc, param_range)
        cd(save_dir);
        
        % Run LNP model fitting and model forward selection
-       hc_results = glm_hardcastle(genData, fc, smooth_params);
-       selected_model = select_best_model(hc_results);
+       if exist('glm_hardcastle_results.mat', 'file')
+          load('glm_hardcastle_results.mat', 'hc_results'); 
+       else
+           hc_results = glm_hardcastle(genData, fc, smooth_params);
+       end
+       [selected_model, hc_results] = select_best_model(hc_results);
 
        % Cell classification and significance testing, saved as a txt file
        % in the labelled directory
@@ -40,7 +44,7 @@ function hardcastle_paramopt(tbin_size, fc, param_range)
        diary('hardcastle_class.txt');
        disp(['Cell classification: ' selected_model]);
        disp(' ');
-       hardcastle_testing(hc_results);
+       hardcastle_testing_LLH(hc_results);
        diary off;
 
        % Generate response plots for classified variables

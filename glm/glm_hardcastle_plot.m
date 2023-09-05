@@ -20,7 +20,12 @@ end
 params = hc_results.params_consol;
 tbin_size = hc_results.tbin_size;
 num_folds = hc_results.num_folds;
-similarity_scores = hc_results.similarity_scores;
+if isfield(hc_results, 'similarity_scores')
+    similarity_scores = hc_results.similarity_scores;
+else
+    similarity_scores = { nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1), ...
+        nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1) };
+end
 [subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 
 % Code adapted from plotgridmap.m

@@ -62,6 +62,22 @@ function [J,J_g,J_h] = rough_penalty_pos(param,beta)
     DD1 = D1'*D1;
     M1 = kron(eye(sqrt(numParam)),DD1); M2 = kron(DD1,eye(sqrt(numParam)));
     M = (M1 + M2);
+    
+    % mark out place bins under pillars, and then remove smoothing penalty
+    % for those place bins
+    under_pillars = nan(256, 1); j = 1;
+    for i = [9:16, 25:32]
+        under_pillars(j:j+15) = 40*(i-1) + [9:16, 25:32];
+        j = j+16;
+    end
+    for i = 1:length(under_pillars)
+        bin = under_pillars(i);
+        for j = 1:length(M)
+           M(j, j) = M(j, j) + M(bin, j); 
+        end
+        M(bin, :) = 0;
+        M(:, bin) = 0;
+    end
 
     J = beta*0.5*param'*M*param;
     J_g = beta*M*param;
@@ -197,6 +213,23 @@ function [J,J_g,J_h] = rough_penalty_spatialview(param,beta)
         M(bin2, bin2) = M(bin2, bin2) + 1;
         M(bin1, bin2) = M(bin1, bin2) - 1;
         M(bin2, bin1) = M(bin2, bin1) - 1;
+    end
+    
+    % mark out view bins on the floor under pillars, and then remove
+    % smoothing penalty for those view bins
+    under_pillars = nan(256, 1); j = 1;
+    for i = [9:16, 25:32]
+        under_pillars(j:j+15) = 40*(i-1) + [9:16, 25:32];
+        j = j+16;
+    end
+    under_pillars = under_pillars + 2;
+    for i = 1:length(under_pillars)
+        bin = under_pillars(i);
+        for j = 1:length(M)
+           M(j, j) = M(j, j) + M(bin, j); 
+        end
+        M(bin, :) = 0;
+        M(:, bin) = 0;
     end
 
     J = beta*0.5*param'*M*param;

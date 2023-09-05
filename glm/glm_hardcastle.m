@@ -48,8 +48,8 @@ for k = 1:samples_total
 end
 
 % Filters for unoccupied place and view bins
-place_filter = zeros(first_feature_bins,1);
-view_filter = zeros(third_feature_bins,1);
+place_filter = ones(first_feature_bins,1) * -1e3;
+view_filter = ones(third_feature_bins,1) * -1e3;
 place_filter(place_good_bins) = 1;
 view_filter(view_good_bins) = 1;
 
@@ -95,7 +95,7 @@ for model_type = 1:num_models % test different models on this dataset
     % Random initialization of params for the first fold, then reuse
     % optimized params from the previous fold for subsequent folds
     param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
-    param = param .* bin_filter; % set all bins that have no observations to be 0
+    param = param .* bin_filter; % set all bins that have no observations to -1e3 (large negative number)
     
     disp(['Fitting model ', modelName{model_type}])
 
