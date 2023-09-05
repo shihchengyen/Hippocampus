@@ -11,23 +11,23 @@ function [lambda, cell_params] = simulate_cell_FR(behav_state)
     
     % Available cell types:
     % 'place', 'headdirection', 'spatialview', 'ph', 'pv', 'hv', 'phv' 
-    cell_type = 'spatialview';
+    cell_type = 'pv';
     active_firing_rate = 5;
     background_firing_rate = 0.5;
     
     % place
-    place_center = 820; % bin number
-    place_width = 4; % in terms of number of bins
+    place_centers = [820]; % bin number
+    place_widths = [4]; % in terms of number of bins
     place_contribution = 1; % contribution coefficient for mixed selective response
         
     % headdirection
-    hd_center = 1; % bin number
-    hd_width = 2; % in terms of number of bins
+    hd_centers = [1]; % bin number
+    hd_widths = [2]; % in terms of number of bins
     hd_contribution = 1; % contribution coefficient for mixed selective response
     
     % view
-    view_center = 4910; % bin number
-    view_width = 3; % in terms of number of bins
+    view_centers = [5050, 4898]; % bin number
+    view_widths = [2, 2]; % in terms of number of bins
     view_contribution = 1; % contribution coefficient for mixed selective response
     
        
@@ -40,9 +40,9 @@ function [lambda, cell_params] = simulate_cell_FR(behav_state)
     % params(4) - s, gaussian width of field (in bins)
     
     % pack cell params
-    place_params = [ active_firing_rate, background_firing_rate, place_center, place_width ];
-    hd_params = [ active_firing_rate, background_firing_rate, hd_center, hd_width ];
-    view_params = [ active_firing_rate, background_firing_rate, view_center, view_width ];
+    place_params = { active_firing_rate, background_firing_rate, place_centers, place_widths };
+    hd_params = { active_firing_rate, background_firing_rate, hd_centers, hd_widths };
+    view_params = { active_firing_rate, background_firing_rate, view_centers, view_widths };
     
     % unpack behavioural state
     place_bin = behav_state(:,1); hd_bin = behav_state(:,2); view_bin = behav_state(:,3);
@@ -99,10 +99,10 @@ end
 %%% Place %%%
 function lambda = place_firing_rate(bin_num, params)
     % Parameters of the simulated place field
-    A = params(1); % active firing rate
-    B = params(2); % background firing rate
-    center_bin = params(3); % centre of place field (in bins)
-    s = params(4); % gaussian width of place field (in bins)
+    A = params{1}; % active firing rate
+    B = params{2}; % background firing rate
+    center_bins = params{3}; % centre of place field (in bins)
+    widths = params{4}; % gaussian width of place field (in bins)
     
     % Return background firing rate if invalid bin number
     if (isnan(bin_num) || bin_num < 1 || bin_num > 1600)
@@ -110,15 +110,25 @@ function lambda = place_firing_rate(bin_num, params)
         return
     end
     
-    % Convert bin numbers to x, y coords, and calculate distance from field
-    % center
     [x, y] = place_bin_to_coords(bin_num);
-    [x0, y0] = place_bin_to_coords(center_bin);
-    r = sqrt((x - x0)^2 + (y - y0)^2);
-    s = s * 0.625;
+    r_s_ratios = nan(length(center_bins), 1);
+    for i = 1:length(center_bins)
+        center_bin = center_bins(i); s = widths(i);
+        % Convert bin numbers to x, y coords, and calculate distance from field
+        % center
+        [x0, y0] = place_bin_to_coords(center_bin);
+        r = sqrt((x - x0)^2 + (y - y0)^2);
+        s = s * 0.625;
+        r_s_ratios(i) = r / s;
+    end
     
     % Compute firing rate
-    lambda = (A - B) * exp(-0.5 * r^2 / s^2) + B;
+    r_s = nanmin(r_s_ratios);
+    if isnan(r_s)
+        lambda = B;
+    else
+        lambda = (A - B) * exp(-0.5 * r_s^2) + B;
+    end
 end
 
 function [x, y] = place_bin_to_coords(bin_num)
@@ -131,10 +141,10 @@ end
 %%% Head direction %%%
 function lambda = hd_firing_rate(bin_num, params)
     % Parameters of the simulated headdirection field
-    A = params(1); % active firing rate
-    B = params(2); % background firing rate
-    center_bin = params(3); % centre of hd field (in bins)
-    s = params(4); % gaussian width of hd field (in bins)
+    A = params{1}; % active firing rate
+    B = params{2}; % background firing rate
+    center_bins = params{3}; % centre of hd field (in bins)
+    widths = params{4}; % gaussian width of hd field (in bins)
     
     % Return background firing rate if invalid bin number
     if (isnan(bin_num) || bin_num < 1 || bin_num > 60)
@@ -142,12 +152,22 @@ function lambda = hd_firing_rate(bin_num, params)
         return
     end
     
-    % Calculate distance (with wraparound) from field center
-    r_abs = abs(bin_num - center_bin);
-    r = min(r_abs, 60 - r_abs);
+    r_s_ratios = nan(length(center_bins), 1);
+    for i = 1:length(center_bins)
+        center_bin = center_bins(i); s = widths(i);
+        % Calculate distance (with wraparound) from field center
+        r_abs = abs(bin_num - center_bin);
+        r = min(r_abs, 60 - r_abs);
+        r_s_ratios(i) = r / s;
+    end
     
     % Compute firing rate
-    lambda = (A - B) * exp(-0.5 * r^2 / s^2) + B;
+    r_s = nanmin(r_s_ratios);
+    if isnan(r_s)
+        lambda = B;
+    else
+        lambda = (A - B) * exp(-0.5 * r_s^2) + B;
+    end
 end
 
 
@@ -155,10 +175,10 @@ end
 %%% View %%%
 function lambda = view_firing_rate(bin_num, params)
     % Parameters of the simulated view field
-    A = params(1); % active firing rate
-    B = params(2); % background firing rate
-    center_bin = params(3); % centre of view field (in bins)
-    s = params(4); % gaussian width of view field (in bins)
+    A = params{1}; % active firing rate
+    B = params{2}; % background firing rate
+    center_bins = params{3}; % centre of view field (in bins)
+    widths = params{4}; % gaussian width of view field (in bins)
     
     % Return background firing rate if invalid bin number
     if (isnan(bin_num) || bin_num < 3 || bin_num > 5122)
@@ -166,32 +186,41 @@ function lambda = view_firing_rate(bin_num, params)
         return
     end
     
-    % Convert bin numbers to x, y, z coords
     [x, y, z] = view_bin_to_coords(bin_num);
-    [x0, y0, z0] = view_bin_to_coords(center_bin);
-    s = s * 0.625; % using place field bin size
+    r_s_ratios = nan(length(center_bins), 1);
+    for i = 1:length(center_bins)
+        center_bin = center_bins(i); s = widths(i);
+        % Convert bin numbers to x, y, z coords
+        [x0, y0, z0] = view_bin_to_coords(center_bin);
+        s = s * 0.625; % using place field bin size
     
-    % Calculate distance from field center
-    % check if bin is on same surface or adjacent surface to field center
-    num_surfaces_betw = view_surface_adjacency(bin_num, center_bin);
-    if (num_surfaces_betw == 0)
-        % same surface, so just use 3d euclidean distance
-        r = sqrt((x - x0)^2 + (y - y0)^2 + (z - z0)^2);
-    elseif (num_surfaces_betw == 1)
-        % adjacent surface, so calculate 3d euclidean distance and project onto surfaces
-        r_euclidean = [(x - x0), (y - y0), (z - z0)];
-        norm1 = get_surface_norm(bin_num); norm2 = get_surface_norm(center_bin);
-        r_proj1 = r_euclidean - dot(r_euclidean, norm1) * norm1; % no need to divide by squared norm of the surface
-        r_proj2 = r_euclidean - dot(r_euclidean, norm2) * norm2; % normal vector since it is already a unit vector
-        r = (norm(r_proj1) + norm(r_proj2)) / 2;
-    else
-        % neither, so return background firing rate
-        lambda = B;
-        return
+        % Calculate distance from field center
+        % check if bin is on same surface or adjacent surface to field center
+        num_surfaces_betw = view_surface_adjacency(bin_num, center_bin);
+        if (num_surfaces_betw == 0)
+            % same surface, so just use 3d euclidean distance
+            r = sqrt((x - x0)^2 + (y - y0)^2 + (z - z0)^2);
+        elseif (num_surfaces_betw == 1)
+            % adjacent surface, so calculate 3d euclidean distance and project onto surfaces
+            r_euclidean = [(x - x0), (y - y0), (z - z0)];
+            norm1 = get_surface_norm(bin_num); norm2 = get_surface_norm(center_bin);
+            r_proj1 = r_euclidean - dot(r_euclidean, norm1) * norm1; % no need to divide by squared norm of the surface
+            r_proj2 = r_euclidean - dot(r_euclidean, norm2) * norm2; % normal vector since it is already a unit vector
+            r = (norm(r_proj1) + norm(r_proj2)) / 2;
+        else
+            % neither, so set to NaN
+            r = NaN;
+        end
+        r_s_ratios(i) = r / s;
     end
     
     % Compute firing rate
-    lambda = (A - B) * exp(-0.5 * r^2 / s^2) + B;
+    r_s = nanmin(r_s_ratios);
+    if isnan(r_s)
+        lambda = B;
+    else
+        lambda = (A - B) * exp(-0.5 * r_s^2) + B;
+    end
 end
 
 
