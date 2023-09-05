@@ -709,12 +709,12 @@ if(dnum>0)
             %                     end
 
                             % Unpad smoothed map
-                            maps_smG = unpadsvmap(maps_adsmGpad,retrievemap,rateG);
-                            dur_smG = unpadsvmap(dur_adsmGpad,retrievemap,rateG);
-            %                     maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap,rateG);
-            %                     dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap,rateG);
-            %                     maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap,rateG);
-            %                     dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap,rateG);
+                            maps_smG = unpadsvmap(maps_adsmGpad,retrievemap);
+                            dur_smG = unpadsvmap(dur_adsmGpad,retrievemap);
+            %                     maps_bcsmG = unpadsvmap(maps_bcsmGpad,retrievemap);
+            %                     dur_bcsmG = unpadsvmap(dur_bcsmGpad,retrievemap);
+            %                     maps_dksmG = unpadsvmap(maps_dksmGpad,retrievemap);
+            %                     dur_dksmG = unpadsvmap(dur_dksmGpad,retrievemap);
                             % Convert grid map back to linear sv map
                             secmap_sm = gridtolinear(maps_smG,'view',binDepths);
                             secdur_sm = gridtolinear(dur_smG,'view',binDepths);
@@ -1675,8 +1675,8 @@ if(dnum>0)
                             %     end
                             % 
                             %     % Unpad smoothed map
-                            %     maps_smG = unpadsvmap(maps_adsmGpad,retrievemap,durG);
-                            %     dur_smG = unpadsvmap(dur_adsmGpad,retrievemap,durG);
+                            %     maps_smG = unpadsvmap(maps_adsmGpad,retrievemap);
+                            %     dur_smG = unpadsvmap(dur_adsmGpad,retrievemap);
                             %     % Convert grid map back to linear sv map
                             %     secmap_sm(:,kk) = gridtolinear(maps_smG,'view',binDepths);
                             %     secdur_sm(:,kk) = gridtolinear(dur_smG,'view',binDepths);
