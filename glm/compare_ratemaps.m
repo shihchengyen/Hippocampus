@@ -16,9 +16,9 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     load('vmpc.mat', 'vmp');
     load('vmhd.mat', 'vmd');
     load('vmsv.mat', 'vms');
-    actual_place = vmp.data.maps_raw';
-    actual_hd = vmd.data.maps_raw';
-    actual_view = vms.data.maps_raw';
+    actual_place = vmp.data.maps_adsm';
+    actual_hd = vmd.data.maps_sm';
+    actual_view = vms.data.maps_adsm';
     
     % create 1x7 cell array to store all results
     similarity_scores = cell(7,1);
