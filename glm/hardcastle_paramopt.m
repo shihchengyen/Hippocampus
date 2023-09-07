@@ -3,12 +3,18 @@
 % cell, as well as the p-values of all significance tests run for different
 % models on the cell.
 
-function hardcastle_paramopt(tbin_size, fc, param_range)
+function hardcastle_paramopt(tbin_size, fc, param_range, redo)
     % PARAMETERS:
     % tbin_size - size of time bin (in seconds) for binning of vmpv data.
     % fc - number of folds for cross-validation in glm_hardcastle.
     % param_range - range of beta values to use for testing. Will use the
     % same beta value for all three variables (place, headdirection, spatialview).
+    % redo - true/1 or false/0, whether to redo model fitting even if data
+    % already exists
+    
+   if ~exist('redo', 'var')
+        redo = false;
+    end
    
    if exist('genData.mat', 'file')
        % Load pre-generated data file
@@ -28,8 +34,8 @@ function hardcastle_paramopt(tbin_size, fc, param_range)
        cd(save_dir);
        
        % Run LNP model fitting and model forward selection
-       if exist('glm_hardcastle_results.mat', 'file')
-          load('glm_hardcastle_results.mat', 'hc_results'); 
+       if exist('glm_hardcastle_results.mat', 'file') && ~redo
+          load('glm_hardcastle_results.mat', 'hc_results');
        else
            hc_results = glm_hardcastle(genData, fc, smooth_params);
        end

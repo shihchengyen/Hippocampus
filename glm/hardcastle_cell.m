@@ -3,14 +3,20 @@
 % cell, as well as the p-values of all significance tests run for different
 % models on the cell.
 
-function hardcastle_cell(tbin_size, fc)
+function hardcastle_cell(tbin_size, fc, redo)
     % PARAMETERS:
     % tbin_size - size of time bin (in seconds) for binning of vmpv data.
     % fc - number of folds for cross-validation in glm_hardcastle.
+    % redo - true/1 or false/0, whether to redo model fitting even if data
+    % already exists
+    
+    if ~exist('redo', 'var')
+        redo = false;
+    end
 
    save_dir = [num2str(tbin_size*1000), 'ms_', num2str(fc), 'fold'];
    
-   if exist([save_dir, '/glm_hardcastle_results.mat'], 'file')
+   if exist([save_dir, '/glm_hardcastle_results.mat'], 'file') && ~redo
        % Load pre-generated data file
        load([save_dir, '/glm_hardcastle_results.mat'], 'hc_results');
        if (hc_results.tbin_size ~= tbin_size) || (hc_results.num_folds ~= fc)
