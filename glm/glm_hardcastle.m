@@ -21,19 +21,23 @@ tbin_size = glm_data.tbin_size;
 place_good_bins = glm_data.place_good_bins;
 view_good_bins = glm_data.view_good_bins;
 
-first_feature_bins = 1600;
-second_feature_bins = 60;
-third_feature_bins = 5122;
+% Define bin geometry of the environment, in terms of:
+% 1. no of floor_width bins, 2. no of wall_height bins, 3. no of
+% pillar_height bins, 4. no of hd bins
+floor_width = 40; wall_height = 8; pillar_height = 5; hd_bins = 60;
+bin_geom = [ floor_width, wall_height, pillar_height, hd_bins ];
+% additional intermediate variables for viewspace bins
+viewbin_offset = 2; wall_perim = floor_width*4; pillar_width = floor_width/5; pillar_perim = pillar_width*4;
+
+first_feature_bins = floor_width^2; % default 1600
+second_feature_bins = hd_bins; % default 60
+third_feature_bins = viewbin_offset + 2*floor_width^2 + wall_height*wall_perim + 4*pillar_height*pillar_perim; % default 5122
 
 % Beta values for smoothing parameters
 if exist('smooth_params', 'var')
-    beta_place = smooth_params(1);
-    beta_hd = smooth_params(2);
-    beta_view = smooth_params(3);
+    betas = smooth_params;
 else
-    beta_place = 3e0;
-    beta_hd = 3e0;
-    beta_view = 3e0;
+    betas = [ 3e0, 3e0, 3e0 ]; % [ beta_place, beta_hd, beta_view ], default value of 3 for each param
 end
 
 % Start to fill in x and y matrices
@@ -143,7 +147,7 @@ for model_type = 1:num_models % test different models on this dataset
         data{2} = train_spikes;
         init_param = param;
         % bottom part all adapted from reference github code
-        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),first_feature_bins,second_feature_bins,third_feature_bins,beta_place,beta_hd,beta_view), init_param, opts);
+        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),bin_geom,betas), init_param, opts);
 
         % test fit
 
@@ -186,13 +190,9 @@ hc_results.testing_fits = testFit; % test likelihood with comparison to mean mod
 hc_results.testing_fits_pure = testFit_pure; % test likelihood without comparison to mean model
 hc_results.params_consol = paramsAll; % weights stored here
 
-hc_results.smoothing_beta = cell(3,1);
-hc_results.smoothing_beta{1} = beta_place;
-hc_results.smoothing_beta{2} = beta_hd;
-hc_results.smoothing_beta{3} = beta_view;
-
 hc_results.tbin_size = tbin_size;
 hc_results.num_folds = fc;
+hc_results.smoothing_beta = betas;
 %hc_results.ThresVel = glm_data.ThresVel;
 %hc_results.UseMinObs = glm_data.UseMinObs;
 
