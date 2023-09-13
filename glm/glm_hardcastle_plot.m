@@ -28,54 +28,82 @@ else
 end
 [subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 
+%%% Specify environment bin geometry here %%%
+% can be changed
+floor_width = 40;
+wall_height = 8;
+pillar_height = 5;
+num_hd_bins = 60;
+
+% do not change, dependent on other variables/environmental geometry/default setting
+wall_width = floor_width; pillar_width = floor_width/5;
+viewbin_offset = 2;
+num_place_bins = floor_width^2;
+num_view_bins = viewbin_offset + 2*floor_width^2 + wall_height*wall_width*4 + 4*pillar_height*pillar_width*4;
+
 % Code adapted from plotgridmap.m
-floor_x = repmat(0:40, 41, 1);
-floor_y = flipud(repmat([0:40]', 1, 41));
-floor_z = zeros(41,41);
+exploded = false;  % exploded view, i.e. floor and ceiling are separated from walls/pillars
+
+floor_x = repmat(0:floor_width, floor_width+1, 1);
+floor_y = flipud(repmat([0:floor_width]', 1, floor_width+1));
+floor_z = zeros(floor_width+1,floor_width+1);
 
 ceiling_x = floor_x;
 ceiling_y = floor_y;
-ceiling_z = 8.*ones(41,41);
 
-walls_x = repmat([0.*ones(1,40) 0:39 40.*ones(1,40) 40:-1:0], 9, 1);
-walls_y = repmat([0:39 40.*ones(1,40) 40:-1:1 0.*ones(1,41)], 9, 1);
-walls_z = repmat([8:-1:0]', 1, 40*4 + 1);
+walls_x = repmat([0.*ones(1,wall_width) 0:wall_width-1 wall_width.*ones(1,wall_width) wall_width:-1:0], wall_height+1, 1);
+walls_y = repmat([0:wall_width-1 wall_width.*ones(1,wall_width) wall_width:-1:1 0.*ones(1,wall_width+1)], wall_height+1, 1);
 
-P1_x = repmat([24.*ones(1,8) 24:31 32.*ones(1,8) 32:-1:24], 6, 1);
-P1_y = repmat([8:15 16.*ones(1,8) 16:-1:9 8.*ones(1,9)], 6, 1);
-PX_z = repmat([5:-1:0]', 1, 8*4 + 1);
+P1_x = repmat([3*pillar_width.*ones(1,pillar_width) 3*pillar_width:4*pillar_width-1 4*pillar_width.*ones(1,pillar_width) 4*pillar_width:-1:3*pillar_width], pillar_height+1, 1);
+P1_y = repmat([pillar_width:2*pillar_width-1 2*pillar_width.*ones(1,pillar_width) 2*pillar_width:-1:pillar_width+1 pillar_width.*ones(1,pillar_width+1)], pillar_height+1, 1);
 
-P2_x = repmat([8.*ones(1,8) 8:15 16.*ones(1,8) 16:-1:8], 6, 1);
+P2_x = repmat([pillar_width.*ones(1,pillar_width) pillar_width:2*pillar_width-1 2*pillar_width.*ones(1,pillar_width) 2*pillar_width:-1:pillar_width], pillar_height+1, 1);
 P2_y = P1_y;
 
 P3_x = P1_x;
-P3_y = repmat([24:31 32.*ones(1,8) 32:-1:25 24.*ones(1,9)], 6, 1);
+P3_y = repmat([3*pillar_width:4*pillar_width-1 4*pillar_width.*ones(1,pillar_width) 4*pillar_width:-1:3*pillar_width+1 3*pillar_width.*ones(1,pillar_width+1)], pillar_height+1, 1);
 
 P4_x = P2_x;
 P4_y = P3_y;
 
-floor = flipud(reshape(3:3+1600-1, 40, 40)');
+if exploded
+    ceiling_z = 3*wall_height.*ones(floor_width+1,floor_width+1);
+    walls_z = repmat([2*wall_height:-1:wall_height]', 1, wall_width*4 + 1);
+    PX_z = repmat([wall_height+pillar_height:-1:wall_height]', 1, pillar_width*4 + 1);
+else
+    ceiling_z = wall_height.*ones(floor_width+1,floor_width+1);
+    walls_z = repmat([wall_height:-1:0]', 1, wall_width*4 + 1);
+    PX_z = repmat([pillar_height:-1:0]', 1, pillar_width*4 + 1);
+end
+
+floor_last_bin = floor_width^2 + viewbin_offset;
+floor = flipud(reshape(viewbin_offset+1:floor_last_bin, floor_width, floor_width)');
 
 % ceiling follows floor mapping, top down view
-ceiling = flipud(reshape(1603:1603+1600-1, 40, 40)');
+ceiling_last_bin = floor_last_bin + floor_width^2;
+ceiling = flipud(reshape(floor_last_bin+1:ceiling_last_bin, floor_width, floor_width)');
 
 % from top down, slit walls at bottom left corner, open outwards.
 % start from row closest to ground, rightwards, then climb rows
-walls = flipud(reshape(3203:3203+1280-1, 40*4, 8)');
+walls_last_bin = ceiling_last_bin + 4*wall_width*wall_height;
+walls = flipud(reshape(ceiling_last_bin+1:walls_last_bin, wall_width*4, wall_height)');
 
 % BL - bottom left, and so on, from top view, same slicing as walls
 % pillar width 8, height 5
-P1_BR = flipud(reshape(4483:4483+160-1, 8*4, 5)');
-P2_BL = flipud(reshape(4643:4643+160-1, 8*4, 5)');
-P3_TR = flipud(reshape(4803:4803+160-1, 8*4, 5)');
-P4_TL = flipud(reshape(4963:4963+160-1, 8*4, 5)');
+P1_last_bin = walls_last_bin + 4*pillar_width*pillar_height;
+P2_last_bin = P1_last_bin + 4*pillar_width*pillar_height;
+P3_last_bin = P2_last_bin + 4*pillar_width*pillar_height;
+P1_BR = flipud(reshape(walls_last_bin+1:P1_last_bin, pillar_width*4, pillar_height)');
+P2_BL = flipud(reshape(P1_last_bin+1:P2_last_bin, pillar_width*4, pillar_height)');
+P3_TR = flipud(reshape(P2_last_bin+1:P3_last_bin, pillar_width*4, pillar_height)');
+P4_TL = flipud(reshape(P3_last_bin+1:num_view_bins, pillar_width*4, pillar_height)');
 
 switch model
     case 'phv'
         params = cell2mat(params(:, 1)')';
-        place_params = params(:, 1:1600);
-        hd_params = params(:, 1601:1600+60);
-        view_params = params(:, 1601+60:1600+60+5122);
+        place_params = params(:, 1:num_place_bins);
+        hd_params = params(:, num_place_bins+1:num_place_bins+num_hd_bins);
+        view_params = params(:, num_place_bins+num_hd_bins+1:num_place_bins+num_hd_bins+num_view_bins);
         
         similarity_scores = similarity_scores{1};
         place_fit = similarity_scores(:,1);
@@ -84,8 +112,8 @@ switch model
         
     case 'ph'
         params = cell2mat(params(:, 2)')';
-        place_params = params(:, 1:1600);
-        hd_params = params(:, 1601:1600+60);
+        place_params = params(:, 1:num_place_bins);
+        hd_params = params(:, num_place_bins+1:num_place_bins+num_hd_bins);
         
         similarity_scores = similarity_scores{2};
         place_fit = similarity_scores(:,1);
@@ -93,8 +121,8 @@ switch model
         
     case 'pv'
         params = cell2mat(params(:, 3)')';
-        place_params = params(:, 1:1600);
-        view_params = params(:, 1601:1600+5122);
+        place_params = params(:, 1:num_place_bins);
+        view_params = params(:, num_place_bins+1:num_place_bins+num_view_bins);
         
         similarity_scores = similarity_scores{3};
         place_fit = similarity_scores(:,1);
@@ -102,8 +130,8 @@ switch model
         
     case 'hv'
         params = cell2mat(params(:, 4)')';
-        hd_params = params(:, 1:60);
-        view_params = params(:, 61:60+5122);
+        hd_params = params(:, 1:num_hd_bins);
+        view_params = params(:, num_hd_bins+1:num_hd_bins+num_view_bins);
         
         similarity_scores = similarity_scores{4};
         hd_fit = similarity_scores(:,1);
@@ -127,24 +155,29 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(1600,1);
+        ratemap = nan(num_place_bins,1);
         for k = 1:size(ratemap,1)
-            ratemap(k) = exp(place_params(fc, k))/tbin_size;
+            if place_params(fc, k) == -1e1
+                ratemap(k) = NaN;
+            else
+                ratemap(k) = exp(place_params(fc, k))/tbin_size;
+            end
         end
 
         subplot(subplot_rows, subplot_cols, fc);
-        surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(1:1600), 40, 40)'));
+        surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(1:num_place_bins), floor_width, floor_width)'));
         alpha 1; shading flat;
+        zlim([0,1]);
         view(-35,20);
         colormap jet;
         colorbar;
         
-        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [pillar_width, pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [pillar_width, 3*pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [3*pillar_width, pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [3*pillar_width, 3*pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
         
-        text('String', ['ratemap fit: ' num2str(place_fit(fc))], 'Position', [-2, -2, -1.3], ...
+        text('String', ['ratemap fit: ' num2str(place_fit(fc))], 'Position', [-2, -2, -0.15], ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);
         axLims(fc, :) = caxis;
     end
@@ -164,14 +197,14 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(60,1);
+        ratemap = nan(num_hd_bins,1);
         for k = 1:size(ratemap,1)
             ratemap(k) = exp(hd_params(fc, k))/tbin_size;
         end
 
         ax = subplot(subplot_rows, subplot_cols, fc);
         pax = polaraxes('Units', ax.Units, 'Position', ax.Position);
-        polarplot(deg2rad((0:60)*360/60), [ratemap; ratemap(1)]);
+        polarplot(deg2rad((0:num_hd_bins)*360/num_hd_bins), [ratemap; ratemap(1)]);
         pax.ThetaZeroLocation = 'top';
         pax.ThetaDir = 'clockwise';
         set(ax, 'Visible', 'off');
@@ -193,41 +226,45 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(5122,1);
+        ratemap = nan(num_view_bins,1);
         for k = 1:size(ratemap,1)
-            ratemap(k) = exp(view_params(fc, k))/tbin_size;
+            if view_params(fc, k) == -1e1
+                ratemap(k) = NaN;
+            else
+                ratemap(k) = exp(view_params(fc, k))/tbin_size;
+            end
         end
         
         subplot(subplot_rows, subplot_cols, fc);
         
         % Plot floor
-        surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(3:1600+3-1), 40, 40)'));
+        surf(floor_x, floor_y, floor_z, flipud(reshape(ratemap(viewbin_offset+1:floor_last_bin), floor_width, floor_width)'));
         alpha 0.35; shading flat;
         hold on;
 
         % Plot ceiling and walls
-        surf(ceiling_x, ceiling_y, ceiling_z, flipud(reshape(ratemap(1603:1603+1600-1), 40, 40)'));
+        surf(ceiling_x, ceiling_y, ceiling_z, flipud(reshape(ratemap(floor_last_bin+1:ceiling_last_bin), floor_width, floor_width)'));
         alpha 0.35; shading flat;
-        surf(walls_x, walls_y, walls_z, flipud(reshape(ratemap(3203:3203+1280-1), 40*4, 8)'));      
+        surf(walls_x, walls_y, walls_z, flipud(reshape(ratemap(ceiling_last_bin+1:walls_last_bin), wall_width*4, wall_height)'));      
         alpha 0.35; shading flat;
 
         % Plot pillars
-        surf(P1_x, P1_y, PX_z, flipud(reshape(ratemap(4483:4483+160-1), 8*4, 5)'));
+        surf(P1_x, P1_y, PX_z, flipud(reshape(ratemap(walls_last_bin+1:P1_last_bin), pillar_width*4, pillar_height)'));
         alpha 0.35; shading flat;
-        surf(P2_x, P2_y, PX_z, flipud(reshape(ratemap(4643:4643+160-1), 8*4, 5)'));
+        surf(P2_x, P2_y, PX_z, flipud(reshape(ratemap(P1_last_bin+1:P2_last_bin), pillar_width*4, pillar_height)'));
         alpha 0.35; shading flat;
-        surf(P3_x, P3_y, PX_z, flipud(reshape(ratemap(4803:4803+160-1), 8*4, 5)'));
+        surf(P3_x, P3_y, PX_z, flipud(reshape(ratemap(P2_last_bin+1:P3_last_bin), pillar_width*4, pillar_height)'));
         alpha 0.35; shading flat;
-        surf(P4_x, P4_y, PX_z, flipud(reshape(ratemap(4963:4963+160-1), 8*4, 5)'));
+        surf(P4_x, P4_y, PX_z, flipud(reshape(ratemap(P3_last_bin+1:num_view_bins), pillar_width*4, pillar_height)'));
         alpha 0.35; shading flat; 
         view(-35,20);
         colormap jet;
         colorbar;
         
-        rectangle('Position', [8, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [8, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [24, 8, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
-        rectangle('Position', [24, 24, 8, 8], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [pillar_width, pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [pillar_width, 3*pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [3*pillar_width, pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
+        rectangle('Position', [3*pillar_width, 3*pillar_width, pillar_width, pillar_width], 'EdgeColor', 'k', 'LineWidth', 1);
         
         text('String', ['ratemap fit: ' num2str(view_fit(fc))], 'Position', [-2, -2, -1.5], ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);

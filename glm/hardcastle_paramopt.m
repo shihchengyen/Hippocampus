@@ -11,28 +11,32 @@ function hardcastle_paramopt(tbin_size, fc, param_range, redo)
     % same beta value for all three variables (place, headdirection, spatialview).
     % redo - true/1 or false/0, whether to redo model fitting even if data
     % already exists
-    
-   if ~exist('redo', 'var')
-        redo = false;
+   
+    if ~exist('param_range', 'var')
+        param_range = 3;  % use default smoothing value of 3
     end
    
-   if exist('genData.mat', 'file')
+    if ~exist('redo', 'var')
+        redo = false;
+    end
+
+    if exist('genData.mat', 'file')
        % Load pre-generated data file
        load('genData.mat', 'genData');
-   else
+    else
        % Generate simulated data from vmpv object
        genData = glm_genData_gaussian(tbin_size);
-   end
-   
-   for i = 1:length(param_range)
+    end
+
+    for i = 1:length(param_range)
        param_val = param_range(i);
        save_dir = ['smoothing_', num2str(param_val)];
        smooth_params = [ param_val, param_val, param_val ];
-       
+
        disp(['Running classification for smoothing beta value of ', num2str(param_val)]);
        mkdir(save_dir);
        cd(save_dir);
-       
+
        % Run LNP model fitting and model forward selection
        if exist('glm_hardcastle_results.mat', 'file') && ~redo
           load('glm_hardcastle_results.mat', 'hc_results');
@@ -55,19 +59,19 @@ function hardcastle_paramopt(tbin_size, fc, param_range, redo)
 
        % Generate response plots for classified variables
        glm_hardcastle_plot(hc_results, selected_model, true);
-       
+
        cd ..;
-   end
-   
-   % Save parameters used in the testing run as a txt file
-   if exist('run_params.txt', 'file')
+    end
+
+    % Save parameters used in the testing run as a txt file
+    if exist('run_params.txt', 'file')
        % Overwrite old text file
        delete('run_params.txt')
-   end
-   diary('run_params.txt');
-   disp(['tbin_size: ', num2str(tbin_size)]);
-   disp(['fc: ', num2str(fc)]);
-   disp(['cell_type: ', genData.cell_params.cell_type]);
-   diary off;
+    end
+    diary('run_params.txt');
+    disp(['tbin_size: ', num2str(tbin_size)]);
+    disp(['fc: ', num2str(fc)]);
+    disp(['cell_type: ', genData.cell_params.cell_type]);
+    diary off;
 
 end

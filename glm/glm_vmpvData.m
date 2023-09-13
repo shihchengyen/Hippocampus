@@ -109,16 +109,26 @@ for k = 1:size(bin_cstc,1)
     end
 end
 
-%{
 % generate duration maps for place and view
-bin_dstc = [bin_dstc; pv.data.rplmaxtime - bin_stc(end,1)];
+dstc = diff([stc(1:end,1); pv.data.rplmaxtime]);
+stc = stc(conditions,:);
+dstc = dstc(conditions);
 place_dur = zeros(1600,1);
 view_dur = zeros(5122,1);
-for k = 1:size(bin_stc,1)
-    place_dur(bin_stc(k,2)) = place_dur(bin_stc(k,2)) + bin_dstc(k);
-    view_dur(bin_stc(k,4)) = view_dur(bin_stc(k,4)) + bin_dstc(k);
+for k = 1:size(stc,1)
+    place_bin = stc(k,2);
+    view_bin = stc(k,4);
+    if place_bin >= 1 && place_bin <= 1600  % valid place bins
+        place_dur(place_bin) = place_dur(place_bin) + dstc(k);
+    end
+    if view_bin >= 1 && view_bin <= 5122  % valid view bins
+        view_dur(view_bin) = view_dur(view_bin) + dstc(k);
+    end
 end
-%}
+
+% get place and view bins that have > 0 duration
+place_good_bins = find(place_dur > 0);
+view_good_bins = find(view_dur > 0);
 
 
 vmpvData = struct;
@@ -129,8 +139,8 @@ vmpvData.UseMinObs = UseMinObs;
 vmpvData.bin_stc = bin_stc;
 vmpvData.tbin_size = tbin_size;
 
-vmpvData.place_good_bins = pv.data.place_good_bins;
-vmpvData.view_good_bins = pv.data.view_good_bins;
+vmpvData.place_good_bins = place_good_bins;
+vmpvData.view_good_bins = view_good_bins;
 
 % vmpvData.place_dur = place_dur;
 % vmpvData.view_dur = view_dur;

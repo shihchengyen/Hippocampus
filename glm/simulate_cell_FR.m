@@ -32,7 +32,7 @@ function [lambda, cell_params] = simulate_cell_FR(behav_state)
     
     % Available cell types:
     % 'place', 'headdirection', 'spatialview', 'ph', 'pv', 'hv', 'phv' 
-    cell_type = 'spatialview';
+    cell_type = 'pv';
     active_firing_rate = 5;
     background_firing_rate = 0.5;
     
