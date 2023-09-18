@@ -58,7 +58,7 @@ function hardcastle_paramopt(tbin_size, fc, param_range, redo)
        diary off;
 
        % Generate response plots for classified variables
-       glm_hardcastle_plot(hc_results, selected_model, true);
+       glm_hardcastle_plot(hc_results, selected_model, [], true);
 
        cd ..;
     end

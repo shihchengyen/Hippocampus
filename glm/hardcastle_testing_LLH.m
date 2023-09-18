@@ -1,22 +1,22 @@
-function hardcastle_testing_LLH(data, use_training, use_demeaned)
+function hardcastle_testing_LLH(data, use_training, use_pure)
 
     if ~exist('use_training', 'var')
         use_training = 0;
     end
     if ~exist('use_demeaned', 'var')
-        use_demeaned = 0;
+        use_pure = 0;
     end
     
     if use_training == 1
         mean_fits = data.training_fits;
-        if use_demeaned == 0
+        if use_pure == 1
             fits = data.training_fits_pure;
         else
             fits = mean_fits;
         end
     else
         mean_fits = data.testing_fits;
-        if use_demeaned == 0
+        if use_pure == 1
             fits = data.testing_fits_pure;
         else
             fits = mean_fits;

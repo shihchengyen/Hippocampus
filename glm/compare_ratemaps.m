@@ -5,14 +5,22 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     % PARAMETERS:
     % hc_results - struct output of glm_hardcastle, after running
     % classification via select_best_model
-    % metric - function to be used in comparing ratemaps, should output a
-    % single scalar value
+    % metric - function to be used in comparing ratemaps OR string of an
+    % already implemented function, should output a single scalar value
+    
+    % List of implemented functions:
+    implemented_funcs = {'cosine_similarity', 'weighted_cosine_similarity'};
 
     params = hc_results.params_consol;
     tbin_size = hc_results.tbin_size;
     num_folds = hc_results.num_folds;
+    
+    if ischar(metric) && ismember(metric, implemented_funcs)
+        metric = str2func(metric);
+    end
 
     % load in ratemaps from actual data
+    global vmp; global vmd; global vms;
     load('vmpc.mat', 'vmp');
     load('vmhd.mat', 'vmd');
     load('vmsv.mat', 'vms');
@@ -114,4 +122,24 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     hc_results.similarity_scores = similarity_scores;
     save('glm_hardcastle_results.mat','hc_results','-v7.3');
     
+end
+
+function score = cosine_similarity(arr1, arr2)
+    score = nansum(arr1.*arr2)/(sqrt(nansum(arr1.^2))*sqrt(nansum(arr2.^2)));
+end
+
+function score = weighted_cosine_similarity(arr1, arr2)
+    switch length(arr1)
+        case 1600  % place
+            global vmp;
+            dur_map = vmp.data.dur_raw;
+        case 60  % hd
+            global vmd;
+            dur_map = vmd.data.dur_raw;
+        case 5122  % view
+            global vms;
+            dur_map = vms.data.dur_raw;
+    end
+    weight = dur_map / nansum(dur_map);
+    score = nansum(weight.*arr1.*arr2)/(sqrt(nansum(arr1.^2))*sqrt(nansum(arr2.^2)));
 end

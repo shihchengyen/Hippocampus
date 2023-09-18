@@ -1,4 +1,4 @@
-function glm_hardcastle_plot(hc_results, model, save)
+function glm_hardcastle_plot(hc_results, model, axRange, save)
 %	Plots fitted params onto each variable space,
 %   analogous to the tuning curve of the cell.
 %   Plots all folds in a single figure for each model variable.
@@ -182,7 +182,12 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         axLims(fc, :) = caxis;
     end
     
-    caxRange = [0, max(axLims(:,2))];
+    if exist('axRange', 'var') && ~isempty(axRange)
+        caxRange = axRange(1,:);
+        axRange(1,:) = [];
+    else
+        caxRange = [0, max(axLims(:,2))];
+    end
     for fc = 1:num_folds
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
@@ -214,7 +219,12 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
             'HorizontalAlignment', 'center', 'FontSize', 11);
     end
     
-    caxRange = [0, max(axLims(:,2))];
+    if exist('axRange', 'var') && ~isempty(axRange)
+        caxRange = axRange(1,:);
+        axRange(1,:) = [];
+    else
+        caxRange = [0, max(axLims(:,2))];
+    end
     rlim(caxRange);
     if save
         saveas(fh, 'hd_plot.fig');
@@ -272,7 +282,12 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         axLims(fc, :) = caxis;
     end
     
-    caxRange = [0, max(axLims(:,2))];
+    if exist('axRange', 'var') && ~isempty(axRange)
+        caxRange = axRange(1,:);
+        axRange(1,:) = [];
+    else
+        caxRange = [0, max(axLims(:,2))];
+    end
     for fc = 1:num_folds
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);

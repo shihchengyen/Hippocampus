@@ -3,11 +3,15 @@
 % containing the classification of the given cell, as well as the p-values 
 % of all significance tests run for different models on the cell.
 
-function hardcastle_days(tbin_size, fc, day_list)
+function hardcastle_days(tbin_size, fc, day_list, redo)
     % PARAMETERS:
     % tbin_size - size of time bin (in seconds) for binning of vmpv data.
     % fc - number of folds for cross-validation in glm_hardcastle.
     % day_list - array of days to process (as either numbers or strings)
+    
+    if ~exist('redo', 'var')
+        redo = false;
+    end
     
     curr_dir = pwd;
     
@@ -20,7 +24,7 @@ function hardcastle_days(tbin_size, fc, day_list)
         % Enter day directory
         cd([curr_dir, '/', day_dir]);
         % Process all cells in the session
-        hardcastle_session(tbin_size, fc);
+        hardcastle_session(tbin_size, fc, redo);
         
     end
     
