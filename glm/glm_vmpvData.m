@@ -145,4 +145,6 @@ vmpvData.view_good_bins = view_good_bins;
 % vmpvData.place_dur = place_dur;
 % vmpvData.view_dur = view_dur;
 
+save('vmpvData.mat','vmpvData','-v7.3');
+
 end

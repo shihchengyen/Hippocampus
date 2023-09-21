@@ -4,7 +4,7 @@
 %
 % inserted 3 arguments to track place/head direction/view bins as well (for ease of use)
 
-function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,bin_geom,betas)
+function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,bin_geom,betas,good_bins)
 
     X = data{1}; % subset of A
     Y = data{2}; % number of spikes
@@ -43,10 +43,19 @@ function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,bin_geom,
     
     numPos = floor_width^2; numHD = hd_bins; numView = viewbin_offset + 2*floor_width^2 + wall_height*wall_perim + 4*pillar_height*pillar_perim; % hardcoded: number of parameters
     [param_pos,param_hd,param_view] = find_param(param,modelType,numPos,numHD,numView);
+    
+    % get filters for place and view bins
+    if exist('good_bins', 'var')
+        place_good_bins = good_bins{1}; view_good_bins = good_bins{2};
+        place_filter = setdiff(1:numPos, place_good_bins);
+        view_filter = setdiff(1:numView, view_good_bins);
+    else
+        place_filter = []; view_filter = [];
+    end
 
     % compute the contribution for f, df, and the hessian
     if ~isempty(param_pos)
-        [J_pos,J_pos_g,J_pos_h] = rough_penalty_pos(param_pos,b_pos);
+        [J_pos,J_pos_g,J_pos_h] = rough_penalty_pos(param_pos,b_pos,place_filter);
     end
     
     if ~isempty(param_hd)
@@ -54,7 +63,7 @@ function [f, df, hessian] = ln_poisson_model_vmpv(param,data,modelType,bin_geom,
     end
 
     if ~isempty(param_view)
-        [J_view,J_view_g,J_view_h] = rough_penalty_spatialview(param_view,b_view);
+        [J_view,J_view_g,J_view_h] = rough_penalty_spatialview(param_view,b_view,view_filter);
     end
 
     %% compute f, the gradient, and the hessian
@@ -67,7 +76,7 @@ end
     
     
 %% smoothing functions called in the above script
-function [J,J_g,J_h] = rough_penalty_pos(param,beta)
+function [J,J_g,J_h] = rough_penalty_pos(param,beta,filter)
 
     global floor_width;
     D1 = spdiags(ones(floor_width,1)*[-1 1],0:1,floor_width-1,floor_width);
@@ -75,16 +84,19 @@ function [J,J_g,J_h] = rough_penalty_pos(param,beta)
     M1 = kron(eye(floor_width),DD1); M2 = kron(DD1,eye(floor_width));
     M = (M1 + M2);
     
-    % mark out place bins under pillars, and then remove smoothing penalty
-    % for those place bins
-    pillar_width = floor_width/5;
-    under_pillars = nan(4*pillar_width^2, 1); j = 1;
-    for i = [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width]
-        under_pillars(j:j+2*pillar_width-1) = floor_width*(i-1) + [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width];
-        j = j+2*pillar_width;
+    if isempty(filter)
+        % mark out place bins under pillars, and then remove smoothing
+        % penalty for those place bins
+        pillar_width = floor_width/5;
+        filter = nan(4*pillar_width^2, 1); j = 1;
+        for i = [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width]
+            filter(j:j+2*pillar_width-1) = floor_width*(i-1) + [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width];
+            j = j+2*pillar_width;
+        end
     end
-    for i = 1:length(under_pillars)
-        bin = under_pillars(i);
+    % Remove smoothing penalty for unoccupied/untouched place bins
+    for i = 1:length(filter)
+        bin = filter(i);
         for j = 1:length(M)
            M(j, j) = M(j, j) + M(bin, j); 
         end
@@ -114,7 +126,7 @@ function [J,J_g,J_h] = rough_penalty_hd(param,beta)
     
 end
 
-function [J,J_g,J_h] = rough_penalty_spatialview(param,beta)
+function [J,J_g,J_h] = rough_penalty_spatialview(param,beta,filter)
 
     % params increase across columns, then rows.
     % e.g.
@@ -230,16 +242,19 @@ function [J,J_g,J_h] = rough_penalty_spatialview(param,beta)
         M(bin2, bin1) = M(bin2, bin1) - 1;
     end
     
-    % mark out view bins on the floor under pillars, and then remove
-    % smoothing penalty for those view bins
-    under_pillars = nan(4*pillar_width^2, 1); j = 1;
-    for i = [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width]
-        under_pillars(j:j+2*pillar_width-1) = floor_width*(i-1) + [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width];
-        j = j+2*pillar_width;
+    if isempty(filter)
+        % mark out view bins on the floor under pillars, and then remove
+        % smoothing penalty for those view bins
+        filter = nan(4*pillar_width^2, 1); j = 1;
+        for i = [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width]
+            filter(j:j+2*pillar_width-1) = floor_width*(i-1) + [pillar_width+1:2*pillar_width, 3*pillar_width+1:4*pillar_width];
+            j = j+2*pillar_width;
+        end
+        filter = filter + viewbin_offset;
     end
-    under_pillars = under_pillars + viewbin_offset;
-    for i = 1:length(under_pillars)
-        bin = under_pillars(i);
+    % Remove smoothing penalty for unoccupied/untouched view bins
+    for i = 1:length(filter)
+        bin = filter(i);
         for j = 1:length(M)
            M(j, j) = M(j, j) + M(bin, j); 
         end

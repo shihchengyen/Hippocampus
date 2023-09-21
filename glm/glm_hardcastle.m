@@ -20,6 +20,7 @@ bin_stc = glm_data.bin_stc;
 tbin_size = glm_data.tbin_size;
 place_good_bins = glm_data.place_good_bins;
 view_good_bins = glm_data.view_good_bins;
+good_bins = { place_good_bins, view_good_bins };
 
 % Define bin geometry of the environment, in terms of:
 % 1. no of floor_width bins, 2. no of wall_height bins, 3. no of
@@ -147,7 +148,7 @@ for model_type = 1:num_models % test different models on this dataset
         data{2} = train_spikes;
         init_param = param;
         % bottom part all adapted from reference github code
-        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),bin_geom,betas), init_param, opts);
+        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),bin_geom,betas,good_bins), init_param, opts);
 
         % test fit
 
