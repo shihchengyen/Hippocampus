@@ -427,17 +427,22 @@ if(~isempty(dir(Args.RequiredFile)))
                     [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,viewSections,padpillar);
                     [toptermGpad,~] = padsvmap(n,toptermG,viewSections,padpillar);
                     sv_array_pred_adsmGpad = cell(size(viewbinDepths,1),1);
+                    dur_pred_adsmGpad = cell(size(viewbinDepths,1),1);
                     for gg = 1:size(viewbinDepths,1)
                         if gg == 1 || gg == 2
                             sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
+                            dur_pred_adsmGpad{gg} = bottomtermG{gg};
                         else
-                            sv_array_pred_adsmGpad{gg} = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
+                            [sv_array_pred_adsmGpad{gg},~,dur_pred_adsmGpad{gg}] = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
                         end
                     end
                     % Unpad
                     [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap);
+                    [dur2_pred_adsmG] = unpadsvmap(dur_pred_adsmGpad,retrievemap);
                     % Linearise
                     var2_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
+                    dur2_pred_adsm = gridtolinear(dur2_pred_adsmG,'view',viewbinDepths);
+                    dur2_pred_adsm(isnan(dur2_pred_adsm)) = 0;
                 case 'headdirection'
                     n = 5; % Boxcar window of 5
                     [var2_array_pred_adsm] = smoothdir(var2_array_pred,n,pv.data.([Var2 'bins']));
@@ -445,9 +450,24 @@ if(~isempty(dir(Args.RequiredFile)))
                     % Adaptive smooth
                     toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
                     bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
-                    [p_array_pred_adsmG,~,~] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
+                    [p_array_pred_adsmG,~,dur2_pred_adsmG] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
                     var2_array_pred_adsm = gridtolinear({p_array_pred_adsmG},'place',[Args.GridSteps Args.GridSteps])';
-
+                    dur2_pred_adsm = gridtolinear({dur2_pred_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                    dur2_pred_adsm(isnan(dur2_pred_adsm)) = 0;
+            end
+            
+            % SIC for predicted/distributed maps
+            if ~strcmp(Var2,'headdirection')
+                sic2_pred_adsm = skaggs_sic(var2_array_pred_adsm,dur2_pred_adsm);
+            else
+                % Rayleigh vector
+                binSize=(pi*2)/length(var2_array_pred_adsm(1,:));
+                binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
+                binWeights=var2_array_pred_adsm./(max(var2_array_pred_adsm,[],2));
+                S=sum( sin(binAngles).*binWeights , 2);
+                C=sum( cos(binAngles).*binWeights , 2);
+                R=sqrt(S.^2+C.^2);
+                sic2_pred_adsm=R./sum(binWeights,2);
             end
 
             % If place cell firing is only mod by location, and view influence is attributable only to inhomogeous sampling, 
@@ -471,8 +491,10 @@ if(~isempty(dir(Args.RequiredFile)))
                 case 'place' 
                     toptermG = cell2mat(lineartogrid(topterm','place',[Args.GridSteps Args.GridSteps]));
                     bottomtermG = cell2mat(lineartogrid(bottomterm','place',[Args.GridSteps Args.GridSteps]));
-                    [p_array_pred_adsmG,~,~] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
+                    [p_array_pred_adsmG,~,dur1_pred_adsmG] = adsmooth(bottomtermG,toptermG,Args.AlphaPlace);
                     var1_array_pred_adsm = gridtolinear({p_array_pred_adsmG},'place',[Args.GridSteps Args.GridSteps])';
+                    dur1_pred_adsm = gridtolinear({dur1_pred_adsmG},'place',[Args.GridSteps Args.GridSteps]);
+                    dur1_pred_adsm(isnan(dur1_pred_adsm)) = 0;
                 case 'headdirection'
                     n = 5; % Boxcar window of 5
                     [var1_array_pred_adsm] = smoothdir(var1_array_pred,n,pv.data.([Var1 'bins']));
@@ -489,17 +511,35 @@ if(~isempty(dir(Args.RequiredFile)))
                     [bottomtermGpad,retrievemap] = padsvmap(n,bottomtermG,viewSections,padpillar);
                     [toptermGpad,~] = padsvmap(n,toptermG,viewSections,padpillar);
                     sv_array_pred_adsmGpad = cell(size(viewbinDepths,1),1);
+                    dur_pred_adsmGpad = cell(size(viewbinDepths,1),1);
                     for gg = 1:size(viewbinDepths,1)
                         if gg == 1 || gg == 2
                             sv_array_pred_adsmGpad{gg} = toptermG{gg}/bottomtermG{gg};
+                            dur_pred_adsmGpad{gg} = bottomtermG{gg};
                         else
-                            sv_array_pred_adsmGpad{gg} = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
+                            [sv_array_pred_adsmGpad{gg},~,dur_pred_adsmGpad{gg}] = adsmooth(bottomtermGpad{gg},toptermGpad{gg},Args.AlphaView);
                         end
                     end
                     % Unpad
                     [sv_array_pred_adsmG] = unpadsvmap(sv_array_pred_adsmGpad,retrievemap);
+                    [dur1_pred_adsmG] = unpadsvmap(dur_pred_adsmGpad,retrievemap);
                     % Linearise
                     var1_array_pred_adsm = gridtolinear(sv_array_pred_adsmG,'view',viewbinDepths);
+                    dur1_pred_adsm = gridtolinear(dur1_pred_adsmG,'view',viewbinDepths);
+                    dur1_pred_adsm(isnan(dur1_pred_adsm)) = 0;
+            end
+            % SIC for predicted/distributed maps
+            if ~strcmp(Var1,'headdirection')
+                sic1_pred_adsm = skaggs_sic(var1_array_pred_adsm,dur1_pred_adsm);
+            else
+                % Rayleigh vector
+                binSize=(pi*2)/length(var1_array_pred_adsm(1,:));
+                binAngles=(0:binSize:( (359.5/360)*2*pi )) + binSize/2;
+                binWeights=var1_array_pred_adsm./(max(var1_array_pred_adsm,[],2));
+                S=sum( sin(binAngles).*binWeights , 2);
+                C=sum( cos(binAngles).*binWeights , 2);
+                R=sqrt(S.^2+C.^2);
+                sic1_pred_adsm=R./sum(binWeights,2);
             end
 
             % If view cell firing is only mod by view location, and place influence is attributable only to inhomogeous sampling, 
@@ -1132,10 +1172,12 @@ if(~isempty(dir(Args.RequiredFile)))
                 data.(combiname).([lower(Var2) 'binDepths']) = eval([Var2 'binDepths']);
                 data.(combiname).errorcode = errorcode;
 
-                data.(combiname).(['maps_dist_' lower(Var1(1))]) = var1_array_pred;
-                data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm']) = var1_array_pred_adsm;
+                data.(combiname).(['maps_dist_' lower(Var1(1))]) = var1_array_pred; % predicted rate as function of var1, raw
+                data.(combiname).(['maps_dist_' lower(Var1(1)) '_adsm']) = var1_array_pred_adsm; % predicted rate as function of var1, adaptive-smoothed
                 data.(combiname).(['maps_dist_' lower(Var2(1))]) = var2_array_pred';
                 data.(combiname).(['maps_dist_' lower(Var2(1)) '_adsm']) = var2_array_pred_adsm';
+                data.(combiname).(['crit_sm_dist' lower(Var1(1))]) = sic1_pred_adsm;
+                data.(combiname).(['crit_sm_dist' lower(Var2(1))]) = sic2_pred_adsm;
                 data.(combiname).(['distratio_' lower(Var1(1))]) = dr_var1;
                 data.(combiname).(['distratio_' lower(Var2(1))]) = dr_var2;
                 data.(combiname).(['distcorr_' lower(Var1(1))]) = dcorr_var1;
