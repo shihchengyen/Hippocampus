@@ -284,8 +284,8 @@ elseif strcmp(objtype,'headdirection')
     
 end
 axis(ax,'tight');
-w = 0.005;
-x = ax.OuterPosition(1) + ax.OuterPosition(3) + w;
+w = ax.OuterPosition(3)*0.02;
+x = ax.OuterPosition(1) + ax.OuterPosition(3);
 y = ax.OuterPosition(2) + ax.OuterPosition(4)/4;
 h = ax.OuterPosition(4)/2;
 
