@@ -55,8 +55,8 @@ else
 %         r.data.maps_adsm2 = [p.data.maps_adsm2; q.data.maps_adsm2];
 %         r.data.maps_adsmsh = [p.data.maps_adsmsh; q.data.maps_adsmsh];
         r.data.maps_bcsm = [p.data.maps_bcsm; q.data.maps_bcsm];
-%         r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
-%         r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
+        r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
+        r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
 %         r.data.maps_bcsmsh = [p.data.maps_bcsmsh; q.data.maps_bcsmsh];
         r.data.maps_dksm = [p.data.maps_dksm; q.data.maps_dksm];
 %         r.data.maps_dksm1 = [p.data.maps_dksm1; q.data.maps_dksm1];
