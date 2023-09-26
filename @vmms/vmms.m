@@ -15,7 +15,7 @@ function [obj, varargout] = vmms(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, 'ObjectLevel', 'Cell',...
                 'RequiredFile','spiketrain.mat', 'GridSteps',40, 'pix', 1, ...
-                'UseCorr',1,'FieldThr',0.7,'FieldSplitThr',0.75,'NumShuffles',1000, ...
+                'UseCorr',0,'FieldThr',0.7,'FieldSplitThr',0.75,'NumShuffles',1000, ...
                 'FieldThrPseudo',0.7,'FieldSplitThrPseudo',0.75,'UseAllTrials',1,'ThresVel',1,'UseMinObs',0);
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -156,12 +156,16 @@ if(dnum>0)
             data.(pairname_short).(msvar{oo}).condbase_fieldsizepercent = {};
             data.(pairname_short).(msvar{oo}).condbase_fieldoverlapind = {};
             data.(pairname_short).(msvar{oo}).condbase_fieldoverlap = {};
-            data.(pairname_short).(msvar{oo}).pseudosecmaps_sm = {};
-            data.(pairname_short).(msvar{oo}).pseudosecSIC_adsm = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_secmaps_sm = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_secSIC_sm = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_meanrate_infield = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_meanrate_outfield = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_hedgesg = [];
             data.(pairname_short).(msvar{oo}).condpseudo_secdataperfield = {};
-            data.(pairname_short).(msvar{oo}).secfieldnumbinset = {};
-            data.(pairname_short).(msvar{oo}).condfield_inbinsset = {};
-            data.(pairname_short).(msvar{oo}).condfield_nonoverlapbinset = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_secfieldnumbinset = {};
+            % data.(pairname_short).(msvar{oo}).condfield_inbinsset = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_nonoverlapbinsperfield = {};
+            data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield = {};
             % data.(pairname_short).(msvar{oo}).tertrate_orig = {};
             % data.(pairname_short).(msvar{oo}).tertrate_pseudo = {};
         end
@@ -611,7 +615,7 @@ if(dnum>0)
                 condbase_sigfields = zeros(data.(pairname_short).(msvar{oo}).sigfields,1);
                 condbase_gridnum = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 condbase_fieldcoord = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
-                condbasefieldlinbin = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
+                condbase_fieldlinbin = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 condbase_fieldsizepercent = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 condbase_fieldoverlapind = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 condbase_fieldoverlap = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
@@ -913,7 +917,7 @@ if(dnum>0)
 
                     condbase_gridnum{ii,1} = gridnum;
                     condbase_fieldcoord{ii,1} = fieldcoord;
-                    condbasefieldlinbin{ii,1} = fieldlinbin;
+                    condbase_fieldlinbin{ii,1} = fieldlinbin;
                     condbase_fieldsizepercent{ii,1} = fieldsizepercent;
                     condbase_fieldoverlapind{ii,1} = fieldoverlapind;
                     condbase_fieldoverlap{ii,1} = fieldoverlap;
@@ -922,7 +926,7 @@ if(dnum>0)
                 data.(pairname_short).(msvar{oo}).condbase_sigfields  = condbase_sigfields;
                 data.(pairname_short).(msvar{oo}).condbase_gridnum = condbase_gridnum;
                 data.(pairname_short).(msvar{oo}).condbase_fieldcoord = condbase_fieldcoord;
-                data.(pairname_short).(msvar{oo}).condbase_fieldlinbin = condbasefieldlinbin;
+                data.(pairname_short).(msvar{oo}).condbase_fieldlinbin = condbase_fieldlinbin;
                 data.(pairname_short).(msvar{oo}).condbase_fieldsizepercent = condbase_fieldsizepercent;
                 data.(pairname_short).(msvar{oo}).condbase_fieldoverlapind = condbase_fieldoverlapind;
                 data.(pairname_short).(msvar{oo}).condbase_fieldoverlap = condbase_fieldoverlap;
@@ -945,14 +949,6 @@ if(dnum>0)
             %      pseudofield needs to be similar size to original sec field, but no spike requirement
             disp('    Checking if base fields are linked with sec fields');
             for oo = 1:size(msvar,2)
-
-                % disp(['Base ' msvar_short{oo} ' Sec ' msvar_short{2-oo+1} ' ...']);
-                % disp(['     Checking if base ' msvar_short{oo} ' fields are linked with sec ' msvar_short{2-oo+1} ' fields']);
-
-                % % debug
-                % if strcmp(msvar{1},'headdirection') && oo == 2
-                %     disp('problem');
-                % end
 
                 % Output variables
                 condbase_insecfieldrates = cell(size(data.(pairname_short).(msvar{oo}).condbase_componentsperpx,1),1);
@@ -995,7 +991,8 @@ if(dnum>0)
                                     overlapthreshold = 3;
                                 end
                                 if length(bins_infield) < overlapthreshold % data.(pairname_short).(msvar{2+oo-1}).fieldsizethreshold % isempty(bins_infield) 
-                                    disp(['Cond map of base ' msvar{oo} ' field ' num2str(ii) ' does not overlap enough with sec ' msvar{2-oo+1} ' field ' num2str(jj)]);
+                                    disp(['Cond' ...
+                                        ' map of base ' msvar{oo} ' field ' num2str(ii) ' does not overlap enough with sec ' msvar{2-oo+1} ' field ' num2str(jj)]);
                                     continue;
                                 end
                                 meanrate_infield = mean(condbase_mapL(bins_infield),'omitnan');
@@ -1165,6 +1162,7 @@ if(dnum>0)
                         % end
                     end
                 end
+
                 % Store data
                 data.(pairname_short).(msvar{oo}).condbase_insecfieldrates = condbase_insecfieldrates;
                 data.(pairname_short).(msvar{oo}).condbase_outsecfieldrates = condbase_outsecfieldrates;
@@ -1292,8 +1290,8 @@ if(dnum>0)
 
             %% Method 2: Find nshuff pseudo base maps by looping
             secfieldnumbinset = cell(size(msvar,2),1);
-            condfield_inbinsset = cell(size(msvar,2),1);
-            condfield_nonoverlapbinset = cell(size(msvar,2),1);
+            % condfield_inbinsset = cell(size(msvar,2),1);
+            condpseudo_nonoverlapbinsperfield = cell(size(msvar,2),1);
             condfield_tertlinbin = cell(size(msvar,2),1);
             disp('    Creating pseudopopulation of base fields and their maps');
             for oo = 1:size(msvar,2) 
@@ -1304,14 +1302,15 @@ if(dnum>0)
                 % Output variables
                 condpseudo_secdataperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 secfieldnumbinperfield = nan(data.(pairname_short).(msvar{oo}).sigfields,1);
-                condbase_fieldlinbin = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
-                condfield_nonoverlapbinsperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
+                % condfield_inbinsset = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
+                condpseudo_nonoverlapbinsperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
+                condpseudo_overlapbinsperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 cond_tertlinbinsperfield = cell(data.(pairname_short).(msvar{oo}).sigfields,1);
                 for ii = 1:size(data.(pairname_short).(msvar{oo}).condbase_componentsperpx,1) % For each base field
                     
                     userawmap = 0;
                     % Load up maps
-                    if ~userawmap
+                    if userawmap
                         baselinmap = data.(pairname_short).(msvar{oo}).basemapLrw; % whole base map - linear
                         basegridmap = data.(pairname_short).(msvar{oo}).basemapGrw; % whole base map - grid
                         condbasemap = nan(size(data.(pairname_short).(msvar{2-oo+1}).basemapLrw));
@@ -1336,8 +1335,14 @@ if(dnum>0)
                     end
                     
                     condbasenumbin = length(condbaseallbins); % number of bins occupied in conditioned map
-                    condbasefieldlinbin = find(condbasemap > mean(condbasemap,'omitnan'))'; % simplistically, fields in sec/conditioned maps are defined as pixels exceeding mean. no contiguity requirement
-                    condbasenonfieldlinbin = setdiff(condbaseallbins,condbasefieldlinbin);
+                    % condbase_fieldlinbin = find(condbasemap > mean(condbasemap,'omitnan'))'; % simplistically, fields in sec/conditioned maps are defined as pixels exceeding mean. no contiguity requirement
+                    % condbasenonfieldlinbin = setdiff(condbaseallbins,condbase_fieldlinbin);
+                    actualsecfieldlinbins = [];
+                    for gg = 1:data.(pairname_short).(msvar{2-oo+1}).sigfields
+                        % if ~isempty(data.(pairname_short).(msvar{oo}).condbase_fieldlinbin{ii})
+                            actualsecfieldlinbins = [actualsecfieldlinbins; data.(pairname_short).(msvar{2-oo+1}).fieldlinbin{gg}];
+                        % end
+                    end
 
                     % Generate a psuedopopulation of 1000 base fields with same num of spikes as original base field 
                     ff = 1;
@@ -1351,6 +1356,7 @@ if(dnum>0)
                     pseudosecmap_raw = nan(shuff,size(data.(pairname_short).(msvar{2-oo+1}).basemapLrw,2));
                     pseudobasebins = cell(shuff,1);
                     pseudononoverlap = cell(shuff,1);
+                    pseudooverlap = cell(shuff,1);
                     pseudotertbins = cell(shuff,1);
                     % tic;
                    
@@ -1396,9 +1402,16 @@ if(dnum>0)
                             end
                         end
                         % disp(['Finding pseudo base field: ' num2str(toc) 's']);
-
-                        nonoverlap = setdiff(growingpx,condbasefieldlinbin); % sec pixels resultant from pseudo base field, excluding fields from orig conditioned maps
-                        if size(intersect(lin_inds,basefieldbins),1) > 0.5*size(basefieldbins,1) % If pseudo base field overlaps with more than half of orig base field
+                        
+                        overlap = intersect(growingpx,actualsecfieldlinbins);
+                        nonoverlap = setdiff(growingpx,actualsecfieldlinbins); % sec pixels resultant from pseudo base field, excluding fields from orig conditioned maps
+                        if ~strcmp(msvar{2-oo+1},'headdirection')
+                            overlapthr = 9;
+                        else
+                            overlapthr = 3;
+                        end
+                        if size(intersect(lin_inds,basefieldbins),1) > 0.5*size(basefieldbins,1) ... % If pseudo base field overlaps with more than half of orig base field
+                                || length(overlap) < data.(pairname_short).(msvar{2-oo+1}).sigfields*overlapthr % If pseudo sec field overlaps with actual sec fields in less than nx15 pixels
                             if attempt == shuff && ff < 10
                                 abandon = true; % run too many rounds and failing to find pseudomaps of appropriate criteria. give up
                             end
@@ -1421,6 +1434,7 @@ if(dnum>0)
                         pseudosecmap_raw(ff,:) = secdata(:,4);
                         pseudobasebins{ff} = lin_inds;
                         pseudononoverlap{ff,:} = nonoverlap;
+                        pseudooverlap{ff,:} = overlap;
 
                         % tic;
                         % % Find pseudo sec maps
@@ -1504,14 +1518,16 @@ if(dnum>0)
                     % disp([num2str(Args.NumShuffles) ' pseudo base fields for ' msvar{oo} ' field ' num2str(ii) ' took ' num2str(toc) 's']);
                     condpseudo_secdataperfield{ii} = {pseudobasebins pseudosecdur pseudosecspk pseudosecmap_raw};
                     secfieldnumbinperfield(ii) = condbasenumbin;
-                    condbase_fieldlinbin{ii} = condbasefieldlinbin;
-                    condfield_nonoverlapbinsperfield{ii} = pseudononoverlap;
+                    % condfield_inbinsset{ii} = condbase_fieldlinbin;
+                    condpseudo_nonoverlapbinsperfield{ii} = pseudononoverlap;
+                    condpseudo_overlapbinsperfield{ii} = pseudooverlap;
                     % cond_tertlinbinsperfield{ii} = pseudotertbins;
                 end
                 data.(pairname_short).(msvar{oo}).condpseudo_secdataperfield = condpseudo_secdataperfield;
-                data.(pairname_short).(msvar{oo}).secfieldnumbinset = secfieldnumbinperfield;
-                data.(pairname_short).(msvar{oo}).condfield_inbinsset = condbase_fieldlinbin;
-                data.(pairname_short).(msvar{oo}).condfield_nonoverlapbinset = condfield_nonoverlapbinsperfield;
+                data.(pairname_short).(msvar{oo}).condpseudo_secfieldnumbinset = secfieldnumbinperfield;
+                % data.(pairname_short).(msvar{oo}).condfield_inbinsset = condfield_inbinsset;
+                data.(pairname_short).(msvar{oo}).condpseudo_nonoverlapbinsperfield = condpseudo_nonoverlapbinsperfield;
+                data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield = condpseudo_overlapbinsperfield;
                 % condfield_tertlinbin{oo} = cond_tertlinbinsperfield;
             end
 
@@ -1592,7 +1608,7 @@ if(dnum>0)
                 %                 to_compute = 1:0.5:Args.GridSteps/2; % unit bin is actually fspecial(...0.5)
                                 to_compute = 1:0.5:(max(size(durGpad{jj}(:,:,1))))/2;
                                 
-                                possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles + 1);
+                                possible = NaN(2,size(firing_counts_full1,1),size(firing_counts_full1,2),Args.NumShuffles);
                                 to_fill = NaN(size(possible,2), size(possible,3), size(possible,4));
                                 to_fill(preset_to_zeros) = 0;
                                 to_fill_smoothed_duration = NaN(size(possible,2), size(possible,3), size(possible,4));
@@ -1606,7 +1622,7 @@ if(dnum>0)
                                     f(f>=(max(max(f))/3))=1;
                                     f(f~=1)=0;
                                     
-                                    possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);
+                                    possible(1,:,:,:) = repmat(imfilter(gpdur1(:,:,1), f, 'conv'), 1,1,Args.NumShuffles);
                                     possible(2,:,:,find(wip)) = imfilter(firing_counts_full1(:,:,find(wip)), f, 'conv');
                                     
                                     logic1 = squeeze(alpha./(possible(1,:,:,:).*sqrt(possible(2,:,:,:))) <= to_compute(idx));
@@ -1641,6 +1657,15 @@ if(dnum>0)
                                 grid_ad_size{jj} = to_fill_size;
                                 
                             end
+
+                            % Unpad smoothed grid map
+                            secmap_sm_grid = unpadsvmap(grid_smoothed_Gaze,retrievemap);
+                            secdur_sm_grid = unpadsvmap(grid_smoothed_dur,retrievemap);
+
+                            % Linearise smoothed map
+                            secmap_sm = gridtolinear(secmap_sm_grid,'view',binDepths);
+                            secdur_sm = gridtolinear(secdur_sm_grid,'view',binDepths);
+
                             % disp(['Quick adaptive smoothing for ' msvar{2-oo+1} ' field ' num2str(ii) ' took ' num2str(toc) 's']);
 
                             % %%% Smoothing loop
@@ -1723,18 +1748,53 @@ if(dnum>0)
                     % 
                     % tertrate_orig(:,ii) = rate_orig;
                     % tertrate_pseudo(:,ii) = rate_pseudo;
-
   
                 end
+                
+                pseudo_meanrate_infield = [];
+                pseudo_meanrate_outfield = [];
+                for ii = 1:size(data.(pairname_short).(msvar{oo}).condbase_componentsperpx,1) % For each base field
+
+                    % Find mean firing rate of pseudosecmaps within and outside sec fields
+                    inrate = nan(size(data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield{ii},1),1);
+                    outrate = nan(size(data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield{ii},1),1);
+                    for kk = 1:size(data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield{ii},1)
+                        inbins = data.(pairname_short).(msvar{oo}).condpseudo_overlapbinsperfield{ii}{kk};
+                        outbins = data.(pairname_short).(msvar{oo}).condpseudo_nonoverlapbinsperfield{ii}{kk};
+                        % if length(inbins)/length(outbins) > 0.25
+                            inrate(kk) = mean(pseudosecmaps_sm{ii,1}(kk,inbins),'all','omitnan');
+                            outrate(kk) = mean(pseudosecmaps_sm{ii,1}(kk,outbins),'all','omitnan');
+                        % else
+                        %     disp(['skip' num2str(kk)]);
+                        % end
+                    end
+                    pseudo_meanrate_infield = [pseudo_meanrate_infield; inrate];
+                    pseudo_meanrate_outfield = [pseudo_meanrate_outfield; outrate];
+
+                end
+
+                % Hedge's G 
+                % Test size of the difference between the mean rates of firing
+                % within sec fields and outside sec fields for conditioned sec
+                % maps of pseudopopulatin of base fields
+                % > 0: infield rate > outfield rate by g std 
+                minobs = size(pseudo_meanrate_outfield,1);
+                pooledstd = sqrt(( (minobs-1)*std(pseudo_meanrate_infield)*std(pseudo_meanrate_infield)+...
+                    (minobs-1)*std(pseudo_meanrate_outfield)*std(pseudo_meanrate_outfield) ) ...
+                    /( (minobs-1)+(minobs-1) ));
+                hedgesg = ( mean(pseudo_meanrate_infield)-mean(pseudo_meanrate_outfield) )/(pooledstd);
 
                 % Store data
-                data.(pairname_short).(msvar{oo}).pseudosecmaps_sm = pseudosecmaps_sm;
-                data.(pairname_short).(msvar{oo}).pseudosecSIC_adsm = pseudosecSIC_sm;
+                data.(pairname_short).(msvar{oo}).condpseudo_secmaps_sm = pseudosecmaps_sm;
+                data.(pairname_short).(msvar{oo}).condpseudo_secSIC_sm = pseudosecSIC_sm;
+                data.(pairname_short).(msvar{oo}).condpseudo_meanrate_infield = pseudo_meanrate_infield;
+                data.(pairname_short).(msvar{oo}).condpseudo_meanrate_outfield = pseudo_meanrate_outfield;
+                data.(pairname_short).(msvar{oo}).condpseudo_hedgesg = hedgesg;
                 % data.(pairname_short).(msvar{oo}).tertrate_orig = tertrate_orig;
                 % data.(pairname_short).(msvar{oo}).tertrate_pseudo = tertrate_pseudo;
             end
 
-       
+            
         end
     else 
         disp('Cell discarded');
