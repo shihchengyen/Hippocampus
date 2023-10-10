@@ -41,23 +41,30 @@ else
         r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
         r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
         r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
+        r.data.fillindex = [p.data.fillindex; q.data.fillindex];
         r.data.discard = [p.data.discard; q.data.discard];
         r.data.rateok = [p.data.rateok; q.data.rateok];
-
+        
 		% object specific fields
+        r.data.cueim_ratetargsplit = {p.data.cueim_ratetargsplit; q.data.cueim_ratetargsplit};
+        r.data.cueim_ratetargmean = [p.data.cueim_ratetargmean; q.data.cueim_ratetargmean];
+        r.data.cueperiodbins = {p.data.cueperiodbins; q.data.cueperiodbins};
+        r.data.hintim_ratetargsplit = {p.data.hintim_ratetargsplit; q.data.hintim_ratetargsplit};
+        r.data.hintim_ratetargmean = [p.data.hintim_ratetargmean; q.data.hintim_ratetargmean];
+        r.data.hintperiodbins = {p.data.hintperiodbins; q.data.hintperiodbins};
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
         r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
         r.data.maps_raw2 = [p.data.maps_raw2; q.data.maps_raw2];
-%         r.data.maps_adsm = [p.data.maps_adsm; q.data.maps_adsm];
+        r.data.maps_adsm = [p.data.maps_adsm; q.data.maps_adsm];
 %         r.data.maps_adsm1 = [p.data.maps_adsm1; q.data.maps_adsm1];
 %         r.data.maps_adsm2 = [p.data.maps_adsm2; q.data.maps_adsm2];
 % %         r.data.maps_adsmsh = [p.data.maps_adsmsh; q.data.maps_adsmsh];
-%         r.data.maps_bcsm = [p.data.maps_bcsm; q.data.maps_bcsm];
-%         r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
-%         r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
+        r.data.maps_bcsm = [p.data.maps_bcsm; q.data.maps_bcsm];
+        r.data.maps_bcsm1 = [p.data.maps_bcsm1; q.data.maps_bcsm1];
+        r.data.maps_bcsm2 = [p.data.maps_bcsm2; q.data.maps_bcsm2];
 % %         r.data.maps_bcsmsh = [p.data.maps_bcsmsh; q.data.maps_bcsmsh];
-%         r.data.maps_dksm = [p.data.maps_dksm; q.data.maps_dksm];
+        r.data.maps_dksm = [p.data.maps_dksm; q.data.maps_dksm];
 %         r.data.maps_dksm1 = [p.data.maps_dksm1; q.data.maps_dksm1];
 %         r.data.maps_dksm2 = [p.data.maps_dksm2; q.data.maps_dksm2];
 % %         r.data.maps_dksmsh = [p.data.maps_dksmsh; q.data.maps_dksmsh];

@@ -35,7 +35,7 @@ Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','UseMinObs','Adaptive
 % passed to createObject and createEmptyObject
 Args.classname = 'vmhd';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'vmd';
+Args.matvarname = 'vmh';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
