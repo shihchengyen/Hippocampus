@@ -14,7 +14,7 @@ function [obj, varargout] = vmpv(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','1binData.hdf', 'pix',1,...
+				'ObjectLevel','Session','pix',1,'RequiredFile','1binData.csv', ...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -70,16 +70,19 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
-    % viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
-    % viewdata = h5read('1binData.hdf','/data');
-    viewdata = h5read('binData_Fixed1.hdf','/data');
-    size(viewdata)
+    % % From hdf file
+    % % viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
+    % viewdata = h5read('100binData.hdf','/data');
+    % viewdata = viewdata';
+    % From csv file
+    viewdata = readtable('1binData.csv');
+    viewdata = table2array(viewdata);
     cd(ori);
 
     % major section 1 - getting combined sessiontime
     
     pst = uma.data.sessionTime;
-    vst = viewdata';
+    vst = viewdata;
     vst(:,1) = vst(:,1)/1000;
     cst_1 = [pst(:,1:3) nan(size(pst,1),1) ones(size(pst,1),1)];
     cst_2 = [vst(:,1) nan(size(vst,1),2) vst(:,2) 2.*ones(size(vst,1),1)];

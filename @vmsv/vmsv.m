@@ -77,9 +77,11 @@ if(~isempty(dir(Args.RequiredFile)))
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
     pv = load([num2str(Args.pix) 'vmpv.mat']);
-    % pv = load('vmpv_Fixed1.mat');
+    % pv = load('mac_vmpv.mat');
     % pv = load('vmpv.mat');
     pv = pv.pv;
+    uma = load('umaze.mat');
+    uma = uma.uma;
     %%%%%%%%%%
     %
     cd(ori);
@@ -122,7 +124,64 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes = flat_spiketimes'; % row 1: spiketimes concatenated in shuffle batches, serially; row 2: identity of shuffle, in ascending order
         flat_spiketimes = sortrows(flat_spiketimes); % spiketimes sorted serially across all data, shuffle identity mixed
 
-        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
+        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];   
+
+        % Get responses to target images during cue presentation / hint views
+        % before filtering for velocity/minobs etc
+        cuestartinds = find(floor(pv.data.unityData(:,1)/10) == 1);
+        navstartinds = find(floor(pv.data.unityData(:,1)/10) == 2)+1;
+        trialendinds = find(floor(pv.data.unityData(:,1)/10) == 3 | floor(pv.data.unityData(:,1)/10) == 4);
+        spkbinned = histcounts(spiketimes, stc(:,1))'; % Method 1 of 2 for binning spikes
+        spk_binned = [spkbinned; 0];
+        cueim_ratepertrial = nan(size(cuestartinds,1),4);
+        hintim_ratepertrial = nan(size(cuestartinds,1),4);
+        cueperiodbins = nan(size(cuestartinds,1),max(navstartinds-cuestartinds)+1);
+        hintperiodbins = nan(size(cuestartinds,1),max(trialendinds-navstartinds)+1);
+        for ii = 1:size(cuestartinds,1)
+            % if ii==124
+            %     disp('test124');
+            % end
+            % Find cue image activity
+            pvinds = stc(:,1) >= pv.data.unityTime(cuestartinds(ii)) & stc(:,1) < pv.data.unityTime(navstartinds(ii));
+            cueperioddata = [stc(pvinds,:) spk_binned(pvinds)]; % col 5 spk
+            cueperioddata(:,6) = [diff(cueperioddata(:,1));0]; % col 6 dur
+            cueim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
+            cueim_ratepertrial(ii,2) = sum(cueperioddata(cueperioddata(:,4) == 1,5)); % spk
+            cueim_ratepertrial(ii,3) = sum(cueperioddata(cueperioddata(:,4) == 1,6)); % dur
+            cueim_ratepertrial(ii,4) = cueim_ratepertrial(ii,2)/cueim_ratepertrial(ii,3); % rate
+            % ### Temp fix for buggy unityTime and unityData e.g. trial 124 of 20181102
+            if isinf(cueim_ratepertrial(ii,4))
+                cueim_ratepertrial(ii,4) = nan;
+            end
+            cueperiodbins(ii,1:sum(pvinds)) = cueperioddata(:,4);
+            % Find hint image activity
+            pvinds = stc(:,1) > pv.data.unityTime(navstartinds(ii)) & stc(:,1) <= pv.data.unityTime(trialendinds(ii));
+            navperioddata = [stc(pvinds,:) spk_binned(pvinds)]; % col 5 spk
+            navperioddata(:,6) = [diff(navperioddata(:,1));0]; % col 6 dur
+            hintim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
+            hintim_ratepertrial(ii,2) = sum(navperioddata(navperioddata(:,4) == 2,5)); % spk
+            hintim_ratepertrial(ii,3) = sum(navperioddata(navperioddata(:,4) == 2,6)); % dur
+            hintim_ratepertrial(ii,4) = hintim_ratepertrial(ii,2)/hintim_ratepertrial(ii,3); % rate
+            % ### Temp fix for buggy unityTime and unityData e.g. trial 124 of 20181102
+            if isinf(hintim_ratepertrial(ii,4))
+                hintim_ratepertrial(ii,4) = nan;
+            end
+            hintperiodbins(ii,1:sum(pvinds)) = navperioddata(:,4);
+        end
+        % Get overall mean rate for each target image
+        uniquetargets = unique(cueim_ratepertrial(:,1));
+        cueim_ratetargmean = nan(size(uniquetargets,1),1);
+        cueim_ratetargsplit = nan(size(uniquetargets,1),max(histcounts(cueim_ratepertrial(:,1))));
+        hintim_ratetargmean = nan(size(uniquetargets,1),1);
+        hintim_ratetargsplit = nan(size(uniquetargets,1),max(histcounts(hintim_ratepertrial(:,1))));
+        for ii = 1:size(uniquetargets,1)
+            inds = cueim_ratepertrial(:,1)==uniquetargets(ii);
+            cueim_ratetargsplit(ii,1:sum(inds)) = cueim_ratepertrial(inds,4);
+            cueim_ratetargmean(ii) = sum(cueim_ratepertrial(inds,2))/sum(cueim_ratepertrial(inds,3));
+            inds = hintim_ratepertrial(:,1)==uniquetargets(ii);
+            hintim_ratetargsplit(ii,1:sum(inds)) = hintim_ratepertrial(inds,4);
+            hintim_ratetargmean(ii) = sum(hintim_ratepertrial(inds,2))/sum(hintim_ratepertrial(inds,3));
+        end
         
         % selecting rows from sessionTimeC
         if repeat == 1
@@ -240,6 +299,13 @@ if(~isempty(dir(Args.RequiredFile)))
             data.spk_raw = spks_raw(:,1)';
             data.filtspknum = sum(consol_arr_p(:,1));
             data.fillindex = fillindex;
+
+            data.cueim_ratetargsplit = cueim_ratetargsplit; % use this for anova
+            data.cueim_ratetargmean = cueim_ratetargmean;
+            data.cueperiodbins = cueperiodbins;
+            data.hintim_ratetargsplit = hintim_ratetargsplit; % use this for anova
+            data.hintim_ratetargmean = hintim_ratetargmean;
+            data.hintperiodbins = hintperiodbins;
         elseif repeat == 2
             data.maps_raw1 = map_raw';
             data.dur_raw1 = dur_raw;
