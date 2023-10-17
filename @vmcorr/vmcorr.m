@@ -269,7 +269,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         Var1obj = Var1obj.vms;
                     case 'headdirection'
                         Var1obj = load('vmhd.mat');
-                        Var1obj = Var1obj.vmd;
+                        Var1obj = Var1obj.vmh;
                         % cd(ori);
                         % Var1obj = vmhd('auto','redo','NumShuffles',2);
                         % % Var1obj = Var1obj.data;
@@ -283,7 +283,7 @@ if(~isempty(dir(Args.RequiredFile)))
                         Var2obj = Var2obj.vms;
                     case 'headdirection'
                         Var2obj = load('vmhd.mat');
-                        Var2obj = Var2obj.vmd;
+                        Var2obj = Var2obj.vmh;
                         % cd(ori);
                         % Var2obj = vmhd('auto','redo','NumShuffles',2);
                         % Var2obj = Var2obj.data;
@@ -476,7 +476,7 @@ if(~isempty(dir(Args.RequiredFile)))
             % perfect prediction. 
             ratio = log((1+var2_array_orig_trun)./(1+var2_array_pred)); % Muller 1994 
     %         ratio = log(1+sv_array_orig_trun)./(1+sv_array_pred); % Cacucci 2004
-            dr_var2 = sum(abs(ratio),[],'omitnan')/sum(bottomterm>0); % influence of var2 on var1
+            dr_var2 = sum(abs(ratio),[],'omitnan')/sum(bottomterm>0); % influence of var1 on var2
             % Correlation between orig and predicted view maps
             vis = ~isnan(var2_array_orig_trun);
             dcorr_var2 = corr2(var2_array_orig_trun(vis),var2_array_pred(vis));
