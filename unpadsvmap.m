@@ -28,7 +28,7 @@ for jj = 1:size(padgrid_sm,1)
         temp = padgrid_sm{jj}(retrievecoords{jj}(1,1):retrievecoords{jj}(1,2),retrievecoords{jj}(2,1):retrievecoords{jj}(2,2),:);
     end
     if jj == 3 % remove the pillar fills if unpadding floor
-        temp = emptyinsidepillar(temp);
+        temp = emptyinsidepillar(temp,'place');
         % temp(unpadgrid_raw{jj} == 0) = nan;
         % temp(isnan(unpadgrid_raw{jj})) = nan;
     end

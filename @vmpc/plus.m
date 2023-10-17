@@ -69,7 +69,7 @@ else
         r.data.dur_raw = [p.data.dur_raw; q.data.dur_raw];
         r.data.dur_raw1 = [p.data.dur_raw1; q.data.dur_raw1];
         r.data.dur_raw2 = [p.data.dur_raw2; q.data.dur_raw2];
-        r.data.dur_adsm = [p.data.dur_adsm; q.data.dur_adsm];
+        % r.data.dur_adsm = [p.data.dur_adsm; q.data.dur_adsm];
         r.data.spk_raw = [p.data.spk_raw; q.data.spk_raw];
         r.data.spk_raw1 = [p.data.spk_raw1; q.data.spk_raw1];
         r.data.spk_raw2 = [p.data.spk_raw2; q.data.spk_raw2];
