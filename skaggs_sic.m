@@ -4,6 +4,7 @@ function [sic_out] = skaggs_sic(ratemaps,posmaps)
 % ratemap - b x n linearised firing rate map (b = num bins, n = num shuffles)
 % posmap - b x n linearised occupancy dur map (b = num bins, n = num shuffles)
 
+posmaps(isnan(posmaps)) = 0;
 Pi1 = posmaps./sum(posmaps,1); % consider nansum to play safe
 lambda_i = ratemaps;
 lambda_i(isnan(lambda_i)) = 0;
