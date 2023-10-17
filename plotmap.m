@@ -1,4 +1,4 @@
-function [mapG,mapGdummy,maxrate]= plotmap(mapL,objtype,varargin)
+function [mapG,mapGdummy,maxrate,c]= plotmap(mapL,objtype,varargin)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot rate map in either place, spatial view or head direction frames
@@ -23,7 +23,7 @@ ax = gca;
 if strcmp(objtype,'place') || strcmp(objtype,'view')
     axis(ax,'tight');
 
-    samesizeaxis = false;
+    samesizeaxis = true;
     if strcmp(objtype,'place') && ~samesizeaxis % Plot place without z axis
         mapG = flipud(reshape(mapL, 40, 40)');
         mapGdummy = flipud(reshape(1:1600, 40, 40)');
@@ -138,6 +138,7 @@ if strcmp(objtype,'place') || strcmp(objtype,'view')
         surf(P3_x, P3_y, PX_z, P3_TR);
         alpha 1; shading flat;
         surf(P4_x, P4_y, PX_z, P4_TL);
+        alpha 1; shading flat;
 
         axlim = max(abs([get(ax, 'xlim'), get(ax, 'ylim'),get(ax, 'zlim')])); % Make axes square around biggest value
         axis(ax,[0 axlim 0 axlim 0 axlim]);  
