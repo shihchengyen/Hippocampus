@@ -389,8 +389,8 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                     data.maps_adsm = maps_adsm(1,:);
                     data.maps_adsmsh = maps_adsm(2:end,:);
-                    data.dur_adsm = durs_adsm_grid(1,:);
-                    data.dur_adsmsh = durs_adsm_grid(2:end,:);
+                    data.dur_adsm = durs_adsm(1,:);
+                    data.dur_adsmsh = durs_adsm(2:end,:);
                     data.radii = rad_adsm_grid(1,:);
                     data.radiish = rad_adsm_grid(2:end,:);
                     data.maps_bcsm = maps_bcsm(1,:);
@@ -401,7 +401,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_smsh = maps_sm(2:end,:);
                 elseif repeat == 2
                     data.maps_adsm1 = maps_adsm(1,:);
-                    data.dur_adsm1 = durs_adsm_grid(1,:); 
+                    data.dur_adsm1 = durs_adsm(1,:); 
                     data.radii1 = rad_adsm_grid(1,:);
                     data.maps_bcsm1 = maps_bcsm(1,:);
                     data.maps_dksm1 = maps_dksm(1,:);
@@ -409,7 +409,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_smsh1 = maps_sm(2:end,:);
                 elseif repeat == 3
                     data.maps_adsm2 = maps_adsm(1,:);
-                    data.dur_adsm2 = durs_adsm_grid(1,:);
+                    data.dur_adsm2 = durs_adsm(1,:);
                     data.radii2 = rad_adsm_grid(1,:);
                     data.maps_bcsm2 = maps_bcsm(1,:);
                     data.maps_dksm2 = maps_dksm(1,:);
@@ -419,7 +419,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
             else
                 maps_adsm = maps_raw;
-                durs_adsm_grid = repmat(dur_raw,Args.NumShuffles+1,1); % HM added
+                durs_adsm = repmat(dur_raw,Args.NumShuffles+1,1); % HM added
 
             end
 
