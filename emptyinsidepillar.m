@@ -1,4 +1,4 @@
-function map = emptyinsidepillar(map)
+function map = emptyinsidepillar(map,objtype)
 
 % Removes the data of floor rate map from the inside of pillars where there should be no data
 % at all
@@ -7,15 +7,29 @@ function map = emptyinsidepillar(map)
 % is hardcoded. 
 
 % Check if map is linear or grid
-if any(size(map)==1600)
-    linear = true;
-else
-    linear = false;
-    if ~size(map,1)==40 
-        error('grid map is not of expected size');
+if strcmp(objtype,'place')
+    if any(size(map)==1600)
+        linear = true;
     else
-        % reshape to linear
-        map = gridtolinear({map},'place',[40 40]);
+        linear = false;
+        if ~size(map,1)==40 
+            error('grid map is not of expected size');
+        else
+            % reshape to linear
+            map = gridtolinear({map},'place',[40 40]);
+        end
+    end
+elseif strcmp(objtype,'view')
+    if any(size(map)==5122)
+        linear = true;
+    else
+        linear = false;
+        if ~size(map,1)==9 
+            error('grid map is not of expected size');
+        else
+            % reshape to linear
+            map = gridtolinear(map,'view',[1 1;1 1;40 40;40 40;8 160;5 32;5 32;5 32;5 32]);
+        end
     end
 end
 
@@ -53,8 +67,15 @@ pillarcoords = [331:338,... % Bottom left
                 1267:1274
                 ];
 
-map(pillarcoords,:) = nan;
+if strcmp(objtype,'view')
+    pillarcoords = pillarcoords+2;
+end
+map(pillarcoords) = nan;
 if ~linear
-    map = lineartogrid(map,'place',[40 40]);
-    map = map{1};
+    if strcmp(objtype,'place')
+        map = lineartogrid(map,'place',[40 40]);
+        map = map{1};
+    elseif strcmp(objtype,'view')
+        map = lineartogrid(reshape(map,5122,1),'view',[1 1;1 1;40 40;40 40;8 160;5 32;5 32;5 32;5 32]);
+    end
 end
