@@ -20,7 +20,7 @@ function [obj, varargout] = unityfile(varargin)
 %
 %dependencies: 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session', 'FileLineOfffset',15, 'DirName','RawData*', ...
+				'ObjectLevel','Session', 'FileLineOfffset',14, 'DirName','RawData*', ...
 				'FileName','session*txt', 'TriggerVal1',10, 'TriggerVal2',20, ...
 				'TriggerVal3',30, 'MaxTimeDiff',0.002);
 Args.flags = {'Auto','ArgsOnly'};
@@ -70,12 +70,13 @@ function obj = createObject(Args,varargin)
 
 % move to correct directory
 [pdir,cwd] = getDataOrder('Session','relative','CDNow');
-
 % need to correct timestamps by comparing to the marker timestamps
 % in rplparallel
-rp = rplparallel('auto',varargin{:});
+% rp = rplparallel('auto',varargin{:});
+% rp
+% rp.data
 % compute trial durations from the timestamps in rplparallel
-rplTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
+% rplTrialDur = diff(rp.data.timeStamps(:,2:3),1,2);
 
 % look for session_1_*.txt in RawData_T*
 rd = dir(Args.DirName);
@@ -84,7 +85,6 @@ if(~isempty(rd))
 	dlist = nptDir(Args.FileName);
 	% get entries in directory
 	dnum = size(dlist,1);
-
 	% check if the right conditions were met to create object
 	if(dnum>0)
 		% this is a valid object
@@ -94,6 +94,7 @@ if(~isempty(rd))
 		% these are object specific fields
 	    % Concatenate unity data into one matrix (accommodates data structure of trial-by-trial training sessions)
 	    length = 0;
+        Args.FileLineOfffset
 	    for i = 1:dnum % go through all 'session_' files and extract data
 	        temp = dlmread(dlist(i).name,'',Args.FileLineOfffset,0); % start reading at row 15 (skip logged parameters)
             unityData(length+1:length+size(temp,1),1:5) = temp;
@@ -162,15 +163,16 @@ if(~isempty(rd))
 			% unityTrialTime(tindices,a) = [0; cumsum(unityData(uDidx,2))]; 
 			
 			% get Unity end time for this trial
-			uet = tempTrialTime(end);
+% 			uet = tempTrialTime(end);
 			% get Ripple end time for this trial
-			ret = rplTrialDur(a);
+% 			ret = rplTrialDur(a);
 			% compute the difference
-			tdiff = uet - ret;
+% 			tdiff = uet - ret;
+            tdiff = tempTrialTime(end);
 
 			% get the starting Ripple timestamp
-			tstart = rp.data.timeStamps(a,2);
-			tend = rp.data.timeStamps(a,3);
+% 			tstart = rp.data.timeStamps(a,2);
+% 			tend = rp.data.timeStamps(a,3);
 			
 			% compare trial durations
 			% if the difference is acceptable, we will add the timestamps
@@ -267,7 +269,7 @@ else % if(~isempty(rd))
 	% create empty object
 	obj = createEmptyObject(Args);
 end % if(~isempty(rd))
-
+fprintf("cwd = %s \n", cwd);
 % move back to previous directory
 cd(cwd)
 
