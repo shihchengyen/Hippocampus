@@ -77,7 +77,7 @@ if(~isempty(dir(Args.RequiredFile)))
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
     pv = load([num2str(Args.pix) 'vmpv.mat']);
-    % pv = load('mac_vmpv.mat');
+    % pv = load('1vmpv_prefix.mat');
     % pv = load('vmpv.mat');
     pv = pv.pv;
     uma = load('umaze.mat');
@@ -138,9 +138,6 @@ if(~isempty(dir(Args.RequiredFile)))
         cueperiodbins = nan(size(cuestartinds,1),max(navstartinds-cuestartinds)+1);
         hintperiodbins = nan(size(cuestartinds,1),max(trialendinds-navstartinds)+1);
         for ii = 1:size(cuestartinds,1)
-            % if ii==124
-            %     disp('test124');
-            % end
             % Find cue image activity
             pvinds = stc(:,1) >= pv.data.unityTime(cuestartinds(ii)) & stc(:,1) < pv.data.unityTime(navstartinds(ii));
             cueperioddata = [stc(pvinds,:) spk_binned(pvinds)]; % col 5 spk
@@ -300,11 +297,11 @@ if(~isempty(dir(Args.RequiredFile)))
             data.filtspknum = sum(consol_arr_p(:,1));
             data.fillindex = fillindex;
 
-            data.cueim_ratetargsplit = cueim_ratetargsplit; % use this for anova
-            data.cueim_ratetargmean = cueim_ratetargmean;
+            data.cueim_ratetargsplit = cueim_ratetargsplit'; % use this for anova
+            data.cueim_ratetargmean = cueim_ratetargmean';
             data.cueperiodbins = cueperiodbins;
-            data.hintim_ratetargsplit = hintim_ratetargsplit; % use this for anova
-            data.hintim_ratetargmean = hintim_ratetargmean;
+            data.hintim_ratetargsplit = hintim_ratetargsplit'; % use this for anova
+            data.hintim_ratetargmean = hintim_ratetargmean';
             data.hintperiodbins = hintperiodbins;
         elseif repeat == 2
             data.maps_raw1 = map_raw';
