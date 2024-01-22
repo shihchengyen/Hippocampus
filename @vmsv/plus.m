@@ -38,20 +38,33 @@ else
 		r = p;
 		% useful fields for most objects
 		r.data.numSets = p.data.numSets + q.data.numSets;
-        r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
-        r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
+        if ~iscell(p.data.sessionTimeC)
+            r.data.sessionTimeC = {p.data.sessionTimeC; q.data.sessionTimeC};
+            r.data.stcfilt = {p.data.stcfilt; q.data.stcfilt};
+        else
+            r.data.sessionTimeC{end+1} = q.data.sessionTimeC;
+            r.data.stcfilt{end+1} = q.data.stcfilt;
+        end
         r.data.filtspknum = [p.data.filtspknum; q.data.filtspknum];
         r.data.fillindex = [p.data.fillindex; q.data.fillindex];
         r.data.discard = [p.data.discard; q.data.discard];
         r.data.rateok = [p.data.rateok; q.data.rateok];
         
 		% object specific fields
-        r.data.cueim_ratetargsplit = {p.data.cueim_ratetargsplit; q.data.cueim_ratetargsplit};
+        if ~iscell(p.data.cueim_ratetargsplit)
+            r.data.cueim_ratetargsplit = {p.data.cueim_ratetargsplit; q.data.cueim_ratetargsplit};
+            r.data.cueperiodbins = {p.data.cueperiodbins; q.data.cueperiodbins};
+            r.data.hintim_ratetargsplit = {p.data.hintim_ratetargsplit; q.data.hintim_ratetargsplit};
+            r.data.hintperiodbins = {p.data.hintperiodbins; q.data.hintperiodbins};
+        else
+            r.data.cueim_ratetargsplit{end+1} = q.data.cueim_ratetargsplit;
+            r.data.cueperiodbins{end+1} = q.data.cueperiodbins;
+            r.data.hintim_ratetargsplit{end+1} = q.data.hintim_ratetargsplit;
+            r.data.hintperiodbins{end+1} = q.data.hintperiodbins;
+        end
         r.data.cueim_ratetargmean = [p.data.cueim_ratetargmean; q.data.cueim_ratetargmean];
-        r.data.cueperiodbins = {p.data.cueperiodbins; q.data.cueperiodbins};
-        r.data.hintim_ratetargsplit = {p.data.hintim_ratetargsplit; q.data.hintim_ratetargsplit};
         r.data.hintim_ratetargmean = [p.data.hintim_ratetargmean; q.data.hintim_ratetargmean];
-        r.data.hintperiodbins = {p.data.hintperiodbins; q.data.hintperiodbins};
+        
 % 		r.data.detailed_fr = [p.data.detailed_fr; q.data.detailed_fr];
         r.data.maps_raw = [p.data.maps_raw; q.data.maps_raw];
         r.data.maps_raw1 = [p.data.maps_raw1; q.data.maps_raw1];
