@@ -1,0 +1,16 @@
+#!/bin/bash 
+  
+#PBS -P vmsv 
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=45GB 
+#PBS -j oe 
+#PBS -N vmsv
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+##--- Put your exec/application commands below ---  
+##--- For example: 
+matlab -nojvm -nodisplay -nosplash -r "vmsv('auto','save','ThresVel',1,'UseMinObs',0)"
+
+##--- END HERE --- 

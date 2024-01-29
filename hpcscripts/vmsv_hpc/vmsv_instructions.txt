@@ -1,0 +1,19 @@
+This program assumes the following has been done:
+	1. Skeletal directories have been set up according to "Using OSort" in Hippocampus Code"
+	2. Matlab paths set up on hpc
+	3. vmpv.mat in session directories, spiketrain.mat in cell directories
+
+Save the list of cells to be processed in this (Hippocampus/vmsv_hpc) folder as cells.txt, separated by newline, see example:
+	/volume1/Hippocampus/Data/picasso-misc/20181105/session01/channel019/cell01
+	/volume1/Hippocampus/Data/picasso-misc/20181101/session01/channel021/cell01
+(There must be a newline after the last line, or all entries after the first will not be read.)
+
+Check vmssubmit.pbs, ensure that the following parameters are ok:
+	queue (eg. openmp, serial. Recommend "short" for faster queues but memory limit might be a problem)
+	number of cpus (1 should be enough if not using parallel loops)
+	memory (suggested 15GB for 1px, depends on raycasting radius)
+
+Files will be sequentially transferred in and passed as jobs with the command:
+	sh vmshpc.sh
+
+For some reason (probably to do with the hpc's firewall) the completed files cannot be scp'd back into the hippocampus drive. They have to be manually transferred out once the jobs are finished.

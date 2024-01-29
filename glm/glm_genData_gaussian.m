@@ -1,10 +1,10 @@
-function genData = glm_genData(tbin_size)
+function genData = glm_genData_gaussian(tbin_size)
 %
 %   (NOTE: not tested yet, might have bugs.)
 %   Only works for 1px for now.
 %
 %   Generate time-binned glm data of simulated fields, but with actual vmpv nav data.
-%   Fields will be simulated at the specified bins below
+%   Fields will be simulated with Gaussian shape using simulate_cell_FR.m.
 %   
 
 pv = vmpv('auto');
@@ -83,90 +83,9 @@ for k = 1:size(bin_stc,1)
 end
 bin_stc(rows_remove,:) = [];
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Simulation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 'place' / 'headdirection' / 'spatialview' / 'ph' / 'pv' / 'hv' / 'phv'
-type = 'place';  
-active_mean = 5;
-background_mean = 0.5;
-
-%%% Specify field bins here %%%
-active_place = [];
-active_hd = [];
-active_view = [];
-%%%%%%%%%%%%%%%%%%%%%%
-
-switch type
-    case 'place'
-        for row = 1:size(bin_stc)
-            if contains(active_place, bin_stc(row, 2))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'headdirection'
-        for row = 1:size(bin_stc)
-            if contains(active_hd, bin_stc(row, 3))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'spatialview'
-        for row = 1:size(bin_stc)
-            if contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'ph'
-        for row = 1:size(bin_stc)
-            if contains(active_place, bin_stc(row, 2)) && contains(active_hd, bin_stc(row, 3))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            elseif contains(active_place, bin_stc(row, 2)) || contains(active_hd, bin_stc(row, 3))
-                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'pv'
-        for row = 1:size(bin_stc)
-            if contains(active_place, bin_stc(row, 2)) && contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            elseif contains(active_place, bin_stc(row, 2)) || contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'hv'
-        for row = 1:size(bin_stc)
-            if contains(active_hd, bin_stc(row, 3)) && contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            elseif contains(active_hd, bin_stc(row, 3)) || contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    case 'phv'
-        for row = 1:size(bin_stc)
-            if contains(active_place, bin_stc(row, 2)) && contains(active_hd, bin_stc(row, 3)) && contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(active_mean*tbin_size);
-            elseif contains(active_place, bin_stc(row, 2)) || contains(active_hd, bin_stc(row, 3)) || contains(active_view, bin_stc(row, 4))
-                bin_stc(row, 5) = poissrnd(sqrt(active_mean*tbin_size)*sqrt(background_mean*tbin_size));
-            else
-                bin_stc(row, 5) = poissrnd(background_mean*tbin_size);
-            end
-        end
-    otherwise
-        Error('Unrecognised type!')
-end
+% simulate spike counts for each time bin
+[lambda, cell_params] = simulate_cell_FR_custom(bin_stc(:, 2:4));
+bin_stc(:, 5) = poissrnd(lambda * tbin_size);
 
 % generate duration maps for place and view
 dstc = diff([stc(1:end,1); pv.data.rplmaxtime]);
@@ -204,10 +123,8 @@ genData.view_good_bins = view_good_bins;
 % genData.place_dur = place_dur;
 % genData.view_dur = view_dur;
 
-genData.active_place = active_place;
-genData.active_view = active_view;
+genData.cell_params = cell_params;
 
 save('genData.mat','genData','-v7.3');
 
 end
-

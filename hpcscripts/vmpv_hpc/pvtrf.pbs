@@ -1,0 +1,21 @@
+#!/bin/bash 
+  
+#PBS -P vmpv 
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=4GB 
+#PBS -j oe 
+#PBS -N vmpv_trf
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+##--- Put your exec/application commands below ---  
+##--- For example: 
+
+cat batch.txt | while read line
+do
+	temp=${line##*Data}
+	scp $line/vmpv.mat hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data$temp/${rad}vmpv.mat
+done
+
+##--- END HERE --- 

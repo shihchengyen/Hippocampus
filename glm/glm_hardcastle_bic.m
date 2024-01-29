@@ -1,4 +1,4 @@
-function hc_results = glm_hardcastle(glm_data, fc, smooth_params)
+function hc_results = glm_hardcastle_bic(glm_data, fc, smooth_params)
 %
 %   Reference: Hardcastle et al., 2017. A Multiplexed, Heterogeneous, and Adaptive Code for Navigation in Medial Entorhinal Cortex
 %   Some code adapted from github.com/GiocomoLab/ln-model-of-mec-neurons
@@ -10,7 +10,7 @@ function hc_results = glm_hardcastle(glm_data, fc, smooth_params)
 %   glm_data - uses either glm_vmpvData or glm_genData.
 %   e.g. glm_hardcastle(glm_vmpvData(0.020), 10)
 %
-%   fc - number of folds used for cross-validation.
+%   fc - number of folds used for cross-validation
 %
 %   smooth_params - 1x3 array of beta values for smoothing parameters,
 %   in the order of [ place, headdirection, view ]. Optional argument,
@@ -20,7 +20,6 @@ bin_stc = glm_data.bin_stc;
 tbin_size = glm_data.tbin_size;
 place_good_bins = glm_data.place_good_bins;
 view_good_bins = glm_data.view_good_bins;
-good_bins = { place_good_bins, view_good_bins };
 
 % Define bin geometry of the environment, in terms of:
 % 1. no of floor_width bins, 2. no of wall_height bins, 3. no of
@@ -83,7 +82,7 @@ trainFit_pure = nan(folds, num_models);
 paramsAll = cell(folds, num_models);
 
 for model_type = 1:num_models % test different models on this dataset
-
+    
     % Set bins that have no occurences to a value of -1e1 (sufficiently 
     % large negative number) during initialization of params
     bin_filter = [];
@@ -148,7 +147,7 @@ for model_type = 1:num_models % test different models on this dataset
         data{2} = train_spikes;
         init_param = param;
         % bottom part all adapted from reference github code
-        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),bin_geom,betas,good_bins), init_param, opts);
+        [param] = fminunc(@(param) ln_poisson_model_vmpv(param,data,modelType(model_type,:),bin_geom,betas), init_param, opts);
 
         % test fit
 
@@ -160,9 +159,12 @@ for model_type = 1:num_models % test different models on this dataset
         log_llh_test_mean = nansum(meanFR_test-n.*log(meanFR_test)+log(factorial(n)))/sum(n);
         log_llh_test = (-log_llh_test_model + log_llh_test_mean);
         log_llh_test = log(2)*log_llh_test;
+        
+        bic_test = sum(modelType(model_type))*log(sum(n))-2*log_llh_test;
+        bic_test_model = sum(modelType(model_type))*log(sum(n))-2*log(2)*(-log_llh_test_model);
 
-        testFit(k, model_type) = log_llh_test;
-        testFit_pure(k, model_type) = log(2)*(-log_llh_test_model);
+        testFit(k, model_type) = bic_test;
+        testFit_pure(k, model_type) = bic_test_model;
 
         % train fit
 
@@ -175,8 +177,11 @@ for model_type = 1:num_models % test different models on this dataset
         log_llh_train = (-log_llh_train_model + log_llh_train_mean);
         log_llh_train = log(2)*log_llh_train;
 
-        trainFit(k, model_type) = log_llh_train;
-        trainFit_pure(k, model_type) = log(2)*(-log_llh_train_model);
+        bic_train = sum(modelType(model_type))*log(sum(n_train))-2*log_llh_train;
+        bic_train_model = sum(modelType(model_type))*log(sum(n_train))-2*log(2)*(-log_llh_train_model);
+        
+        trainFit(k, model_type) = bic_train;
+        trainFit_pure(k, model_type) = bic_train_model;
 
         paramsAll{k, model_type} = param;
 

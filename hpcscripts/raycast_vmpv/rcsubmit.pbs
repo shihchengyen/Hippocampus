@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#PBS -P raycasting
+#PBS -q serial
+#PBS -l select=1:ncpus=1:mem=4GB
+#PBS -j oe 
+#PBS -N raycasting
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+~/VirtualMazeExe/VirtualMaze.x86_64 -screen-height 1080 -screen-width 1920 -batchmode -sessionlist batch.txt -density 220 -radius $rad -logfile logs.txt
+

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#PBS -P raycast_vmpv
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=4GB
+#PBS -j oe 
+#PBS -N raycast_vmpv_trf
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+cat batch.txt | while read line
+do
+	temp=${line##*Data}
+	scp $line/binData.hdf hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data$temp/${rad}binData.hdf
+	scp $line/vmpv.mat hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data$temp/${rad}vmpv.mat
+	if [ $rad -eq 1 ]; then
+		scp $line/unityfile_eyelink.csv $line/logs.txt $line/VirtualMazeBatchLog.txt hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data$temp/
+	fi
+done

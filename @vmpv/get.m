@@ -9,8 +9,8 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0,'SpeedLimit',0);
-Args.flags ={'ObjectLevel','AnalysisLevel'};
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0,'SpeedLimit',0,'Duration',0);
+Args.flags ={'ObjectLevel','AnalysisLevel','Duration'};
 Args = getOptArgs(varargin,Args);
 
 % set variables to default
@@ -22,6 +22,9 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
+elseif(Args.Duration)
+    % specifies 2 plots to be generated - place and view duration maps
+    r = 2;
     
 elseif(Args.SpeedLimit)
     
