@@ -35,8 +35,12 @@ second_feature_bins = hd_bins; % default 60
 third_feature_bins = viewbin_offset + 2*floor_width^2 + wall_height*wall_perim + 4*pillar_height*pillar_perim; % default 5122
 
 % Beta values for smoothing parameters
-if exist('smooth_params', 'var')
-    betas = smooth_params;
+if exist('smooth_params', 'var') && ~isempty(smooth_params)
+    if length(smooth_params) == 1
+        betas = [ smooth_params, smooth_params, smooth_params ]; % use same value for all variables if only 1 value is specified
+    else
+        betas = smooth_params;
+    end
 else
     betas = [ 3e0, 3e0, 3e0 ]; % [ beta_place, beta_hd, beta_view ], default value of 3 for each param
 end
@@ -57,6 +61,7 @@ place_filter = ones(first_feature_bins,1);
 view_filter = ones(third_feature_bins,1);
 place_filter(place_good_bins) = 0;
 view_filter(view_good_bins) = 0;
+large_negative_number = -1e3;
 
 %%% inputs done %%%
 
@@ -84,8 +89,7 @@ paramsAll = cell(folds, num_models);
 
 for model_type = 1:num_models % test different models on this dataset
 
-    % Set bins that have no occurences to a value of -1e1 (sufficiently 
-    % large negative number) during initialization of params
+    % Set bins that have no occurences to a large negative number during initialization of params
     bin_filter = [];
     if (modelType(model_type,1))
         bin_filter = [bin_filter; place_filter];
@@ -101,7 +105,7 @@ for model_type = 1:num_models % test different models on this dataset
     % Random initialization of params for the first fold, then reuse
     % optimized params from the previous fold for subsequent folds
     param = 1e-3*randn(first_feature_bins*modelType(model_type,1) + second_feature_bins*modelType(model_type,2) + third_feature_bins*modelType(model_type,3), 1); % random initialization
-    param(bin_filter) = -1e1; % set all bins that have no observations to -1e1 (sufficiently large negative number)
+    param(bin_filter) = large_negative_number; % set all bins that have no observations to -1e3 (sufficiently large negative number)
     
     disp(['Fitting model ', modelName{model_type}])
 

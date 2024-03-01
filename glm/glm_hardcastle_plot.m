@@ -13,9 +13,21 @@ if ~exist('save', 'var')
     save = false;
 end
 if ~exist('model', 'var')
-    model_names = {'phv', 'ph', 'pv', 'hv', 'place', 'headdirection', 'spatialview'};
-    model = model_names{hc_results.classification};
+    model = hc_results.classification;
 end
+if isnumeric(model)
+    model_names = {'phv', 'ph', 'pv', 'hv', 'place', 'headdirection', 'spatialview'};
+    if ~isnan(model)
+        model = model_names{model};
+    else
+        model = 'unclassified';
+    end
+end   
+
+filter_unoccupied = true;  % set unoccupied bins to NaN when plotting
+% large_negative_number = -1e3;
+large_negative_number = -1e1;
+pltRange = [0, 99];  % percentiles to set the colorbar range of the plots to, if not using axRange
 
 params = hc_results.params_consol;
 tbin_size = hc_results.tbin_size;
@@ -26,6 +38,7 @@ else
     similarity_scores = { nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1), ...
         nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1), nan(num_folds, 1) };
 end
+
 [subplot_rows, subplot_cols] = getSubplotGridSize(num_folds);
 
 %%% Specify environment bin geometry here %%%
@@ -155,13 +168,9 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(num_place_bins,1);
-        for k = 1:size(ratemap,1)
-            if place_params(fc, k) == -1e1
-                ratemap(k) = NaN;
-            else
-                ratemap(k) = exp(place_params(fc, k))/tbin_size;
-            end
+        ratemap = exp(place_params(fc,:))/tbin_size;
+        if filter_unoccupied
+            ratemap(ratemap == exp(large_negative_number)/tbin_size) = NaN;
         end
 
         subplot(subplot_rows, subplot_cols, fc);
@@ -179,7 +188,7 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         
         text('String', ['ratemap fit: ' num2str(place_fit(fc))], 'Position', [-2, -2, -0.15], ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);
-        axLims(fc, :) = caxis;
+        axLims(fc, :) = [prctile(ratemap, pltRange(1)), prctile(ratemap, pltRange(2))];  % was previously caxis
     end
     
     if exist('axRange', 'var') && ~isempty(axRange)
@@ -192,6 +201,8 @@ if strcmp(model, 'place') || strcmp(model, 'ph') || strcmp(model, 'pv') || strcm
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
     end
+        annotation('textbox', [(subplot_cols-1)/subplot_cols, 0.25/subplot_rows, 0.2, 0.1], 'String', ['mean ratemap fit: ' num2str(nanmean(place_fit))], ...
+        'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 12);
     if save
         saveas(fp, 'place_plot.fig');
     end
@@ -202,10 +213,7 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(num_hd_bins,1);
-        for k = 1:size(ratemap,1)
-            ratemap(k) = exp(hd_params(fc, k))/tbin_size;
-        end
+        ratemap = exp(hd_params(fc,:))/tbin_size;
 
         ax = subplot(subplot_rows, subplot_cols, fc);
         pax = polaraxes('Units', ax.Units, 'Position', ax.Position);
@@ -214,7 +222,7 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
         pax.ThetaDir = 'clockwise';
         set(ax, 'Visible', 'off');
         
-        axLims(fc, :) = rlim;
+        axLims(fc, :) = [prctile(ratemap, pltRange(1)), prctile(ratemap, pltRange(2))];  % was previously rlim
         text('String', ['ratemap fit: ' num2str(hd_fit(fc))], 'Position', [pi, 1.4*axLims(fc,2)], ...
             'HorizontalAlignment', 'center', 'FontSize', 11);
     end
@@ -226,6 +234,8 @@ if strcmp(model, 'headdirection') || strcmp(model, 'ph') || strcmp(model, 'hv') 
         caxRange = [0, max(axLims(:,2))];
     end
     rlim(caxRange);
+        annotation('textbox', [(subplot_cols-1)/subplot_cols, 0.25/subplot_rows, 0.2, 0.1], 'String', ['mean ratemap fit: ' num2str(nanmean(hd_fit))], ...
+        'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 12);
     if save
         saveas(fh, 'hd_plot.fig');
     end
@@ -236,13 +246,9 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
     axLims = zeros(num_folds, 2);
     
     for fc = 1:num_folds
-        ratemap = nan(num_view_bins,1);
-        for k = 1:size(ratemap,1)
-            if view_params(fc, k) == -1e1
-                ratemap(k) = NaN;
-            else
-                ratemap(k) = exp(view_params(fc, k))/tbin_size;
-            end
+        ratemap = exp(view_params(fc,:))/tbin_size;
+        if filter_unoccupied
+            ratemap(ratemap == exp(large_negative_number)/tbin_size) = NaN;
         end
         
         subplot(subplot_rows, subplot_cols, fc);
@@ -279,7 +285,7 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         text('String', ['ratemap fit: ' num2str(view_fit(fc))], 'Position', [-2, -2, -1.5], ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 11);
         hold off;
-        axLims(fc, :) = caxis;
+        axLims(fc, :) = [prctile(ratemap, pltRange(1)), prctile(ratemap, pltRange(2))];  % was previously caxis
     end
     
     if exist('axRange', 'var') && ~isempty(axRange)
@@ -292,6 +298,8 @@ if strcmp(model, 'spatialview') || strcmp(model, 'pv') || strcmp(model, 'hv') ||
         subplot(subplot_rows, subplot_cols, fc);
         caxis(caxRange);
     end
+    annotation('textbox', [(subplot_cols-1)/subplot_cols, 0.25/subplot_rows, 0.2, 0.1], 'String', ['mean ratemap fit: ' num2str(nanmean(view_fit))], ...
+        'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 12);
     if save
         saveas(fv, 'view_plot.fig');
     end

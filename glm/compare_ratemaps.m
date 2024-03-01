@@ -1,4 +1,4 @@
-function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
+function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric, reference)
     % Compares model-fitted ratemap to actual ratemap from data. Requires
     % vmpc/vmhd/vmsv objects to be in the current directory before running.
     %
@@ -6,7 +6,12 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     % hc_results - struct output of glm_hardcastle, after running
     % classification via select_best_model
     % metric - function to be used in comparing ratemaps OR string of an
-    % already implemented function, should output a single scalar value
+    % already implemented function, should take in 3 arguments (arr1:
+    % numeric array, arr2: numeric array, optArgs: cell array of optional
+    % args) and output a single scalar value
+    %
+    % Current format of optArgs: optArgs{1} - dur_map (for use in weighted
+    % cosine similarity)
     
     % List of implemented functions:
     implemented_funcs = {'cosine_similarity', 'weighted_cosine_similarity'};
@@ -15,18 +20,100 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     tbin_size = hc_results.tbin_size;
     num_folds = hc_results.num_folds;
     
-    if ischar(metric) && ismember(metric, implemented_funcs)
-        metric = str2func(metric);
+    global num_place; global num_hd; global num_view;
+    num_place = 1600;
+    num_hd = 60;
+    num_view = 5122;
+    
+    if ischar(metric)
+        if ismember(metric, implemented_funcs)
+            metric = str2func(metric);
+        else
+            error(['Invalid function name provided: ' metric])
+        end
     end
+    
+    if ~exist('reference', 'var')
+        reference = 'smoothed';  % use smoothed ratemaps from vmobj by default
+    end        
 
     % load in ratemaps from actual data
-    global vmp; global vmd; global vms;
-    load('vmpc.mat', 'vmp');
-    load('vmhd.mat', 'vmd');
-    load('vmsv.mat', 'vms');
-    actual_place = vmp.data.maps_adsm';
-    actual_hd = vmd.data.maps_sm';
-    actual_view = vms.data.maps_adsm';
+    switch reference
+        case 'raw'
+            % raw ratemaps from vmobj
+            load('vmpc.mat', 'vmp');
+            load('vmhd.mat', 'vmd');
+            load('vmsv.mat', 'vms');
+            
+            actual_place = repmat({vmp.data.maps_raw'}, num_folds, 1);
+            actual_hd = repmat({vmd.data.maps_raw'}, num_folds, 1);
+            actual_view = repmat({vms.data.maps_raw'}, num_folds, 1);
+            
+            place_dur = repmat({vmp.data.dur_raw'}, num_folds, 1);
+            hd_dur = repmat({vmd.data.dur_raw'}, num_folds, 1);
+            view_dur = repmat({vms.data.dur_raw'}, num_folds, 1);
+            
+        case 'smoothed'
+            % smoothed ratemaps from vmobj
+            load('vmpc.mat', 'vmp');
+            load('vmhd.mat', 'vmd');
+            load('vmsv.mat', 'vms');
+            
+            actual_place = repmat({vmp.data.maps_adsm'}, num_folds, 1);
+            actual_hd = repmat({vmd.data.maps_sm'}, num_folds, 1);
+            actual_view = repmat({vms.data.maps_adsm'}, num_folds, 1);
+            
+            place_dur = repmat({vmp.data.dur_raw'}, num_folds, 1);
+            hd_dur = repmat({vmd.data.dur_raw'}, num_folds, 1);
+            view_dur = repmat({vms.data.dur_raw'}, num_folds, 1);
+            
+        case 'training'
+            % raw ratemaps from training fold
+            if exist('vmpvData.mat', 'file')
+                load('vmpvData.mat', 'vmpvData');
+            else
+                vmpvData = glm_vmpvData(tbin_size);
+            end
+            bin_stc = vmpvData.bin_stc;
+            
+            actual_place = repmat({zeros(num_place, 1)}, num_folds, 1);
+            actual_hd = repmat({zeros(num_hd, 1)}, num_folds, 1);
+            actual_view = repmat({zeros(num_view, 1)}, num_folds, 1);
+            
+            place_dur = repmat({zeros(num_place, 1)}, num_folds, 1);
+            hd_dur = repmat({zeros(num_hd, 1)}, num_folds, 1);
+            view_dur = repmat({zeros(num_view, 1)}, num_folds, 1);
+            
+            fold_edges = round(linspace(1,size(bin_stc, 1)+1, (5*num_folds)+1));
+            for k = 1:num_folds
+                % Get slice indices for training data for the current fold
+                test_ind  = [fold_edges(k):fold_edges(k+1)-1 fold_edges(k+num_folds):fold_edges(k+num_folds+1)-1 ...
+                    fold_edges(k+2*num_folds):fold_edges(k+2*num_folds+1)-1 fold_edges(k+3*num_folds):fold_edges(k+3*num_folds+1)-1 ...
+                    fold_edges(k+4*num_folds):fold_edges(k+4*num_folds+1)-1];
+                train_ind = setdiff(1:size(bin_stc, 1), test_ind);
+                bin_stc_fold = bin_stc(train_ind,:);
+                
+                for i = 1:size(bin_stc_fold, 1)
+                    % Fill in spike count and duration maps for the current fold
+                    actual_place{k}(bin_stc_fold(i,2)) = actual_place{k}(bin_stc_fold(i,2)) + bin_stc_fold(i,5);
+                    actual_hd{k}(bin_stc_fold(i,3)) = actual_hd{k}(bin_stc_fold(i,3)) + bin_stc_fold(i,5);
+                    actual_view{k}(bin_stc_fold(i,4)) = actual_view{k}(bin_stc_fold(i,4)) + bin_stc_fold(i,5);
+
+                    place_dur{k}(bin_stc_fold(i,2)) = place_dur{k}(bin_stc_fold(i,2)) + tbin_size;
+                    hd_dur{k}(bin_stc_fold(i,3)) = hd_dur{k}(bin_stc_fold(i,3)) + tbin_size;
+                    view_dur{k}(bin_stc_fold(i,4)) = view_dur{k}(bin_stc_fold(i,4)) + tbin_size;
+                end
+                
+                % Calculate average firing rate per bin, replace divide-by-zero results with NaN
+                actual_place{k} = actual_place{k} ./ place_dur{k};
+                actual_place{k}(isinf(actual_place{k})) = NaN;
+                actual_hd{k} = actual_hd{k} ./ hd_dur{k};
+                actual_hd{k}(isinf(actual_hd{k})) = NaN;
+                actual_view{k} = actual_view{k} ./ view_dur{k};
+                actual_view{k}(isinf(actual_view{k})) = NaN;
+                
+            end
+    end
     
     % create 1x7 cell array to store all results
     similarity_scores = cell(7,1);
@@ -36,24 +123,24 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
         switch model
             case 1  % phv
                 model_params = cell2mat(params(:, 1)')';
-                place_params = model_params(:, 1:1600);
-                hd_params = model_params(:, 1601:1600+60);
-                view_params = model_params(:, 1601+60:1600+60+5122);
+                place_params = model_params(:, 1:num_place);
+                hd_params = model_params(:, num_place+1:num_place+num_hd);
+                view_params = model_params(:, num_place+num_hd+1:end);
 
             case 2  % ph
                 model_params = cell2mat(params(:, 2)')';
-                place_params = model_params(:, 1:1600);
-                hd_params = model_params(:, 1601:1600+60);
+                place_params = model_params(:, 1:num_place);
+                hd_params = model_params(:, num_place+1:end);
 
             case 3  % pv
                 model_params = cell2mat(params(:, 3)')';
-                place_params = model_params(:, 1:1600);
-                view_params = model_params(:, 1601:1600+5122);
+                place_params = model_params(:, 1:num_place);
+                view_params = model_params(:, num_place+1:end);
 
             case 4  % hv
                 model_params = cell2mat(params(:, 4)')';
-                hd_params = model_params(:, 1:60);
-                view_params = model_params(:, 61:60+5122);
+                hd_params = model_params(:, 1:num_hd);
+                view_params = model_params(:, num_hd+1:end);
 
             case 5  % place
                 place_params = cell2mat(params(:, 5)')';
@@ -74,7 +161,7 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
                 for k = 1:size(model_place,1)
                     model_place(k) = exp(place_params(fc, k))/tbin_size;
                 end
-                place_similarity(fc) = metric(model_place, actual_place);
+                place_similarity(fc) = metric(model_place, actual_place{fc}, {place_dur{fc}});
             end
         end
 
@@ -85,7 +172,7 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
                 for k = 1:size(model_hd,1)
                     model_hd(k) = exp(hd_params(fc, k))/tbin_size;
                 end
-                hd_similarity(fc) = metric(model_hd, actual_hd);
+                hd_similarity(fc) = metric(model_hd, actual_hd{fc}, {hd_dur{fc}});
             end
         end
 
@@ -96,7 +183,7 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
                 for k = 1:size(model_view,1)
                     model_view(k) = exp(view_params(fc, k))/tbin_size;
                 end
-                view_similarity(fc) = metric(model_view, actual_view);
+                view_similarity(fc) = metric(model_view, actual_view{fc}, {view_dur{fc}});
             end
         end
 
@@ -124,22 +211,12 @@ function [similarity_scores, hc_results] = compare_ratemaps(hc_results, metric)
     
 end
 
-function score = cosine_similarity(arr1, arr2)
+function score = cosine_similarity(arr1, arr2, optArgs)
     score = nansum(arr1.*arr2)/(sqrt(nansum(arr1.^2))*sqrt(nansum(arr2.^2)));
 end
 
-function score = weighted_cosine_similarity(arr1, arr2)
-    switch length(arr1)
-        case 1600  % place
-            global vmp;
-            dur_map = vmp.data.dur_raw;
-        case 60  % hd
-            global vmd;
-            dur_map = vmd.data.dur_raw;
-        case 5122  % view
-            global vms;
-            dur_map = vms.data.dur_raw;
-    end
+function score = weighted_cosine_similarity(arr1, arr2, optArgs)
+    dur_map = optArgs{1};
     weight = dur_map / nansum(dur_map);
     score = nansum(weight.*arr1.*arr2)/(sqrt(nansum(arr1.^2))*sqrt(nansum(arr2.^2)));
 end
