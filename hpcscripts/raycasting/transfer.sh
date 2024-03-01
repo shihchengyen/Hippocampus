@@ -7,7 +7,7 @@ do
 	temp=${line##*Data}
 	echo Transferring files from: ~/hpctmp/Data$temp
 	cd ~/hpctmp/Data$temp
-	scp binData.hdf hippocampus@cortex.nus.edu.sg:$line/${rad}binData.hdf 
+	scp ${rad}binData.csv hippocampus@cortex.nus.edu.sg:$line/${rad}binData.csv
 	scp unityfile_eyelink.csv logs.txt VirtualMazeBatchLog.txt hippocampus@cortex.nus.edu.sg:$line/ 
 done
 cd $curr

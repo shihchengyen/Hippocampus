@@ -9,7 +9,7 @@ do
 	dirpath=~/hpctmp/Data$temp
 	mkdir -p $dirpath
 	echo hpc session directory: $dirpath
-	for file in binData.hdf rplparallel.mat umaze.mat
+	for file in 1binData.csv rplparallel.mat umaze.mat
 	do
 		if [ ! -f $dirpath/$file ]; then
 			scp hippocampus@cortex.nus.edu.sg:$line/$file $dirpath
