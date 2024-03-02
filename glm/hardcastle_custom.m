@@ -3,7 +3,7 @@
 % containing the classification of the given cells, as well as the p-values
 % of all significance tests run for different models on the cells.
 
-function hardcastle_custom(tbin_size, fc, cell_list, redo)
+function hardcastle_custom(tbin_size, fc, filename, redo)
     % PARAMETERS:
     % tbin_size - size of time bin (in seconds) for binning of vmpv data.
     % fc - number of folds for cross-validation in glm_hardcastle.
@@ -14,7 +14,9 @@ function hardcastle_custom(tbin_size, fc, cell_list, redo)
     end
 
     % Read in list of cells from txt file
-    filename = 'cell_list.txt';  % should be in the directory level containing all day folders
+    if ~exist('filename', 'var')
+        filename = 'cell_list.txt';  % should be in the directory level containing all day folders
+    end
     cell_list = textread(filename, '%s', 'delimiter', '\n');
     
     curr_dir = pwd;

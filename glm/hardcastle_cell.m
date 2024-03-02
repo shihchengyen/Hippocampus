@@ -48,7 +48,7 @@ function hardcastle_cell(tbin_size, fc, redo)
 
     % Compare fitted model to ratemaps from actual data using cosine
     % similarity score
-    [~, hc_results] = compare_ratemaps(hc_results, 'cosine_similarity');
+    [~, hc_results] = compare_ratemaps(hc_results, 'cosine_similarity', 'smoothed');
 
     % Move results into a labelled directory
     if ~exist(save_dir, 'dir')
