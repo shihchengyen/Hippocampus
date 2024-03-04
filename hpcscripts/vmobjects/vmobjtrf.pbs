@@ -8,5 +8,5 @@
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
-dest=/volume1/Hippocampus/Data${dir##*Data}
+dest=/picasso-misc-folder-link${dir##*picasso-misc}
 scp $dir/vmpc.mat $dir/vmsv.mat $dir/vmhd.mat hippocampus@cortex.nus.edu.sg:$dest

@@ -14,8 +14,8 @@ cd $PBS_O_WORKDIR;   ## This line is needed, do not modify.
 
 cat batch.txt | while read line
 do
-	temp=${line##*Data}
-	scp $line/vmpv.mat hippocampus@cortex.nus.edu.sg:/volume1/Hippocampus/Data$temp/${rad}vmpv.mat
+	temp=${line##*picasso-misc}
+	scp $line/vmpv.mat hippocampus@cortex.nus.edu.sg:/picasso-misc-folder-link$temp/${rad}vmpv.mat
 done
 
 ##--- END HERE --- 
