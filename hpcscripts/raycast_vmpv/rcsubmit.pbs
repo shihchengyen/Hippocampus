@@ -2,11 +2,13 @@
 
 #PBS -P raycasting
 #PBS -q serial
-#PBS -l select=1:ncpus=1:mem=4GB
+#PBS -l select=1:ncpus=1:mem=10GB
 #PBS -j oe 
 #PBS -N raycasting
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
-~/VirtualMazeExe/VirtualMaze.x86_64 -screen-height 1080 -screen-width 1920 -batchmode -sessionlist batch.txt -density 220 -radius $rad -logfile logs.txt
+#2.062 is ~= 1/0.485
+
+~/VirtualMazeExe/VirtualMaze.x86_64 -density 2.062 -radius 5 -screenx 32 -screeny 58.5 -resx 1920 -resy 1080 -disttoscreen 68 -batchmode -sessionlist batch.txt - -logfile logs.txt
 
