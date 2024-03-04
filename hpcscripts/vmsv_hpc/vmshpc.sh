@@ -8,6 +8,7 @@ do
 	echo hpc cell directory: ~/hpctmp/Data$celldir
     spiketrainFILE=~/hpctmp/Data"$celldir"/spiketrain.mat
     if [ ! -f $spiketrainFILE ]; then
+	echo "Copying spiketrain from hippocampus"
         scp hippocampus@cortex.nus.edu.sg:$line/spiketrain.mat ~/hpctmp/Data$celldir
     fi
     
