@@ -1,17 +1,38 @@
-#!/bin/bash 
-  
-#PBS -P vmpv 
+#!/bin/bash
+
+#PBS -P vmpv
 #PBS -q short
-#PBS -l select=1:ncpus=1:mem=12GB 
-#PBS -j oe 
+#PBS -l select=1:ncpus=1:mem=10GB
+#PBS -j oe
 #PBS -N vmpv
-###  -N Job_Name: set filename for standard output/error message.
+### -N Job_Name: set filename for standard output/error message.
 
-cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+cd $PBS_O_WORKDIR || exit 1  ## This line is needed, do not modify.
 
-##--- Put your exec/application commands below ---  
-##--- For example: 
+##--- Put your exec/application commands below ---
+##--- For example:
 
+if [[ -z "$file_name" ]]; then
+    echo "file_name arg not supplied."
+    exit 1
+fi
+
+filebasename=$(basename "$file_name" .csv) # strip out the base name minus file extension (.csv)
+filedirname=$(dirname "$file_name")
+firstchar=${filebasename:0:1}
+umazename="$filedirname/umaze.mat"
+rplname="$filedirname/rplparallel.mat"
+mkdir -p "$filebasename" # now a dir with filebasename exists (temp folder)
+
+cp "$file_name" "$filebasename/binData.csv" # move it inside and rename
+cp "$umazename" "$filebasename/umaze.mat"
+cp "$rplname" "$filebasename/rplparallel.mat"
+cd "$filebasename" || exit 1
+PWD=$(pwd)
+echo "cd-ed into $PWD and running matlab"
 matlab2016b2 -nojvm -nodisplay -nosplash -r "vmpv('auto','redo','save','MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01)"
+rm binData.csv
+rm umaze.mat
+rm rplparallel.mat
+mv vmpv.mat "../${firstchar}vmpv.mat"
 
-##--- END HERE --- 
