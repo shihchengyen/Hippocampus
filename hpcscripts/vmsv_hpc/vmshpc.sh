@@ -22,11 +22,9 @@ do
     mkdir -p ~/hpctmp/Data$sessdir
     echo hippocampus session directory: $hippsessdir
     echo hpc session directory: ~/hpctmp/Data$sessdir
-    vmpvFILE="${HOME}/hpctmp/Data${sessdir}/${vmpv_name}"
-    echo vmpvfile : $vmpvFILE 
+    vmpvFILE=~/hpctmp/Data"$sessdir"/vmpv.mat
     if [ ! -f $vmpvFILE ]; then
-	
-        scp hippocampus@cortex.nus.edu.sg:"${hippsessdir}/${vmpv_name}" "${vmpvFILE}"
+        scp hippocampus@cortex.nus.edu.sg:$hippsessdir/1vmpv.mat ~/hpctmp/Data$sessdir/vmpv.mat
     fi
     
     curr=$(pwd)
