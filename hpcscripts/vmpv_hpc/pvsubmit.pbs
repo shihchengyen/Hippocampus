@@ -19,11 +19,11 @@ fi
 
 filebasename=$(basename "$file_name" .csv) # strip out the base name minus file extension (.csv)
 filedirname=$(dirname "$file_name")
-firstchar=${filebasename:0:1}
+prefix=$(echo "$filebasename" | awk -F'bin' '{print $1}')
 umazename="$filedirname/umaze.mat"
 rplname="$filedirname/rplparallel.mat"
 mkdir -p "$filebasename" # now a dir with filebasename exists (temp folder)
-
+echo $umazename
 cp "$file_name" "$filebasename/binData.csv" # move it inside and rename
 cp "$umazename" "$filebasename/umaze.mat"
 cp "$rplname" "$filebasename/rplparallel.mat"
@@ -34,5 +34,6 @@ matlab2016b2 -nojvm -nodisplay -nosplash -r "vmpv('auto','redo','save','MinObsPl
 rm binData.csv
 rm umaze.mat
 rm rplparallel.mat
-mv vmpv.mat "../${firstchar}vmpv.mat"
-
+mv vmpv.mat "../${prefix}vmpv.mat"
+cd ..
+rmdir -p "$filebasename"

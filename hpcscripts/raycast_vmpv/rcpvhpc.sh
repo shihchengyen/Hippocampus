@@ -19,10 +19,10 @@ do
 	cd $dirpath
 	echo $dirpath > batch.txt
 		rcjob=$(qsub -v rad=$rad $curr/rcsubmit.pbs)
-		1pvjob=$(qsub -W depend=afterok:$rcjob -v file_name=1binData.csv $curr/pvsubmit.pbs)
-		mvpvjob=$(qsub -W depend=afterok$rcjob -v file_name=mbinData.csv $curr/pvsubmit.pbs)
-		qsub -W depend=afterok:$1pvjob -v rad=$rad $curr/rcpvtrf.pbs
-		qsub -W depend=afterok:$mpvjob -v rad=$rad $curr/rcpvtrf.pbs
+		onepvjob=$(qsub -W depend=afterok:$rcjob -v file_name=1binData.csv $curr/pvsubmit.pbs)
+		mpvjob=$(qsub -W depend=afterok:$rcjob -v file_name=mbinData.csv $curr/pvsubmit.pbs)
+		qsub -W depend=afterok:${onepvjob} -v rad=$rad $curr/rcpvtrf.pbs
+		qsub -W depend=afterok:${mpvjob} -v rad=$rad $curr/rcpvtrf.pbs
 	echo Changing back to working dir: $curr
 	cd $curr	
 done

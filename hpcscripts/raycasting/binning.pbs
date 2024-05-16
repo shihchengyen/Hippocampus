@@ -9,5 +9,5 @@
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
 #2.062 is ~= 1/0.485
-
-python $curr/pyBinning/pyVirtualMazeBinning/src/main.py --path_to_list batch.txt
+echo $curr
+python $curr/pyBinning/pyVirtualMazeBinning/src/main.py --single_path $single_path --single_save_path $single_save_path --multi_path $multi_path --multi_save_path $multi_save_path
