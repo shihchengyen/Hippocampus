@@ -12,7 +12,7 @@ ssh_address="$2"
 
 # SSH and execute the command
 ssh "$ssh_address" << EOF | while IFS= read -r line; do
-    ls -1 -d ${dir_name}/array*/channel*/cell* -f
+    ls -1 -d /${dir_name}/array*/channel*/cell* -f
 EOF
     echo "$line"
 done

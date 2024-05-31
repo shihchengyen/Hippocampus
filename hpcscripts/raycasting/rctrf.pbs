@@ -11,7 +11,7 @@ cd $PBS_O_WORKDIR;   ## This line is needed, do not modify.
 cat batch.txt | while read line
 do
 	temp=${line##*picasso-misc}
-	scp $line/${rad}binData.csv hippocampus@cortex.nus.edu.sg:/picasso-misc-folder-link$temp/${rad}binData.csv
+	scp $line/${rad}binData.csv hippocampus@cortex.nus.edu.sg:~/picasso-misc-folder-link$temp/${rad}binData.csv
 	if [ $rad -eq 1 ]; then
 		scp $line/unityfile_eyelink.csv $line/logs.txt $line/VirtualMazeBatchLog.txt hippocampus@cortex.nus.edu.sg:/picasso-misc-folder-link$temp/
 	fi

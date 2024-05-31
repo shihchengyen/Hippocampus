@@ -10,12 +10,14 @@
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
 ##--- Put your exec/application commands below ---  
-##--- For example: 
+##--- For example:
 
-cat batch.txt | while read line
+filebasename=$(basename "$file_name" .csv) # strip out the base name minus file extension (.csv)
+filedirname=$(dirname "$file_name")
+prefix=$(echo "$filebasename" | awk -F'bin' '{print $1}')
+
 do
-	temp=${line##*picasso-misc}
-	scp $line/vmpv.mat hippocampus@cortex.nus.edu.sg:/picasso-misc-folder-link$temp/${rad}vmpv.mat
+    scp $file_name hippocampus@cortex.nus.edu.sg:~/picasso-misc-folder-link$temp/${prefix}vmpv.mat
 done
 
 ##--- END HERE --- 
