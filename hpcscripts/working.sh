@@ -34,10 +34,10 @@ while IFS= read -r line || [ -n "$line" ]; do
 
     echo "Setting up vmpv"
     pvjob1=$(qsub -v file_name=1binData.csv -W depend=afterok:"$binnerjob"  -N "1_pv" "$curr/vmpv_hpc/pvsubmit.pbs")
-    qsub -W depend=afterok:"$pvjob1" -v rad="$rad" "$curr/vmpv_hpc/pvtrf.pbs"
+    qsub -W depend=afterok:"$pvjob1" -v prefix="$prefix" "$curr/vmpv_hpc/pvtrf.pbs"
     echo "Setting vmpv ${multi_output_file}"
     pvjobm=$(qsub -v file_name=$multi_save_file -W depend=afterok:"$binnerjob" -N "${rad}_pv" "$curr/vmpv_hpc/pvsubmit.pbs")
-    qsub -W depend=afterok:"$pvjobm" -v rad="$rad" "$curr/vmpv_hpc/pvtrf.pbs"
+    qsub -W depend=afterok:"$pvjobm" -v prefix="$prefix" "$curr/vmpv_hpc/pvtrf.pbs"
     echo Changing back to working dir: "$curr"
     cd "$curr"
 
@@ -61,8 +61,11 @@ while IFS= read -r line || [ -n "$line" ]; do
         echo "PV job : $pvjobm , $pvjob1" 
         mvms=$(qsub -v prefix="$prefix" -N "${prefix}vms" -W depend=afterok:"$pvjobm" $curr/vmsv_hpc/vmssubmit.pbs) 
         singlevms=$(qsub -v prefix="" -N "1vms" -W depend=afterok:"$pvjob1" $curr/vmsv_hpc/vmssubmit.pbs) 
-        mplot=$(qsub -v prefix="$prefix" -N "${prefix}plot" -W depend=afterok:"$mvms" "$curr/vmsv_hpc/plotvms.pbs")
-        singleplot=$(qsub -v prefix="" -N "singleplot" -W depend=afterok:"$singlevms" "$curr/vmsv_hpc/plotvms.pbs")
+        qsub -W depend=afterok:"$mvms" -v prefix="$prefix" "$curr/vmsv_hpc/svtrf.pbs"
+        qsub -W depend=afterok:"$singlevms" -v prefix="$prefix" "$curr/vmsv_hpc/svtrf.pbs"
+	### does not seem to be working for some reason
+	### mplot=$(qsub -v prefix="$prefix" -N "${prefix}plot" -W depend=afterok:"$mvms" "$curr/vmsv_hpc/plotvms.pbs")
+        ### singleplot=$(qsub -v prefix="" -N "singleplot" -W depend=afterok:"$singlevms" "$curr/vmsv_hpc/plotvms.pbs")
         echo Changing back to working dir: $curr
         cd $curr
      done

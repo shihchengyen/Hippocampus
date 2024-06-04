@@ -1,12 +1,12 @@
-1. Contents of raycasting folder are different from the one currently on the repository (as of 29/06/2021). It differs in that the sh script no longer transfers back to the hippocampus drive from the hpc, because the transfer fails for some reason (might be due to some firewall).
-The other folders perform batch processing for each object respectively.
+1. To run, set up the following files correctly :
+    - "sessions.txt" which should specify the path to the sessions
+    - "radii.txt" which should specify the angular radius to use
 
-2. checkdone_hpc.sh can be run on the hpc after your jobs are complete to check if any of the objects are missing (might happen when a job fails due to insufficient memory).
+2. Then, run multiple_r_all.sh
 
 3. When processing is done on the hpc, the 'origin' field of the objects will reflect the directory of your hpc folders. name_change.m can be used to change the 'origin' field if desired, just make sure to check that the to_remove and to_replace variables are correct, and the directory that is cd'd to contains the files you wish to change.
 
 4. After you transfer the done files from the hpc into a temporary folder on a workstation, move_download.sh can be used to transfer those files to the respective directories on the hippocampus drive.
 
 It would be a good idea to check the .sh scripts before running, and make sure the directories, etc. are correct.
-For vmpc and vmsv, if you wish to use the 100px or 500px vmpv for processing, then the 100px/500px vmpv should be transferred in the vmphpc.sh/vmshpc.sh scripts.
-Accordingly, the files should be transferred to 100px or 500px folders (and not the 1px) in move_download.sh.
+
