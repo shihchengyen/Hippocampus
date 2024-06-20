@@ -1,0 +1,3 @@
+[submodule "hpcscripts/raycasting/pyBinning/pyVirtualMazeBinning"]
+	path = hpcscripts/raycasting/pyBinning/pyVirtualMazeBinning
+	url = https://github.com/xavierpok/pyVirtualMazeBinning.git
