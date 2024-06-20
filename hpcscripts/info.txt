@@ -1,0 +1,12 @@
+1. To run, set up the following files correctly :
+    - "sessions.txt" which should specify the path to the sessions
+    - "radii.txt" which should specify the angular radius to use
+
+2. Then, run multiple_r_all.sh
+
+3. When processing is done on the hpc, the 'origin' field of the objects will reflect the directory of your hpc folders. name_change.m can be used to change the 'origin' field if desired, just make sure to check that the to_remove and to_replace variables are correct, and the directory that is cd'd to contains the files you wish to change.
+
+4. After you transfer the done files from the hpc into a temporary folder on a workstation, move_download.sh can be used to transfer those files to the respective directories on the hippocampus drive.
+
+It would be a good idea to check the .sh scripts before running, and make sure the directories, etc. are correct.
+

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#PBS -P vmobjects
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=4GB
+#PBS -j oe 
+#PBS -N vmpobj_trf
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+dest=/picasso-misc-folder-link${dir##*picasso-misc}
+scp $dir/vmpc.mat $dir/vmsv.mat $dir/vmhd.mat hippocampus@cortex.nus.edu.sg:$dest

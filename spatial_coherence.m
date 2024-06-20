@@ -65,7 +65,7 @@ for ii = 1:size(gridsize,1)
             sham = map;
             sham(aa,bb) = nan;
             map_neighbor = sham(index1,index2);
-            rate_neighbor_pad(aa,bb) = mean(map_neighbor,"all",'omitnan');
+            rate_neighbor_pad(aa,bb) = mean(map_neighbor(:),'omitnan');
         end
     end
     rates_neighbor_pad{ii} = rate_neighbor_pad;
@@ -84,6 +84,6 @@ end
 
 rate_neighbor = gridtolinear(rate_neighbor,spatialvar,gridsize);
 vis = ~isnan(linmap);
-rmat = corrcoef(linmap(vis),rate_neighbor(vis),'Rows','Complete');
+rmat = corrcoef(linmap(vis),rate_neighbor(vis),'rows','complete');
 r = rmat(2,1);
 c = atanh(r);

@@ -1,0 +1,15 @@
+#!/bin/bash 
+  
+#PBS -P plotfig
+#PBS -q serial
+#PBS -l select=1:ncpus=1:mem=10GB 
+#PBS -j oe 
+#PBS -N plotfig
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+##--- Put your exec/application commands below ---  
+##--- For example:
+matlab2016b2 -nodisplay -nosplash -r "load('${prefix}vmsv.mat','-mat');plotmap(vms.data.maps_adsm,'view');savefig('${prefix}_vmsv_adsm.fig')"
+##--- END HERE --- 

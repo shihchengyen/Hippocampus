@@ -1,0 +1,23 @@
+#!/bin/bash 
+  
+#PBS -P vmpv 
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=4GB 
+#PBS -j oe 
+#PBS -N vmpv_trf
+###  -N Job_Name: set filename for standard output/error message.
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+##--- Put your exec/application commands below ---  
+##--- For example:
+
+filebasename=$(basename "$file_name" .csv) # strip out the base name minus file extension (.csv)
+filedirname=$(dirname "$file_name")
+prefix=$(echo "$filebasename" | awk -F'bin' '{print $1}')
+
+do
+    scp $file_name hippocampus@cortex.nus.edu.sg:~/picasso-misc-folder-link$temp/${prefix}vmpv.mat
+done
+
+##--- END HERE --- 

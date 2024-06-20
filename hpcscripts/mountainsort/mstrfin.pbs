@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#PBS -P mountainsort
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=4GB
+#PBS -j oe 
+#PBS -N mountainsort_trfin
+
+cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
+
+cat channels.txt | while read line
+do
+	dirpath=~/hpctmp/Data${line##*Data}
+	mkdir -p $dirpath
+	scp hippocampus@cortex.nus.edu.sg:$line/rplhighpass.mat $dirpath
+done

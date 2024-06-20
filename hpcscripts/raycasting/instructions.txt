@@ -1,0 +1,24 @@
+This program assumes the following has been done:
+	1. VirtualMaze has been set up according to "VirtualMaze for HPC" in "Hippocampus Code".
+	2. VirtualMaze is located in ~/ on HPC
+	3. HPC VirtualMaze folder renamed to VirtualMazeExe (to prevent confusion with source folder)
+	4. Skeletal directories have been set up according to "Using OSort" in Hippocampus Code"
+
+Save the list of sessions to be processed in this (Hippocampus/raycasting) folder as sessions.txt, separated by newline, see example:
+	/volume1/Hippocampus/Data/picasso-misc/20181105/session01
+	/volume1/Hippocampus/Data/picasso-misc/20181101/session01 
+
+Check rcsubmit.pbs, ensure that the following parameters are ok:
+	queue (eg. openmp, serial)
+	number of cpus (suggested 5, depends on queue)
+	memory (suggested 15GB, most queues can handle)
+
+Files will be sequentially transferred in and passed as jobs with the command:
+	sh rchpc.sh
+
+Optional:
+Update sessions in trackerlist.txt (for tracking purposes)
+To get a live update of progress, run:
+	watch -n 1 'qlist; sh jobtracker.sh'
+
+
