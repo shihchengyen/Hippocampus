@@ -14,7 +14,7 @@ function [obj, varargout] = vmsv(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'pix',1,...
+				'GridSteps',40, 'Prefix','',...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 0, 'SmoothType', 'Adaptive', 'SelectiveCriteria','SIC',...
@@ -34,7 +34,8 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','AdaptiveSmooth','UseMinObs','Th
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmsv';
-Args.matname = [Args.classname '.mat'];
+Args.Prefix
+Args.matname = [Args.Prefix Args.classname '.mat'];
 Args.matvarname = 'vms';
 
 % To decide the method to create or load the object
@@ -76,9 +77,9 @@ if(~isempty(dir(Args.RequiredFile)))
     %%%%%%%
     % Patch %%%%%%
     cd ..; cd ..; cd ..;
-    pv = load([num2str(Args.pix) 'vmpv.mat']);
+    % pv = load([num2str(Args.pix) 'vmpv.mat']);
     % pv = load('1vmpv_prefix.mat');
-    % pv = load('vmpv.mat');
+    pv = load(strcat(Args.Prefix,'vmpv.mat'));
     pv = pv.pv;
     uma = load('umaze.mat');
     uma = uma.uma;
@@ -660,7 +661,6 @@ if(~isempty(dir(Args.RequiredFile)))
             sig2noise = spatial_sig2noise(map_raw);
     
             % Calculate coherence using raw map
-    
             coherence = spatial_coherence('view',binDepths,map_raw,1); % raw
             coherence_sm = spatial_coherence('view',binDepths,lambda_i(1,:),1); % adsm, cheat
 

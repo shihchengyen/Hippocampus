@@ -1,4 +1,4 @@
-function [mapG,mapGdummy]= plotgridmap(mapL,objtype)
+function [axRange,mapG,mapGdummy]= plotgridmap(mapL,objtype)
 
 % Insert floor place map into larger 3D view setting
 if strcmp(objtype,'place')
@@ -101,3 +101,7 @@ alpha 1; shading flat;
 view(-35,20);
 colormap jet;
 colorbar;
+
+axRange = caxis;
+% axRange(1) = 0;
+caxis(axRange);

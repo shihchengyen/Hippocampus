@@ -1,0 +1,16 @@
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array01/channel006/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array01/channel021/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array01/channel029/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array02/channel045/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array02/channel051/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180821/session01/array03/channel076/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array01/channel006/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array01/channel021/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array01/channel021/cell02
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array01/channel029/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array02/channel034/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array02/channel038/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array02/channel038/cell02
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array02/channel045/cell01
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array02/channel045/cell02
+/volume1/Hippocampus/Data/picasso-misc/20180816/session01/array03/channel093/cell01

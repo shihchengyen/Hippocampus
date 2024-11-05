@@ -14,7 +14,7 @@ function [obj, varargout] = vmpv(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','pix',1,'RequiredFile','1binData.csv', ...
+				'ObjectLevel','Session','pix',1,'RequiredFile','binData.csv', ...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -75,7 +75,7 @@ if(~isempty(dir(Args.RequiredFile)))
     % viewdata = h5read('100binData.hdf','/data');
     % viewdata = viewdata';
     % From csv file
-    viewdata = readtable('1binData.csv');
+    viewdata = readtable('binData.csv');
     viewdata = table2array(viewdata);
     cd(ori);
 
