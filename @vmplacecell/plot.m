@@ -1,6 +1,6 @@
 function [obj, varargout] = plot(obj,varargin)
 %@vmplacecell/plot Plot function for a vmplacecell object.
-%   OBJ = plot(OBJ) creates an imagesc plot for the vmplacecell object. The
+%   OBJ = plot(OBJ,1,'RawMap') creates an imagesc plot for the vmplacecell object. The
 %   map shows the mean firing rates at each grid position.
 %
 %   InspectGUI(OBJ) creates an imagesc plot for a vmplacecell object
