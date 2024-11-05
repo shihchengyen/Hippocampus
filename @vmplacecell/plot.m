@@ -15,8 +15,8 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Errorbar',0, ...
-          'SIC',0,'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4);
-Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle'};
+          'SIC',0,'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4,'RawMap',0,'SmoothedMap',0);
+Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle','RawMap','SmoothedMap'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -74,7 +74,14 @@ if(~isempty(Args.NumericArguments))
         ylabel('95th percentile SIC')
     else  % if(Args.Errorbar)
         gSteps = obj.data.gridSteps;
-        imagesc(reshape(obj.data.meanFRs(:,n),gSteps,gSteps));
+        if Args.RawMap
+            y = obj.data.maps_raw(:,n);
+        elseif Args.SmoothedMap
+            y = obj.data.maps_adsmooth(:,n);
+        else
+            error('No map specified.');
+         end
+        imagesc(reshape(y,gSteps,gSteps));
         colorbar
     end  % if(Args.Errorbar)
 
