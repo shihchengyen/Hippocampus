@@ -82,7 +82,15 @@ if(~isempty(dir(Args.RequiredFile)))
 	% load rplparallel object
 	rp = rplparallel('auto',varargin{:});
 	% load spike train file
-	spiketrain = load(Args.RequiredFile);
+    % this is a bit hackish; check whether we have a .mat or a .csv file
+    [d,fn,ext] = fileparts(Args.RequiredFile);
+    if strcmp(ext,'.mat')
+	    spiketrain = load(Args.RequiredFile);
+    elseif strcmp(ext,'.csv')
+        spiketrain.timestamps = load(Args.RequiredFile)';
+    else
+        error(['Unkown file type ' + Args.RequiredFile]);
+    end
 	% save(Args.HPCInputFilename,'Args','um','rp','varargin');
 
 	if(Args.HPC)
