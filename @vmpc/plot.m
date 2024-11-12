@@ -58,7 +58,7 @@ if(~isempty(Args.NumericArguments))
         h0 = axes('Position',[0.3 0.5 0.4 0.4]);
         set(h0,'Tag','top');
         if Args.Smooth
-            map_choice = obj.data.maps_adsmooth(n,:);
+            map_choice = obj.data.maps_adsm(n,:);
         else
             map_choice = obj.data.maps_raw(n,:);
         end
