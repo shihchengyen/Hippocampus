@@ -12,6 +12,8 @@ function [obj, varargout] = plot(obj,varargin)
 %
 %   InspectGUI(vpc,'addObjs',{vpc},'optArgs',{{},{'Errorbar'}},'SP',[2 1])
 %       creates a figure with an imagesc plot on top of an errorbar plot.
+% TODO: Document this better with actual usage examples. Also, make sure those examples
+%       actually keep working as the code is updated.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Map',0,'Smooth',1,'SameScale',0, ...
