@@ -16,8 +16,9 @@ function [obj, varargout] = plot(obj,varargin)
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', 'Errorbar',0, ...
           'Shuffle',0, 'ShuffleSteps',100, 'NumSubPlots',4, ...
-          'Map',0,'Smooth',1,'SIC',0,'Radii',0,'MinDur',0,'Filtered',1,'SortByRatio',0,'Details',1,'RateBins',0);
-Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle'};
+          'Map',0,'Smooth',1,'SIC',0,'Radii',0,'MinDur',0,'Filtered',1,...
+          'SortByRatio',0,'Details',1,'RateBins',0,'MapOnly',0);
+Args.flags = {'LabelsOff','ArgsOnly','Errorbar','SIC','Shuffle','MapOnly'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -55,7 +56,11 @@ if(~isempty(Args.NumericArguments))
         
     elseif(Args.Details)
         set(gca,'visible','off');
-        h0 = axes('Position',[0.3 0.5 0.4 0.4]);
+        if Args.MapOnly
+            h0 = axes('Position',[0.1 0.1 0.8 0.8]);
+        else
+            h0 = axes('Position',[0.3 0.5 0.4 0.4]);
+        end
         set(h0,'Tag','top');
         if Args.Smooth
             map_choice = obj.data.maps_adsm(n,:);
@@ -64,8 +69,9 @@ if(~isempty(Args.NumericArguments))
         end
         im0 = imagesc(reshape(map_choice,sqrt(length(map_choice)),sqrt(length(map_choice))), 'Tag','toppic');
         colorbar();  
-                       
+        if ~Args.MapOnly     
             h1 = axes('Position',[0.1 0.1 0.8 0.3]);
+            % what is the point of this plot?
             details1 = obj.data.detailed_fr{n,1};
             unique_bins = unique(details1(1,:));
             if Args.Filtered
@@ -106,15 +112,15 @@ if(~isempty(Args.NumericArguments))
             set(gca,'YTick',1:length(bin_limits)-2,'YTickLabel',bin_limits(2:end-1));
             title(obj.data.origin{n});
             colorbar();
+        
             
-            
-        next_handle = findobj(gcf,'String','Next');
-        prev_handle = findobj(gcf,'String','Previous');
-        set(next_handle,'Callback',{@forwardcallback, length(obj.data.origin), Args, gcf, obj, h0, h1});
-        set(prev_handle,'Callback',{@backcallback, Args, gcf, obj, h0, h1});            
-
-        set(gcf,'WindowButtonMotionFcn',{@hovercallback,unique_bins, bin_limits,sqrt(length(map_choice)),h0,h1,binned_data,map_choice,im0,im1});
-          
+            next_handle = findobj(gcf,'String','Next');
+            prev_handle = findobj(gcf,'String','Previous');
+            set(next_handle,'Callback',{@forwardcallback, length(obj.data.origin), Args, gcf, obj, h0, h1});
+            set(prev_handle,'Callback',{@backcallback, Args, gcf, obj, h0, h1});            
+    
+            set(gcf,'WindowButtonMotionFcn',{@hovercallback,unique_bins, bin_limits,sqrt(length(map_choice)),h0,h1,binned_data,map_choice,im0,im1});
+    end
     end
 
 % 	sdstr = get(obj,'SessionDirs');
