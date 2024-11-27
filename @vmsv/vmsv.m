@@ -86,7 +86,14 @@ if(~isempty(dir(Args.RequiredFile)))
     %%%%%%%%%%
     %
     cd(ori);
-    spiketrain = load(Args.RequiredFile);   
+    [d,fn,ext] = fileparts(Args.RequiredFile);
+    if strcmp(ext,'.mat')
+	    spiketrain = load(Args.RequiredFile);
+    elseif strcmp(ext,'.csv')
+        spiketrain.timestamps = load(Args.RequiredFile)';
+    else
+        error(['Unkown file type ' + Args.RequiredFile]);
+    end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
