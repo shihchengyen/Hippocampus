@@ -51,12 +51,11 @@ else
     figure;
     if(Args.Map)
         if Args.Smooth
-            maps = obj.data.maps_adsmooth;
-            plot_all_maps(maps,Args);
+            maps = obj.data.maps_adsm;
         else
             maps = obj.data.maps_raw;
-            plot_all_maps(maps,Args);
         end
+        plotmap(maps, 'view', Args)
     elseif(Args.SIC)
         histogram(obj.data.SICsh);
         max_count = max(histcounts(obj.data.SICsh));
