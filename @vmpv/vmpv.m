@@ -32,7 +32,7 @@ Args.DataCheckArgs = {'GridSteps', 'MinObsPlace','MinObsView','overallGridSize',
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpv';
-Args.matname = [Args.classname '.mat'];
+Args.matname = [num2str(Args.pix) Args.classname '.mat'];
 Args.matvarname = 'pv';
 
 % To decide the method to create or load the object
