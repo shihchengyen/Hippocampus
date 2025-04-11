@@ -1,4 +1,4 @@
-function [obj, varargout] = vmpv(varargin)
+hfunction [obj, varargout] = vmpv(varargin)
 %@vmpv Constructor function for vmpv class
 %   OBJ = vmpv(varargin)
 %
