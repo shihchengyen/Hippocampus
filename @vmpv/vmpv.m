@@ -1,8 +1,8 @@
-hfunction [obj, varargout] = vmpv(varargin)
+function [obj, varargout] = vmpv(varargin)
 %@vmpv Constructor function for vmpv class
 %   OBJ = vmpv(varargin)
 %
-%   OBJ = vmpv('auto') attempts to create a vmpv object by ...
+%   OBJ = vmpv('auto') attempts to create a vmpv object by ....
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   % Instructions on vmpv %
@@ -13,8 +13,8 @@ hfunction [obj, varargout] = vmpv(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','pix',1,'RequiredFile','binData.csv', ...
+Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
+				'ObjectLevel','Session','pix',1,'RequiredFile','binData.hdf', ...
 				'GridSteps',40, 'overallGridSize',25, ...
                 'MinObsPlace',5,'MinObsView',5,'MinDurPlace',0.05,'MinDurView',0.01);
             
@@ -32,7 +32,7 @@ Args.DataCheckArgs = {'GridSteps', 'MinObsPlace','MinObsView','overallGridSize',
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpv';
-Args.matname = [num2str(Args.pix) Args.classname '.mat'];
+Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'pv';
 
 % To decide the method to create or load the object
@@ -71,12 +71,13 @@ if(~isempty(dir(Args.RequiredFile)))
 	uma = umaze('auto',varargin{:});
 	rp = rplparallel('auto',varargin{:});
     % % From hdf file
-    % % viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out because different people are working with different raycast cone sizes at the moment. -HM
-    % viewdata = h5read('100binData.hdf','/data');
-    % viewdata = viewdata';
-    % From csv file
-    viewdata = readtable('binData.csv');
-    viewdata = table2array(viewdata);
+   viewdata = h5read([num2str(Args.pix) 'binData.hdf'],'/data'); % Temporarily commented out 
+    % because different people are working with different raycast cone sizes at the moment. -HM
+     %5viewdata = h5read(Args.RequiredFile,'/data');
+     viewdata = viewdata';
+    % From   file
+    %viewdata = readtable('binData.csv');
+    %viewdata = table2array(viewdata);
     cd(ori);
 
     % major section 1 - getting combined sessiontime

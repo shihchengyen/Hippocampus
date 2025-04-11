@@ -138,6 +138,7 @@ if Args.plotmap
     h = ax.OuterPosition(4)/2;
 
     c = colorbar(ax,'Position',[x y w h]);
+    
 end    
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -167,7 +168,7 @@ else
 %         
 %     end
     
-    figure;
+  
     if(Args.Map)
         if Args.Smooth
             maps = obj.data.maps_adsmooth;
