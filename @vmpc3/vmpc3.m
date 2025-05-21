@@ -296,7 +296,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 % end of the smoothing chunk
                 
                
-
+                % run adaptive smoothing
                 [maps_adsm,smoothedSpk,durs_adsm]=adsmooth(dur_raw,spk_raw,alpha);
 
                
