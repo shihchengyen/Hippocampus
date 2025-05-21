@@ -12,10 +12,10 @@ function [obj, varargout] = vmsv(varargin)
 %
 %dependencies: 
 
-Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
+Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
 				'GridSteps',40, 'Prefix','',...
-                'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
+                'ShuffleLimits',[0.1 0.9], 'NumShuffles',100, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4, 'ThresVel',1, 'UseMinObs', 0, 'SmoothType', 'Adaptive', 'SelectiveCriteria','SIC',...
                 'UseAllTrials',1,'Alpha',1000);
@@ -24,7 +24,7 @@ Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','AdaptiveSmooth','UseMinObs','ThresVel','UseAllTrials','Alpha'};                          
+Args.DataCheckArgs = {'GridSteps','NumShuffles','SmoothType','UseMinObs','ThresVel','UseAllTrials','Alpha'};                          
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -34,7 +34,7 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','AdaptiveSmooth','UseMinObs','Th
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmsv';
-Args.Prefix
+Args.Prefix = '100'
 Args.matname = [Args.Prefix Args.classname '.mat'];
 Args.matvarname = 'vms';
 
@@ -86,14 +86,7 @@ if(~isempty(dir(Args.RequiredFile)))
     %%%%%%%%%%
     %
     cd(ori);
-    [d,fn,ext] = fileparts(Args.RequiredFile);
-    if strcmp(ext,'.mat')
-	    spiketrain = load(Args.RequiredFile);
-    elseif strcmp(ext,'.csv')
-        spiketrain.timestamps = load(Args.RequiredFile)';
-    else
-        error(['Unkown file type ' + Args.RequiredFile]);
-    end
+    spiketrain = load(Args.RequiredFile);   
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -150,7 +143,7 @@ if(~isempty(dir(Args.RequiredFile)))
             pvinds = stc(:,1) >= pv.data.unityTime(cuestartinds(ii)) & stc(:,1) < pv.data.unityTime(navstartinds(ii));
             cueperioddata = [stc(pvinds,:) spk_binned(pvinds)]; % col 5 spk
             cueperioddata(:,6) = [diff(cueperioddata(:,1));0]; % col 6 dur
-            cueim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
+%            cueim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
             cueim_ratepertrial(ii,2) = sum(cueperioddata(cueperioddata(:,4) == 1,5)); % spk
             cueim_ratepertrial(ii,3) = sum(cueperioddata(cueperioddata(:,4) == 1,6)); % dur
             cueim_ratepertrial(ii,4) = cueim_ratepertrial(ii,2)/cueim_ratepertrial(ii,3); % rate
@@ -163,7 +156,7 @@ if(~isempty(dir(Args.RequiredFile)))
             pvinds = stc(:,1) > pv.data.unityTime(navstartinds(ii)) & stc(:,1) <= pv.data.unityTime(trialendinds(ii));
             navperioddata = [stc(pvinds,:) spk_binned(pvinds)]; % col 5 spk
             navperioddata(:,6) = [diff(navperioddata(:,1));0]; % col 6 dur
-            hintim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
+%            hintim_ratepertrial(ii,1) = uma.data.sumCost(ii,4); % target id
             hintim_ratepertrial(ii,2) = sum(navperioddata(navperioddata(:,4) == 2,5)); % spk
             hintim_ratepertrial(ii,3) = sum(navperioddata(navperioddata(:,4) == 2,6)); % dur
             hintim_ratepertrial(ii,4) = hintim_ratepertrial(ii,2)/hintim_ratepertrial(ii,3); % rate
