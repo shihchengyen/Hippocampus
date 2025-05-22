@@ -3,18 +3,18 @@ function [obj, varargout] = vmpc(varargin)
 %   OBJ = vmpc(varargin)
 %
 %   OBJ = vmpc('auto') attempts to create a vmpc object by ...
-%   
+%
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   % Instructions on vmpc %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %example [as, Args] = vmpc('save','redo')
 %
-%dependencies: 
+%dependencies:
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
-				'GridSteps',40, 'pix',1,...
+                'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
+                'GridSteps',40, 'pix',1,...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Adaptive', 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1,...
@@ -24,12 +24,12 @@ Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','AdaptiveSmooth','ThresVel','UseAllTrials', 'Alpha'};                           
+Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','AdaptiveSmooth','ThresVel','UseAllTrials', 'Alpha'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
-	'subtract',{'RedoLevels','SaveLevels'}, ...
-	'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
-	'remove',{'Auto'});
+    'subtract',{'RedoLevels','SaveLevels'}, ...
+    'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
+    'remove',{'Auto'});
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
@@ -50,9 +50,9 @@ elseif(strcmp(command,'passedObj'))
 elseif(strcmp(command,'loadObj'))
     % l = load(Args.matname);
     % obj = eval(['l.' Args.matvarname]);
-	obj = robj;
+    obj = robj;
 elseif(strcmp(command,'createObj'))
-    % IMPORTANT NOTICE!!! 
+    % IMPORTANT NOTICE!!!
     % If there is additional requirements for creating the object, add
     % whatever needed here
     obj = createObject(Args,modvarargin{:});
@@ -70,7 +70,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     ori = pwd;
 
-    data.origin = {pwd}; 
+    data.origin = {pwd};
 %     pv = vmpv('auto', varargin{:});
 
     %%%% PATCH
@@ -83,7 +83,7 @@ if(~isempty(dir(Args.RequiredFile)))
     cd(ori);
     [d,fn,ext] = fileparts(Args.RequiredFile);
     if strcmp(ext,'.mat')
-	    spiketrain = load(Args.RequiredFile);
+        spiketrain = load(Args.RequiredFile);
     elseif strcmp(ext,'.csv')
         spiketrain.timestamps = load(Args.RequiredFile)';
     else
@@ -128,10 +128,10 @@ if(~isempty(dir(Args.RequiredFile)))
         temp = full_arr';
         flat_spiketimes(1,:) = temp(:);
         flat_spiketimes(2,:) = repelem(1:size(full_arr,1), size(full_arr,2));
-        flat_spiketimes = flat_spiketimes'; 
+        flat_spiketimes = flat_spiketimes';
         flat_spiketimes = sortrows(flat_spiketimes);
 
-        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];      
+        flat_spiketimes(flat_spiketimes(:,1) < stc(1,1),:) = [];
         
         % selecting rows from sessionTimeC
         if repeat == 1
@@ -163,7 +163,7 @@ if(~isempty(dir(Args.RequiredFile)))
             bins_sieved = 1:(Args.GridSteps * Args.GridSteps);
         end
 
-        if repeat == 1 
+        if repeat == 1
             % Group into intervals those consecutive rows where same place bin is occupied
             dstc = diff(stc(:,1));
             stc_changing_ind = [1; find(dstc>0)+1; size(stc,1)];
@@ -185,7 +185,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     break;
                 end
                 interval = interval + 1; % didn't fall in this interval, search in the next interval
-            end   
+            end
 
             % Bin all spikes into stc, unfiltered. If > 1 row for same time sample (i.e. large view cone), add spike to last row, backfill later
             if flat_spiketimes(sp,2) == 1
@@ -194,19 +194,19 @@ if(~isempty(dir(Args.RequiredFile)))
             % Keep only bins that meet filter criteria and have all of place, view, and hd data
             bins_hit = stc(stc_changing_ind(interval,1):stc_changing_ind(interval,2),[2 3 4]); % find the relevant place and view bin
             bins_hit = bins_hit(logical(conditions(stc_changing_ind(interval,1):stc_changing_ind(interval,2))),:); % take out bins that don't satisfy filters
-            bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0 
+            bins_hit(~(bins_hit(:,1)>0),:) = []; % take out bins where place bin = 0
             bins_hit(~(bins_hit(:,3)>0),:) = []; % take out bins where view bin = nan
             bins_hit(~(bins_hit(:,2)>0),:) = []; % take out bins where HD bin = 0
             consol_arr(bins_hit(:,1),flat_spiketimes(sp,2)) = consol_arr(bins_hit(:,1),flat_spiketimes(sp,2)) + 1;
 
-        end        
+        end
         
         spike_count_full = consol_arr';
 
         %% This portion for place-related calculations
 
             % Remove non-place and non-view rows for duration
-            stc_filt = stc(find(conditions==1),:); 
+            stc_filt = stc(find(conditions==1),:);
             stc_filt(~(stc_filt(:,2) > 0),:) = []; % remove place bin = 0
             stc_filt(isnan(stc_filt(:,4)),:) = []; % remove NaN view bins
             stc_filt(~(stc_filt(:,3) > 0),:) = []; % remove hd bin = 0
@@ -216,7 +216,7 @@ if(~isempty(dir(Args.RequiredFile)))
             gpdurfull = accumarray(stc_ss(:,1),stc_ss(:,2))';
 
         % %% This portion for combined sessionTimeC with view to output for later mixed sel calculations
-        % 
+        %
         %     fillindex = false(size(stc,1),1);
         %     % back-filling spikes for view bins that occupy the same time bin
         %     stcfill = stc;
@@ -233,9 +233,9 @@ if(~isempty(dir(Args.RequiredFile)))
         %     stcfill(end,5) = stc_lasttime;
         %     % fillindex(isnan(stcfill(1:end-1,5)),2) = true;
         %     stcfill(:,5) = fillmissing(stcfill(:,5), 'next'); % [timestamp place hd view dur spk]
-        % 
+        %
         %     % Remove non-place and non-view rows for duration
-        %     stcfill_filt = stcfill(find(conditions==1),:); 
+        %     stcfill_filt = stcfill(find(conditions==1),:);
         %     stcfill_filt(~(stcfill_filt(:,2) > 0),:) = []; % remove place bin = 0
         %     stcfill_filt(isnan(stcfill_filt(:,4)),:) = []; % remove NaN view bins
         %     stcfill_filt(~(stcfill_filt(:,3) > 0),:) = []; % remove hd bin = 0
@@ -285,7 +285,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 % 2. reshape each row to 5x5
                 % after permute step, now structured 5x5x10001, with each grid in a
                 % slice as following:
-                % 
+                %
                 % 1 6 11 16 21
                 % 2 - 12 -  22
                 % 3 8 13 18 23
@@ -295,82 +295,10 @@ if(~isempty(dir(Args.RequiredFile)))
                 % but will be reverted back to usual linear representation by the
                 % end of the smoothing chunk
                 
-                durs_raw = repmat(dur_raw',1,Args.NumShuffles+1);
-                preset_to_zeros = durs_raw == 0; 
-                
-                % Switch from linear maps to grid maps
-                durs_raw_grid = cell2mat(lineartogrid(durs_raw,'place',[Args.GridSteps Args.GridSteps]));
-                spkies_count_grid = cell2mat(lineartogrid(spikes_count','place',[Args.GridSteps Args.GridSteps]));
-                preset_to_zeros_grid = logical(cell2mat(lineartogrid(preset_to_zeros,'place',[Args.GridSteps Args.GridSteps])));
-                maps_raw_grid = cell2mat(lineartogrid(maps_raw','place',[Args.GridSteps Args.GridSteps]));
-                
-                unvis = ~(durs_raw_grid>0);
-                % Boxcar smoothing
-                maps_bcsm_grid = smooth(maps_raw_grid,5,unvis,'boxcar');
-                durs_bcsm_grid = smooth(durs_raw_grid,5,unvis,'boxcar');
-                % Disk smoothing
-                maps_dksm_grid = smooth(maps_raw_grid,5,unvis,'disk');
-                durs_dksm_grid = smooth(durs_raw_grid,5,unvis,'disk');
+               
 
-                % Set up adaptive smoothing parameters and output vars
-                to_compute = 1:0.5:Args.GridSteps/2;
-                possible = NaN(length(to_compute),2,Args.GridSteps,Args.GridSteps,Args.NumShuffles + 1);
-                maps_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
-                maps_adsm_grid(preset_to_zeros_grid) = 0;
-                durs_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
-                durs_adsm_grid(preset_to_zeros_grid) = 0; 
-                rad_adsm_grid = NaN(size(possible,3), size(possible,4), size(possible,5));
-                rad_adsm_grid(preset_to_zeros_grid) = 0;
-                
-                wip = ones(Args.NumShuffles+1,1);
-                % Adaptive smoothing
-                for idx = 1:length(to_compute)
+                [maps_adsm, durs_adsm, rad_adsm, maps_bcsm, maps_dksm, durs_bcsm, durs_dksm,rad_adsm_grid] = smoothMaps(maps_raw, dur_raw, spk_raw, spikes_count, Args);
 
-                    f=fspecial('disk',to_compute(idx));
-                    f(f>=(max(max(f))/3))=1;
-                    f(f~=1)=0;
-
-                    possible(idx,1,:,:,:) = repmat(imfilter(durs_raw_grid(:,:,1), f, 'conv'), 1,1,Args.NumShuffles+1);   %./scaler;
-                    possible(idx,2,:,:,find(wip)) = imfilter(spkies_count_grid(:,:,find(wip)), f, 'conv');   %./scaler;
-
-                    logic1 = squeeze(alpha./(possible(idx,1,:,:,:).*sqrt(possible(idx,2,:,:,:))) <= to_compute(idx));
-                    slice1 = squeeze(possible(idx,1,:,:,:));
-                    slice2 = squeeze(possible(idx,2,:,:,:));
-
-                    maps_adsm_grid(logic1 & isnan(maps_adsm_grid)) = slice2(logic1 & isnan(maps_adsm_grid))./slice1(logic1 & isnan(maps_adsm_grid));
-                    durs_adsm_grid(logic1 & isnan(durs_adsm_grid)) = slice1(logic1 & isnan(durs_adsm_grid));
-                    rad_adsm_grid(logic1 & isnan(rad_adsm_grid)) = to_compute(idx);
-
-%                     disp('smoothed with kernel size:');
-%                     disp(to_compute(idx));
-%                     disp('grids left');
-%                     disp(sum(sum(sum(isnan(to_fill(:,:,:))))));
-
-                    check = squeeze(sum(sum(isnan(maps_adsm_grid),2),1));
-                    wip(check==0) = 0;
-
-                end
-                
-                % Reshape from grid to linear maps
-                maps_adsm_grid(preset_to_zeros_grid) = nan; % unvisited bins should be nan
-                maps_adsm = gridtolinear({maps_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                maps_adsm = maps_adsm';
-                durs_adsm_grid(isnan(durs_adsm_grid) | preset_to_zeros_grid) = 0;
-                durs_adsm = gridtolinear({durs_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                durs_adsm = durs_adsm';
-                rad_adsm_grid(preset_to_zeros_grid) = nan;
-                rad_adsm = gridtolinear({rad_adsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                rad_adsm = rad_adsm';
-                maps_bcsm = gridtolinear({maps_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                maps_bcsm = maps_bcsm';
-                maps_dksm = gridtolinear({maps_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                maps_dksm = maps_dksm';
-                durs_bcsm_grid(isnan(durs_bcsm_grid) | preset_to_zeros_grid) = 0;
-                durs_bcsm = gridtolinear({durs_bcsm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                durs_bcsm = durs_bcsm';
-                durs_dksm_grid(isnan(durs_dksm_grid) | preset_to_zeros_grid) = 0;
-                durs_dksm = gridtolinear({durs_dksm_grid},'place',[Args.GridSteps Args.GridSteps]);
-                durs_dksm = durs_dksm';
                
 
                 % smoothing part ends
@@ -384,9 +312,9 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
                 
                 if repeat == 1
-                    if data.filtspknum < 100 
+                    if data.filtspknum < 100
                         data.discard = true;
-                    else 
+                    else
                         data.discard = false;
                     end
                     if max(maps_sm(1,:),[],'omitnan') < 0.7
@@ -408,7 +336,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     data.maps_smsh = maps_sm(2:end,:);
                 elseif repeat == 2
                     data.maps_adsm1 = maps_adsm(1,:);
-                    data.dur_adsm1 = durs_adsm(1,:); 
+                    data.dur_adsm1 = durs_adsm(1,:);
                     data.radii1 = rad_adsm_grid(1,:);
                     data.maps_bcsm1 = maps_bcsm(1,:);
                     data.maps_dksm1 = maps_dksm(1,:);
@@ -445,7 +373,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
 %             % ISE part
 %             lambda_i = firing_rates_full;
-% 
+%
 %             if repeat == 1
 %                 ise_adsm = ise(lambda_i(1,:), lambda_i(2:end,:), Args.GridSteps, Args.GridSteps);
 %                 data.ISE_sm = ise_adsm(1);
@@ -474,7 +402,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 
         end
 
-        % Calculate sparsity 
+        % Calculate sparsity
         sparsity = spatial_sparsity(dur_raw,map_raw);
 
         % Calculate selectivity (signal-to-noise)
@@ -549,7 +477,7 @@ if(~isempty(dir(Args.RequiredFile)))
     data.intracorr = intracorr;
     data.intracorrz = intracorrz;
     
-    % create nptdata so we can inherit from it    
+    % create nptdata so we can inherit from it
     data.gridSteps = Args.GridSteps;
     Args.NumShuffles = NumShuffles_saved;
     data.numSets = 1;
@@ -560,8 +488,8 @@ if(~isempty(dir(Args.RequiredFile)))
     saveObject(obj,'ArgsC',Args);
 
 else
-	% create empty object
-	obj = createEmptyObject(Args);
+    % create empty object
+    obj = createEmptyObject(Args);
 end
 
 
