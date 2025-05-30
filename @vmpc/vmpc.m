@@ -31,10 +31,31 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
     'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
     'remove',{'Auto'});
 
+% NEW: create a filemap
+persistent vmpcFileMap
+if isempty(vmpcFileMap)
+    vmpcFileMap = containers.Map();
+end
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpc';
-Args.matname = [Args.classname '.mat'];
+% NEW:create hash filename
+% Args.matname = [Args.classname '.mat'];
+hash_input = '';
+for i = 1:length(Args.DataCheckArgs)
+    key = Args.DataCheckArgs{i};
+    val = Args.(key);
+    if isnumeric(val)
+        valStr = num2str(val);
+    elseif ischar(val)
+        valStr = val;
+    else
+        error(['Unsupported argument type: ' key]);
+    end
+    hash_input = [hash_input '_' key '=' valStr];
+end
+hashval = string2hash(hash_input);
+Args.matname = sprintf('%s_%s.mat', Args.classname, hashval);
 Args.matvarname = 'vmp';
 
 % To decide the method to create or load the object
@@ -50,12 +71,25 @@ elseif(strcmp(command,'passedObj'))
 elseif(strcmp(command,'loadObj'))
     % l = load(Args.matname);
     % obj = eval(['l.' Args.matvarname]);
-    obj = robj;
+    % NEW: if object did not exist, create the object instead
+    if isKey(vmpcFileMap, Args.matname)
+        obj = robj; 
+    else
+        disp(['Object not existed for' Args.matname, ', create object instead']);
+        obj = createObject(Args,modvarargin{:});
+    end
 elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!!
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    obj = createObject(Args,modvarargin{:});
+    % NEW: if the object already existed, avoid creating a new one and load
+    % instead
+    if isKey(vmpcFileMap, Args.matname)
+        disp(['Object already existed for' Args.matname]);
+        obj = robj; 
+    else
+        obj = createObject(Args,modvarargin{:});
+    end
 end
 
 function obj = createObject(Args,varargin)
@@ -65,6 +99,26 @@ dlist = nptDir;
 % get entries in directory
 dnum = size(dlist,1);
 
+% added code here to create a hash map for the required arguments
+% and check if the new object has the arguments
+argsMap = containers.Map();
+argField = fieldnames(Args);
+for i = 1:length(argFields)
+    argsMap(argFields{i}) = Args.(argFields{i})
+end
+
+requiredKeys = Args.DataCheckArgs;
+missingKeys = {};
+
+for i = 1:length(requiredKeys)
+    if ~isKey(argsMap, requiredKeys{i})
+        missingKeys{end+1} = requiredKeys{i};
+    end
+end
+
+if ~isempty(missingKeys)
+    error(['Missing required arguments in Args: ' strjoin(missingKeys, ',')]);
+end
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
     
@@ -486,6 +540,8 @@ if(~isempty(dir(Args.RequiredFile)))
     d.data = data;
     obj = class(d,Args.classname,n);
     saveObject(obj,'ArgsC',Args);
+    % NEW: add the new matname to the filemap
+    vmpcFileMap(Args.matname) = true;
 
 else
     % create empty object
@@ -507,3 +563,16 @@ data.Args = Args;
 n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
+
+function hash = string2hash(str)
+    str = double(str);
+    hash = uint64(14695981039346656037);
+    prime = uint64(1099511628211); 
+    for i = 1:length(str)
+        hash = bitxor(hash, uint64(str(i)));
+        hash = hash * prime;
+    end
+    hash = lower(sprintf('%016x', hash));
+
+
+    
