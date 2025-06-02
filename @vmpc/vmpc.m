@@ -32,10 +32,10 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
     'remove',{'Auto'});
 
 % NEW: create a filemap
-persistent vmpcFileMap
-if isempty(vmpcFileMap)
-    vmpcFileMap = containers.Map();
-end
+% persistent vmpcFileMap
+% if isempty(vmpcFileMap)
+%     vmpcFileMap = containers.Map();
+% end
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmpc';
@@ -72,7 +72,7 @@ elseif(strcmp(command,'loadObj'))
     % l = load(Args.matname);
     % obj = eval(['l.' Args.matvarname]);
     % NEW: if object did not exist, create the object instead
-    if isKey(vmpcFileMap, Args.matname)
+    if isfile(Args.matname)
         obj = robj; 
     else
         disp(['Object not existed for' Args.matname, ', create object instead']);
@@ -84,7 +84,7 @@ elseif(strcmp(command,'createObj'))
     % whatever needed here
     % NEW: if the object already existed, avoid creating a new one and load
     % instead
-    if isKey(vmpcFileMap, Args.matname)
+    if isfile(Args.matname)
         disp(['Object already existed for' Args.matname]);
         obj = robj; 
     else
@@ -541,7 +541,7 @@ if(~isempty(dir(Args.RequiredFile)))
     obj = class(d,Args.classname,n);
     saveObject(obj,'ArgsC',Args);
     % NEW: add the new matname to the filemap
-    vmpcFileMap(Args.matname) = true;
+    % vmpcFileMap(Args.matname) = true;
 
 else
     % create empty object
