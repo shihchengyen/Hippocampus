@@ -31,33 +31,13 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
     'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
     'remove',{'Auto'});
 
-% NEW: create a filemap
-% persistent vmpcFileMap
-% if isempty(vmpcFileMap)
-%     vmpcFileMap = containers.Map();
-% end
-% variable specific to this class. Store in Args so they can be easily
-% passed to createObject and createEmptyObject
-Args.classname = 'vmpc';
-% NEW:create hash filename
-% Args.matname = [Args.classname '.mat'];
-hash_input = '';
-for i = 1:length(Args.DataCheckArgs)
-    key = Args.DataCheckArgs{i};
-    val = Args.(key);
-    if isnumeric(val)
-        valStr = num2str(val);
-    elseif ischar(val)
-        valStr = val;
-    else
-        error(['Unsupported argument type: ' key]);
-    end
-    hash_input = [hash_input '_' key '=' valStr];
-end
-hashval = string2hash(hash_input);
-Args.matname = sprintf('%s_%s.mat', Args.classname, hashval);
-Args.matvarname = 'vmp';
 
+Args.classname = 'vmpc';
+filename = hashFileName(Args);
+Args.matname = sprintf('%s_%s.mat', Args.classname, filename);
+Args.matvarname = 'vmp';
+% testing hash functions
+% test_hashFileName;
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
 
@@ -564,15 +544,83 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-function hash = string2hash(str)
-    str = double(str);
-    hash = uint64(14695981039346656037);
-    prime = uint64(1099511628211); 
-    for i = 1:length(str)
-        hash = bitxor(hash, uint64(str(i)));
-        hash = hash * prime;
+function hash = javaHash(inputStr, algorithm)
+    % Convert string to bytes (uint8)
+    data = uint8(inputStr);
+    % Create MessageDigest object for the specified algorithm (e.g., SHA-256)
+    md = java.security.MessageDigest.getInstance(algorithm);
+    % Update the MessageDigest with the data
+    md.update(data);
+    % Get the resulting hash (as a byte array)
+    hashBytes = md.digest();
+    % Convert hash to a hex string
+    hash = '';
+    for i = 1:length(hashBytes)
+        hash = [hash, sprintf('%02x', hashBytes(i))];  % Format each byte as 2-digit hex
     end
-    hash = lower(sprintf('%016x', hash));
 
 
+
+function filename = hashFileName(Args)
+    hash_input = '';
+    for i = 1:length(Args.DataCheckArgs)
+        key = Args.DataCheckArgs{i};
+        val = Args.(key);
+        if isnumeric(val)
+            valStr = num2str(val);
+        elseif ischar(val)
+            valStr = val;
+        else
+            error(['Unsupported argument type: ' key]);
+        end
+        hash_input = [hash_input '_'  valStr];
+   
+    end
+    filename = javaHash(hash_input, 'SHA-256');
+    % filename = string2hash(hash_input);
+
+
+function test_hashFileName
+    % --- Setup ---
+    % Define a mock Args struct with required fields
+    Args = struct();
+    Args.GridSteps = 40;
+    Args.NumShuffles = 10000;
+    Args.UseMinObs = 0;
+    Args.SmoothType = 'Adaptive';
+    Args.ThresVel = 1;
+    Args.UseAllTrials = 1;
+    Args.Alpha = 10000;
     
+    % Specify which fields to include in the hash
+    Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresVel','UseAllTrials','Alpha'};
+    
+    % --- Act ---
+    hash1 = hashFileName(Args);
+
+    % --- Test for consistency: same input → same hash ---
+    hash2 = hashFileName(Args);
+    assert(strcmp(hash1, hash2), 'Hash should be consistent for same Args');
+
+    % --- Test for change: modifying one field should change the hash ---
+    Args.NumShuffles = 50;
+    hash3 = hashFileName(Args);
+    assert(~strcmp(hash1, hash3), 'Hash should change when Arg.NumShuffles changes');
+
+    Args.NumShuffles = 100;
+    hash4 = hashFileName(Args);
+    assert(~strcmp(hash4, hash3), 'Hash should change when Args.NumShuffles changes');
+    
+    Args.UseMinObs = 40;
+    hash5 = hashFileName(Args);
+    assert(~strcmp(hash4, hash5), 'Hash should change when Args.UseMinObs changes');
+
+    Args.GridSteps = 41;
+    hash6 = hashFileName(Args);
+    assert(~strcmp(hash5, hash6), 'Hash should change when Arg.GridSteps changes');
+
+    Args.GridSteps = 45;
+    hash7 = hashFileName(Args);
+    assert(~strcmp(hash6, hash7), 'Hash should change when Arg.GridSteps changes');
+
+    disp('All hashFileName tests passed.');
