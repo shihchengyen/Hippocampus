@@ -82,9 +82,9 @@ dnum = size(dlist,1);
 % added code here to create a hash map for the required arguments
 % and check if the new object has the arguments
 argsMap = containers.Map();
-argField = fieldnames(Args);
+argFields = Args.DataCheckArgs;
 for i = 1:length(argFields)
-    argsMap(argFields{i}) = Args.(argFields{i})
+     argsMap(argFields{i}) = Args.(argFields{i});
 end
 
 requiredKeys = Args.DataCheckArgs;
@@ -567,7 +567,7 @@ function filename = hashFileName(Args)
         key = Args.DataCheckArgs{i};
         val = Args.(key);
         if isnumeric(val)
-            valStr = num2str(val);
+            valStr = mat2str(val);
         elseif ischar(val)
             valStr = val;
         else
@@ -576,8 +576,12 @@ function filename = hashFileName(Args)
         hash_input = [hash_input '_'  valStr];
    
     end
-    filename = javaHash(hash_input, 'SHA-256');
-    % filename = string2hash(hash_input);
+    hashString = javaHash(hash_input, 'SHA-256');
+
+    % Create final short and unique filename
+    filename = sprintf('%s_%s.mat', Args.classname, hashString(1:16));  % Shorten to 16 chars
+
+    
 
 
 function test_hashFileName
