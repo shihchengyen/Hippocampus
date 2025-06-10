@@ -31,12 +31,13 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
     'shortcuts',{'redo',{'RedoLevels',1}; 'save',{'SaveLevels',1}}, ...
     'remove',{'Auto'});
 
-% variable specific to this class. Store in Args so they can be easily
-% passed to createObject and createEmptyObject
-Args.classname = 'vmpc';
-Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'vmp';
 
+Args.classname = 'vmpc';
+filename = hashFileName(Args);
+Args.matname = filename;
+Args.matvarname = 'vmp';
+% testing hash functions
+% test_hashFileName;
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
 
@@ -50,12 +51,25 @@ elseif(strcmp(command,'passedObj'))
 elseif(strcmp(command,'loadObj'))
     % l = load(Args.matname);
     % obj = eval(['l.' Args.matvarname]);
-    obj = robj;
+    % NEW: if object did not exist, create the object instead
+    if isfile(Args.matname)
+        obj = robj; 
+    else
+        disp(['Object not existed for' Args.matname, ', create object instead']);
+        obj = createObject(Args,modvarargin{:});
+    end
 elseif(strcmp(command,'createObj'))
     % IMPORTANT NOTICE!!!
     % If there is additional requirements for creating the object, add
     % whatever needed here
-    obj = createObject(Args,modvarargin{:});
+    % NEW: if the object already existed, avoid creating a new one and load
+    % instead
+    if isfile(Args.matname)
+        disp(['Object already existed for' Args.matname]);
+        obj = robj; 
+    else
+        obj = createObject(Args,modvarargin{:});
+    end
 end
 
 function obj = createObject(Args,varargin)
@@ -65,6 +79,26 @@ dlist = nptDir;
 % get entries in directory
 dnum = size(dlist,1);
 
+% added code here to create a hash map for the required arguments
+% and check if the new object has the arguments
+argsMap = containers.Map();
+argFields = Args.DataCheckArgs;
+for i = 1:length(argFields)
+     argsMap(argFields{i}) = Args.(argFields{i});
+end
+
+requiredKeys = Args.DataCheckArgs;
+missingKeys = {};
+
+for i = 1:length(requiredKeys)
+    if ~isKey(argsMap, requiredKeys{i})
+        missingKeys{end+1} = requiredKeys{i};
+    end
+end
+
+if ~isempty(missingKeys)
+    error(['Missing required arguments in Args: ' strjoin(missingKeys, ',')]);
+end
 % check if the right conditions were met to create object
 if(~isempty(dir(Args.RequiredFile)))
     
@@ -486,6 +520,8 @@ if(~isempty(dir(Args.RequiredFile)))
     d.data = data;
     obj = class(d,Args.classname,n);
     saveObject(obj,'ArgsC',Args);
+    % NEW: add the new matname to the filemap
+    % vmpcFileMap(Args.matname) = true;
 
 else
     % create empty object
@@ -507,3 +543,88 @@ data.Args = Args;
 n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
+
+function hash = javaHash(inputStr, algorithm)
+    % Convert string to bytes (uint8)
+    data = uint8(inputStr);
+    % Create MessageDigest object for the specified algorithm (e.g., SHA-256)
+    md = java.security.MessageDigest.getInstance(algorithm);
+    % Update the MessageDigest with the data
+    md.update(data);
+    % Get the resulting hash (as a byte array)
+    hashBytes = md.digest();
+    % Convert hash to a hex string
+    hash = '';
+    for i = 1:length(hashBytes)
+        hash = [hash, sprintf('%02x', hashBytes(i))];  % Format each byte as 2-digit hex
+    end
+
+
+
+function filename = hashFileName(Args)
+    hash_input = '';
+    for i = 1:length(Args.DataCheckArgs)
+        key = Args.DataCheckArgs{i};
+        val = Args.(key);
+        if isnumeric(val)
+            valStr = mat2str(val);
+        elseif ischar(val)
+            valStr = val;
+        else
+            error(['Unsupported argument type: ' key]);
+        end
+        hash_input = [hash_input '_'  valStr];
+   
+    end
+    hashString = javaHash(hash_input, 'SHA-256');
+
+    % Create final short and unique filename
+    filename = sprintf('%s_%s.mat', Args.classname, hashString(1:16));  % Shorten to 16 chars
+
+    
+
+
+function test_hashFileName
+    % --- Setup ---
+    % Define a mock Args struct with required fields
+    Args = struct();
+    Args.GridSteps = 40;
+    Args.NumShuffles = 10000;
+    Args.UseMinObs = 0;
+    Args.SmoothType = 'Adaptive';
+    Args.ThresVel = 1;
+    Args.UseAllTrials = 1;
+    Args.Alpha = 10000;
+    
+    % Specify which fields to include in the hash
+    Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresVel','UseAllTrials','Alpha'};
+    
+    % --- Act ---
+    hash1 = hashFileName(Args);
+
+    % --- Test for consistency: same input → same hash ---
+    hash2 = hashFileName(Args);
+    assert(strcmp(hash1, hash2), 'Hash should be consistent for same Args');
+
+    % --- Test for change: modifying one field should change the hash ---
+    Args.NumShuffles = 50;
+    hash3 = hashFileName(Args);
+    assert(~strcmp(hash1, hash3), 'Hash should change when Arg.NumShuffles changes');
+
+    Args.NumShuffles = 100;
+    hash4 = hashFileName(Args);
+    assert(~strcmp(hash4, hash3), 'Hash should change when Args.NumShuffles changes');
+    
+    Args.UseMinObs = 40;
+    hash5 = hashFileName(Args);
+    assert(~strcmp(hash4, hash5), 'Hash should change when Args.UseMinObs changes');
+
+    Args.GridSteps = 41;
+    hash6 = hashFileName(Args);
+    assert(~strcmp(hash5, hash6), 'Hash should change when Arg.GridSteps changes');
+
+    Args.GridSteps = 45;
+    hash7 = hashFileName(Args);
+    assert(~strcmp(hash6, hash7), 'Hash should change when Arg.GridSteps changes');
+
+    disp('All hashFileName tests passed.');
