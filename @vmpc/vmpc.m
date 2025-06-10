@@ -34,7 +34,7 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
 
 Args.classname = 'vmpc';
 filename = hashFileName(Args);
-% Args.matname = sprintf('%s_%s.mat', Args.classname, filename);
+Args.matname = hashFileName(Args);
 Args.matvarname = 'vmp';
 % testing hash functions
 % test_hashFileName;
