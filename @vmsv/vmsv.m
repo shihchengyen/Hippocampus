@@ -35,7 +35,8 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','SmoothType','UseMinObs','ThresV
 % passed to createObject and createEmptyObject
 Args.classname = 'vmsv';
 Args.Prefix = '100'
-Args.matname = [Args.Prefix Args.classname '.mat'];
+Args.matname = hash_filename(Args);
+% Args.matname = [Args.Prefix Args.classname '.mat'];
 Args.matvarname = 'vms';
 
 % To decide the method to create or load the object
