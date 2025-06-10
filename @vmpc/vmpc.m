@@ -34,7 +34,7 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
 
 Args.classname = 'vmpc';
 filename = hashFileName(Args);
-Args.matname = hashFileName(Args);
+Args.matname = filename;
 Args.matvarname = 'vmp';
 % testing hash functions
 % test_hashFileName;
