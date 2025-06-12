@@ -24,7 +24,7 @@ Args.flags = {'Auto','ArgsOnly','FRSIC','UseAllTrials','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','UseMinObs','AdaptiveSmooth','ThresVel','UseAllTrials', 'Alpha'};                           
+Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','UseMinObs','SmoothType','ThresVel','UseAllTrials', 'Alpha'};                           
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -34,7 +34,8 @@ Args.DataCheckArgs = {'GridSteps','DirSteps','NumShuffles','UseMinObs','Adaptive
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
 Args.classname = 'vmhd';
-Args.matname = [Args.classname '.mat'];
+Args.matname = hash_filename(Args);
+% Args.matname = [Args.classname '.mat'];
 Args.matvarname = 'vmh';
 
 % To decide the method to create or load the object
