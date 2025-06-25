@@ -85,5 +85,9 @@ end
 rate_neighbor = gridtolinear(rate_neighbor,spatialvar,gridsize);
 vis = ~isnan(linmap);
 rmat = corrcoef(linmap(vis),rate_neighbor(vis),'rows','complete');
-r = rmat(2,1);
+if size(rmat,1) >= 2
+	r = rmat(2,1);
+else
+	r = rmat(1,1);
+end
 c = atanh(r);
