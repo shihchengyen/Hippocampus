@@ -64,7 +64,8 @@ dlist = nptDir;
 dnum = size(dlist,1);
 
 % check if the right conditions were met to create object
-if(~isempty(dir(Args.RequiredFile)))
+requiredFile = [num2str(Args.pix) Args.RequiredFile];
+if(~isempty(dir(requiredFile)))
 
     ori = pwd;
     data.origin = {pwd};
