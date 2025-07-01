@@ -230,6 +230,9 @@ function aligning_objects(threshold)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     toc
+    uf.data.Args.aligned=1;
+    el.data.Args.aligned=1;
+    rp.data.Args.aligned=1;
        save('unityfile.mat', 'uf', '-v7.3');
     save('eyelink.mat', 'el', '-v7.3');
     save('rplparallel.mat', 'rp', '-v7.3');
