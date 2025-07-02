@@ -229,6 +229,9 @@ function aligning_objects(threshold)
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    uf.data.Args.aligned=1;
+    el.data.Args.aligned=1;
+    rp.data.Args.aligned=1;
     toc
     uf.data.Args.aligned=1;
     el.data.Args.aligned=1;
