@@ -60,7 +60,9 @@ elseif(strcmp(command,'createObj'))
 end
 
 function obj = createObject(Args,varargin)
-
+% if Args.NumShuffles >= 10000
+%    error('Numshuffles exceeds 10000 might cause error.');
+% end
 % example object
 dlist = nptDir;
 % get entries in directory
@@ -93,6 +95,7 @@ if(~isempty(dir(Args.RequiredFile)))
 %     sessionTimeInds(1) = []; % Remove first marker which marks first cue-off, instead of trial end
 
     NumShufflesSaved = Args.NumShuffles;
+    tic;
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
         if repeat == 1
@@ -114,6 +117,10 @@ if(~isempty(dir(Args.RequiredFile)))
         % spike shuffling
         
         spiketimes = spiketrain.timestamps/1000; % now in seconds
+        fprintf('Length of spiketimes: %d\n', length(spiketimes));
+        % if length(spiketimes) > 10000
+        %     error("Too many spikes.");
+        % end
         maxTime = pv.data.rplmaxtime;
         spiketimes(spiketimes>maxTime) = [];
         tShifts = [0 ((rand([1,Args.NumShuffles])*diff(Args.ShuffleLimits))+Args.ShuffleLimits(1))*maxTime];
@@ -385,6 +392,7 @@ if(~isempty(dir(Args.RequiredFile)))
         
     
     end
+    toc
 
     % Calculate intra-session stability
     map1 = data.maps_sm1;
