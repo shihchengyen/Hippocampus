@@ -81,7 +81,7 @@ if Args.plotmap
 %                 'FontSize',14,'GridLineStyle','none','Color','none');
 %     end
     
-    view(-35,20);
+    % view(-35,20);
     colormap jet;
     % colorbar;
 
@@ -145,6 +145,7 @@ if(~isempty(Args.NumericArguments))
     else
         comp = "=";
     end
+    
 	% title(getDataOrder('ShortName','DirString',sdstr{1}))
     title(getDataOrder('ShortName', 'DirString', sdstr{1}) + " : R = " + num2str(obj.data.crit_sm(n))+ " " + comp + " RC = " + num2str(obj.data.critthrcell(n)) + ", Significance: " + significance);
     % dim = [.2 .5 .3 .3];
