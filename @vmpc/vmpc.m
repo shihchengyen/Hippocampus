@@ -18,7 +18,7 @@ Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'FRSIC',0, 'UseMedian',0, ...
                 'NumFRBins',4,'SmoothType','Adaptive', 'UseMinObs',0, 'ThresVel',1, 'UseAllTrials',1,...
-                'SelectiveCriteria','SIC','Alpha', 10000);
+                'SelectiveCriteria','SIC','Alpha', 10000,'UseFileHash',0);
             
 Args.flags = {'Auto','ArgsOnly','FRSIC','UseMedian'};
 % Specify which arguments should be checked when comparing saved objects
@@ -33,7 +33,11 @@ Args.DataCheckArgs = {'GridSteps','NumShuffles','UseMinObs','SmoothType','ThresV
 
 
 Args.classname = 'vmpc';
-filename = hashFileName(Args);
+if Args.UseFileHash
+    filename = hashFileName(Args);
+else
+    filename = [Args.classname '.mat'];
+end
 Args.matname = filename;
 Args.matvarname = 'vmp';
 % testing hash functions
@@ -52,8 +56,10 @@ elseif(strcmp(command,'loadObj'))
     % l = load(Args.matname);
     % obj = eval(['l.' Args.matvarname]);
     % NEW: if object did not exist, create the object instead
-    if isfile(Args.matname)
+    if exist(Args.matname, 'file')
         obj = robj; 
+    elseif exist([Args.classname '.mat'],'file')
+        % using un-hashed file.
     else
         disp(['Object not existed for' Args.matname, ', create object instead']);
         obj = createObject(Args,modvarargin{:});
@@ -64,12 +70,7 @@ elseif(strcmp(command,'createObj'))
     % whatever needed here
     % NEW: if the object already existed, avoid creating a new one and load
     % instead
-    if isfile(Args.matname)
-        disp(['Object already existed for' Args.matname]);
-        obj = robj; 
-    else
-        obj = createObject(Args,modvarargin{:});
-    end
+    obj = createObject(Args,modvarargin{:});
 end
 
 function obj = createObject(Args,varargin)
