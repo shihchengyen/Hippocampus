@@ -1,4 +1,38 @@
 function obj = sessionInfo()
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% align_bin_data() This is part of a set of helper functions used to construct VMPV objects
+% at the session level on days with multiple sessions
+% Designed flow of functions:
+% sessionInfo() --> splitBinData('1') --> align_bin_data()
+
+% Description on how to use the helper functions %
+
+% Workflow:
+
+% sessionInfo() is run at /Session01 but can be modified to run at
+% /2018xxxx instead
+
+% sessionInfo() - creates a sessionInfo.mat ('sesh') object containing details on
+%                   number of trials per session, based on raw session*.txt
+%                   files found in each /Session0_ folder
+
+% data structure within sesh obj:
+
+% sessionCount: Integer value of number of sessions for the day
+% sessionTrialUTime: N x 2 matrix , N = No. of sessions
+%        Each Column Represents:
+%
+%        | Calculated No. of Trials| Number of Samples recorded | 
+
+% After day-level binData has been constructed from raycasting,
+% splitBinData('1') is run at Session01 to break 1binData_new.csv
+% (day-level raycasted bin data) into session level and store the
+% respective session-levels binData files at the correct session folders
+
+% align_bin_data() is run at /Session02 onwards to make sure bin Data
+% starts from the same timestamp as 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     args.classname = 'sessionInfo';
     args.matname = [args.classname '.mat'];
     args.matvarname = 'sesh';
