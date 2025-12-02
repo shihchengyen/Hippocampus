@@ -484,7 +484,7 @@ if(~isempty(dir(Args.RequiredFile)))
             data.SIC_dksm2 = sic_dksm;
             data.crit_sm2 = crit_sm;
             data.sparsity2 = sparsity;
-            data.sig2noise = sig2noise;
+            data.sig2noise2 = sig2noise;
             data.coherence2 = coherence;
             data.coherence_sm2 = coherence_sm;
         end
