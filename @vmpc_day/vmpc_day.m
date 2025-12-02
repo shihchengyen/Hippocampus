@@ -19,13 +19,33 @@ function [obj, varargout] = vmpc_day(varargin)
 %
 %example [as, Args] = vmpc_day('save','redo','CellPath','array01/channel01/cell01')
 
+% ---------------ADDITIONAL DESCRIPTION ----------
+% VMPC_DAY and VMPC_session are functions built to construct vmpc objects
+% for individual cells on days with multiple sessions
+% VMPC_Session create lightweight .mat objects contain session level raw
+% maps
+% VMPC_DAY aggregates all the individual vmpc_session for a specific cell
+% selected (based on array__/channel__/cell__ path used in argument
+
+% if there is only ONE SESSION for a day, you can run VMPC('auto') at the
+% cell-level directory
+
+% if there are multiple sessions:
+
+%   1) Run vmpc_session on all individual session/array/cell folders to generate lightweight .mat files 
+%   containing raw maps (this is where the spiketrains.mat exists)
+
+%   2) Run vmpc_day at the day-level targeting a specific cell 
+%       using the arugments in the format mentioned above 
+%       It will automatically load the previously created session objects, 
+%       aggregate them, and run the shuffling statistics to determine spatial info.
+
 Args = struct('RedoLevels',0, 'SaveLevels',1, 'Auto',0, 'ArgsOnly',0, ...
                 'ObjectLevel','Day', ...
                 'GridSteps',40, ...
                 'ShuffleLimits',[0.1 0.9], 'NumShuffles',10000, ...
                 'SmoothType','Adaptive', 'Alpha', 10000, ...
                 'SelectiveCriteria','SIC', ...
-                'GaussSigma', 2.0, ... %for gaussian smoothing
                 'Sessions',[], ...  % Pass session objects directly
                 'SessionDirs',[], ...  % Or specify full paths to cells
                 'CellPath','', ...  % Relative path from session to cell
@@ -212,7 +232,7 @@ for i = 1:numSessions
     spk_agg = spk_agg + sess.data.spk_raw;
     dur_agg = dur_agg + sess.data.dur_raw;
     
-    
+  
     
 end
 
@@ -386,40 +406,7 @@ disp('Smoothing aggregated firing rate maps...');
 [maps_adsm, durs_adsm, ~, maps_bcsm, maps_dksm, durs_bcsm, durs_dksm, rad_adsm_grid] = ...
     smoothMaps(maps_shuffled, dur_agg, spk_agg, spike_count_shuffled, Args);
 
-%%section on gaussian smoothing
-%% ---------------------------- 
-disp('Applying Gaussian smoothing...');
-% 1. Create the 2D Gaussian kernel
-if license('checkout', 'image_toolbox')
-    sigma_bins = Args.GaussSigma;
-    kernel_size = ceil(sigma_bins * 3) * 2 + 1; % Kernel size ~3x sigma
-    gauss_kernel = fspecial('gaussian', kernel_size, sigma_bins);
-else
-    error('Image Processing Toolbox license not found. Required for fspecial(''gaussian'').');
-end
 
-% 2. Reshape raw maps to 2D
-grid_dim = Args.GridSteps;
-num_all_maps = Args.NumShuffles + 1;
-spk_maps_2d = reshape(spike_count_shuffled', grid_dim, grid_dim, num_all_maps);
-dur_map_2d = reshape(dur_agg, grid_dim, grid_dim); 
-
-% 3. Initialize output arrays
-maps_gasm = zeros(num_all_maps, grid_dim * grid_dim);
-durs_gasm = zeros(num_all_maps, grid_dim * grid_dim); 
-
-% 4. Smooth the 2D duration map (only needs to be done once)
-smoothed_occupancy = imfilter(dur_map_2d, gauss_kernel, 'conv', 'replicate');
-durs_gasm(1:end, :) = repmat(reshape(smoothed_occupancy, 1, []), num_all_maps, 1);
-
-% 5. Loop and smooth each spike map (real + shuffles)
-for i = 1:num_all_maps
-    smoothed_spikes = imfilter(spk_maps_2d(:,:,i), gauss_kernel, 'conv', 'replicate');
-    gasm_map_2d = smoothed_spikes ./ smoothed_occupancy;
-    gasm_map_2d(smoothed_occupancy < 1e-5) = NaN; 
-    maps_gasm(i, :) = reshape(gasm_map_2d, 1, []);
-end
-%% ---------------------------- 
 
 switch Args.SmoothType
     case 'Adaptive'
@@ -428,8 +415,7 @@ switch Args.SmoothType
         maps_sm = maps_bcsm;
     case 'Disk'
         maps_sm = maps_dksm;
-    case 'Gaussian' 
-        maps_sm = maps_gasm; 
+  
 end
 
 % Store smoothed data
@@ -446,10 +432,6 @@ data.maps_dksmsh = maps_dksm(2:end,:);
 data.maps_sm = maps_sm(1,:);
 data.maps_smsh = maps_sm(2:end,:);
 
-% extra: Store Gaussian maps
-data.maps_gasm = maps_gasm(1,:);
-data.maps_gasmsh = maps_gasm(2:end,:);
-data.durs_gasm = durs_gasm(1,:);
 
 %% STEP 6: Calculate day-level spatial metrics with shuffle statistics
 disp('Calculating spatial information content...');
@@ -457,7 +439,7 @@ disp('Calculating spatial information content...');
 sic_adsm = skaggs_sic(maps_adsm', durs_adsm');
 sic_bcsm = skaggs_sic(maps_bcsm', durs_bcsm');
 sic_dksm = skaggs_sic(maps_dksm', durs_dksm');
-sic_gasm = skaggs_sic(maps_gasm', durs_gasm');
+
 
 sic_adsm = sic_adsm';
 
@@ -465,7 +447,6 @@ sic_bcsm = sic_bcsm';
 
 sic_dksm = sic_dksm';
 
-sic_gasm = sic_gasm';
 
 switch Args.SmoothType
     case 'Adaptive'
@@ -475,8 +456,7 @@ switch Args.SmoothType
     case 'Disk'
         sic_sm = sic_dksm;
 
-    case 'Gaussian'
-        sic_sm = sic_gasm; 
+    
 end
 
 switch Args.SelectiveCriteria
@@ -491,9 +471,6 @@ coherence = spatial_coherence('place', [Args.GridSteps Args.GridSteps], map_agg,
 coherence_sm = spatial_coherence('place', [Args.GridSteps Args.GridSteps], maps_sm(1,:), 1);
 
 % Store metrics with shuffle statistics
-%%new gaussian
-data.SIC_gasm = sic_gasm(1);
-data.SICsh_gasm = sic_gasm(2:end);
 
 data.SIC_adsm = sic_adsm(1);
 data.SICsh_adsm = sic_adsm(2:end);

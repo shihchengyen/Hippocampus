@@ -12,6 +12,31 @@ function [obj, varargout] = vmpc(varargin)
 %
 %dependencies:
 
+
+% ---------------ADDITIONAL DESCRIPTION ----------
+% VMPC is run at the cell-directory, where spiketrain.mat exists. You
+% should run this if there is only one session for the day
+
+% VMPC_DAY and VMPC_session are functions built to construct vmpc objects
+% for individual cells on days with multiple sessions
+% VMPC_Session create lightweight .mat objects contain session level raw
+% maps
+% VMPC_DAY aggregates all the individual vmpc_session for a specific cell
+% selected (based on array__/channel__/cell__ path used in argument
+
+% if there is only ONE SESSION for a day, you can run VMPC('auto') at the
+% cell-level directory
+
+% if there are multiple sessions:
+
+%   1) Run vmpc_session on all individual session/array/cell folders to generate lightweight .mat files 
+%   containing raw maps (this is where the spiketrains.mat exists)
+
+%   2) Run vmpc_day at the day-level targeting a specific cell 
+%       using the arugments in the format mentioned above 
+%       It will automatically load the previously created session objects, 
+%       aggregate them, and run the shuffling statistics to determine spatial info.
+
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
                 'ObjectLevel','Cell', 'RequiredFile','spiketrain.mat', ...
                 'GridSteps',40, 'pix',1,...
